@@ -1,0 +1,10 @@
+# oapi-codegen config. Источник — api/openapi.yaml (контракт-первый подход).
+# Генерация: go run .../oapi-codegen -config api/oapi-codegen.yaml api/openapi.yaml
+package: openapi
+output: internal/api/openapi/generated.go
+generate:
+  std-http-server: true   # сервер на голом net/http (Go 1.22+), как в SPEC §11
+  models: true            # DTO из schemas
+  embedded-spec: true     # встроить спеку для self-serve / валидации
+output-options:
+  skip-prune: false

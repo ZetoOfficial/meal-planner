@@ -1,0 +1,1424 @@
+openapi: 3.0.3
+info:
+  title: Meal Planner API
+  version: 1.0.0
+  description: >
+    HTTP API для планирования компонентной готовки под цели БЖУ (MVP v1, owner-only).
+    Контракт — источник истины для oapi-codegen. См. docs/SPEC.md и docs/schema.sql.
+servers:
+  - url: http://localhost:8080
+    description: Локальный docker-compose стек
+
+security:
+  - apiToken: []
+
+tags:
+  - name: eaters
+  - name: products
+  - name: recipes
+  - name: plans
+  - name: swaps
+  - name: shopping
+  - name: meals
+  - name: feedback
+  - name: analytics
+
+paths:
+  # ---------------------------------------------------------------- eaters
+  /eaters:
+    get:
+      operationId: listEaters
+      tags: [eaters]
+      summary: Список едоков
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Eater' }
+    post:
+      operationId: createEater
+      tags: [eaters]
+      summary: Создать профиль едока
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/EaterInput' }
+      responses:
+        '201': { $ref: '#/components/responses/EaterOK' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /eaters/{eaterId}:
+    parameters:
+      - $ref: '#/components/parameters/EaterId'
+    get:
+      operationId: getEater
+      tags: [eaters]
+      summary: Профиль едока
+      responses:
+        '200': { $ref: '#/components/responses/EaterOK' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    put:
+      operationId: updateEater
+      tags: [eaters]
+      summary: Обновить профиль (влияет на следующую генерацию, не на существующие планы)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/EaterInput' }
+      responses:
+        '200': { $ref: '#/components/responses/EaterOK' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /eaters/{eaterId}/goals:
+    parameters:
+      - $ref: '#/components/parameters/EaterId'
+    get:
+      operationId: listEaterGoals
+      tags: [eaters]
+      summary: История целей по БЖУ (от новых к старым)
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/MacroGoal' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    post:
+      operationId: createEaterGoal
+      tags: [eaters]
+      summary: Задать новую цель (создаёт версию, не перезаписывает прошлые)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/MacroGoalInput' }
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MacroGoal' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /eaters/{eaterId}/fixed-meals:
+    parameters:
+      - $ref: '#/components/parameters/EaterId'
+    get:
+      operationId: listFixedMeals
+      tags: [eaters]
+      summary: Фиксированные приёмы пищи едока (напр. Сашин завтрак)
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/FixedMeal' }
+    post:
+      operationId: createFixedMeal
+      tags: [eaters]
+      summary: Добавить фиксированный приём (учитывается в БЖУ, не генерируется)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/FixedMealInput' }
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/FixedMeal' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /eaters/{eaterId}/exclusions:
+    parameters:
+      - $ref: '#/components/parameters/EaterId'
+    get:
+      operationId: listExclusions
+      tags: [eaters]
+      summary: Личные исключения едока (preference bans, напр. морепродукты)
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Exclusion' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    post:
+      operationId: createExclusion
+      tags: [eaters]
+      summary: Добавить исключение по предпочтению (hard/soft, по food_group/role_tag/product)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ExclusionInput' }
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Exclusion' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /exclusions/{exclusionId}:
+    parameters:
+      - name: exclusionId
+        in: path
+        required: true
+        schema: { type: integer, format: int64 }
+    delete:
+      operationId: deleteExclusion
+      tags: [eaters]
+      summary: Удалить исключение
+      responses:
+        '204': { description: No Content }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  # ---------------------------------------------------------------- products
+  /products:
+    get:
+      operationId: listProducts
+      tags: [products]
+      summary: Список продуктов
+      parameters:
+        - name: role
+          in: query
+          description: Фильтр по коду роли, напр. protein:lean:breast
+          schema: { type: string }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Product' }
+    post:
+      operationId: createProduct
+      tags: [products]
+      summary: Добавить продукт в личную БД
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ProductInput' }
+      responses:
+        '201': { $ref: '#/components/responses/ProductOK' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /products/{productId}:
+    parameters:
+      - $ref: '#/components/parameters/ProductId'
+    get:
+      operationId: getProduct
+      tags: [products]
+      summary: Продукт
+      responses:
+        '200': { $ref: '#/components/responses/ProductOK' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    put:
+      operationId: updateProduct
+      tags: [products]
+      summary: Обновить продукт
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ProductInput' }
+      responses:
+        '200': { $ref: '#/components/responses/ProductOK' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    delete:
+      operationId: deleteProduct
+      tags: [products]
+      summary: Удалить продукт
+      responses:
+        '204': { description: No Content }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /role-tags:
+    get:
+      operationId: listRoleTags
+      tags: [products]
+      summary: Справочник ролевых тегов (с подклассами)
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/RoleTag' }
+
+  # ---------------------------------------------------------------- recipes
+  /recipes:
+    get:
+      operationId: listRecipes
+      tags: [recipes]
+      summary: Библиотека рецептов-шаблонов
+      parameters:
+        - name: status
+          in: query
+          schema: { $ref: '#/components/schemas/RecipeStatus' }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/RecipeTemplate' }
+    post:
+      operationId: createRecipe
+      tags: [recipes]
+      summary: Создать рецепт-шаблон вручную (status=draft по умолчанию)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RecipeTemplateInput' }
+      responses:
+        '201': { $ref: '#/components/responses/RecipeOK' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /recipes/{recipeId}:
+    parameters:
+      - $ref: '#/components/parameters/RecipeId'
+    get:
+      operationId: getRecipe
+      tags: [recipes]
+      summary: Рецепт-шаблон со слотами
+      responses:
+        '200': { $ref: '#/components/responses/RecipeOK' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /recipes/{recipeId}/promote:
+    parameters:
+      - $ref: '#/components/parameters/RecipeId'
+    post:
+      operationId: promoteRecipe
+      tags: [recipes]
+      summary: Повысить draft → permanent после реальной готовки + одобрения (FR-9)
+      responses:
+        '200': { $ref: '#/components/responses/RecipeOK' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: Уже permanent или rejected
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  # ---------------------------------------------------------------- plans
+  /plans:
+    get:
+      operationId: listPlans
+      tags: [plans]
+      summary: Список планов
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/PlanSummary' }
+    post:
+      operationId: generatePlan
+      tags: [plans]
+      summary: Сгенерировать план (reuse-first; LLM только при нехватке матчей/novelty≥2)
+      description: >
+        Солвер собирает 5–7 компонентов под цели БЖУ и hard-constraints,
+        раскладывает по дням/приёмам/едокам. Сначала ищет permanent-рецепты,
+        LLM вызывается только при нехватке матчей или novelty_level >= 2.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PlanGenerateInput' }
+      responses:
+        '201': { $ref: '#/components/responses/PlanOK' }
+        '422':
+          description: Солвер не сошёлся под constraints (с диагностикой)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SolverError' }
+        '503':
+          description: Генерация LLM недоступна (после retry); можно reuse-only
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /plans/{planId}:
+    parameters:
+      - $ref: '#/components/parameters/PlanId'
+    get:
+      operationId: getPlan
+      tags: [plans]
+      summary: Полный план (компоненты, заполнения слотов, приёмы, prep-граф)
+      responses:
+        '200': { $ref: '#/components/responses/PlanOK' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    delete:
+      operationId: archivePlan
+      tags: [plans]
+      summary: Архивировать план
+      responses:
+        '204': { description: No Content }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  # ---------------------------------------------------------------- swaps
+  /plans/{planId}/swap/preview:
+    parameters:
+      - $ref: '#/components/parameters/PlanId'
+    post:
+      operationId: previewSwap
+      tags: [swaps]
+      summary: Предпросмотр свопа — blast radius ДО подтверждения (FR-4)
+      description: >
+        Возвращает уровень радиуса, diff БЖУ дня, затронутые приёмы и
+        блюда, которые станут невалидны по prep-графу. Ничего не меняет.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SwapInput' }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SwapPreview' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /plans/{planId}/swap:
+    parameters:
+      - $ref: '#/components/parameters/PlanId'
+    post:
+      operationId: applySwap
+      tags: [swaps]
+      summary: Применить своп (после подтверждения)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: '#/components/schemas/SwapInput'
+                - type: object
+                  properties:
+                    confirm:
+                      type: boolean
+                      description: Должно быть true; иначе 409
+                  required: [confirm]
+      responses:
+        '200':
+          description: Применено; в ответе обновлённый план + флаг shopping_list_stale
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Plan' }
+        '409':
+          description: Своп ломает prep-граф или confirm!=true
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SwapPreview' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  # ---------------------------------------------------------------- shopping
+  /plans/{planId}/shopping-list:
+    parameters:
+      - $ref: '#/components/parameters/PlanId'
+    get:
+      operationId: getShoppingList
+      tags: [shopping]
+      summary: Список покупок (производная от плана)
+      responses:
+        '200': { $ref: '#/components/responses/ShoppingOK' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    post:
+      operationId: regenerateShoppingList
+      tags: [shopping]
+      summary: (Пере)генерировать список покупок; сохраняет отметки неизменившихся позиций
+      responses:
+        '200': { $ref: '#/components/responses/ShoppingOK' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /shopping-list-items/{itemId}:
+    parameters:
+      - name: itemId
+        in: path
+        required: true
+        schema: { type: integer, format: int64 }
+    patch:
+      operationId: updateShoppingListItem
+      tags: [shopping]
+      summary: Отметить позицию купленной
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                checked: { type: boolean }
+              required: [checked]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ShoppingItem' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  # ---------------------------------------------------------------- meals
+  /plans/{planId}/meals:
+    parameters:
+      - $ref: '#/components/parameters/PlanId'
+    get:
+      operationId: listPlanMeals
+      tags: [meals]
+      summary: Приёмы пищи плана (planned + actual)
+      parameters:
+        - name: eaterId
+          in: query
+          schema: { type: integer, format: int64 }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Meal' }
+
+  /meals/{mealId}/log:
+    parameters:
+      - name: mealId
+        in: path
+        required: true
+        schema: { type: integer, format: int64 }
+    post:
+      operationId: logMeal
+      tags: [meals]
+      summary: Залогировать факт еды (actual пишется руками только при отклонении, FR-6)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/MealLogInput' }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Meal' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  # ---------------------------------------------------------------- feedback
+  /feedback:
+    post:
+      operationId: createFeedback
+      tags: [feedback]
+      summary: Оценка/комментарий → сдвиг веса (не бан, FR-7)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/FeedbackInput' }
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/FeedbackEvent' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  # ---------------------------------------------------------------- analytics
+  /analytics/macros:
+    get:
+      operationId: getMacroAnalytics
+      tags: [analytics]
+      summary: Средние БЖУ по едоку за период (planned/actual)
+      parameters:
+        - name: eaterId
+          in: query
+          required: true
+          schema: { type: integer, format: int64 }
+        - name: from
+          in: query
+          required: true
+          schema: { type: string, format: date }
+        - name: to
+          in: query
+          required: true
+          schema: { type: string, format: date }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MacroSummary' }
+
+  /analytics/nutrition-quality:
+    get:
+      operationId: getNutritionQualityAnalytics
+      tags: [analytics]
+      summary: Quality-аналитика по едоку за период (FR-8)
+      description: >
+        Средние клетчатка/натрий/sat fat/добавл. сахар, объёмы овощей-фруктов и
+        цельных злаков, rolling-экспозиция красного/переработанного мяса,
+        data coverage по нутриентам, quality-нагрузка фиксированных приёмов.
+      parameters:
+        - name: eaterId
+          in: query
+          required: true
+          schema: { type: integer, format: int64 }
+        - name: from
+          in: query
+          required: true
+          schema: { type: string, format: date }
+        - name: to
+          in: query
+          required: true
+          schema: { type: string, format: date }
+        - name: basis
+          in: query
+          schema: { type: string, enum: [planned, actual], default: actual }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/NutritionQualitySummary'
+                  - type: object
+                    properties:
+                      eater_id: { type: integer, format: int64 }
+                      from: { type: string, format: date }
+                      to: { type: string, format: date }
+                      fixed_meal_quality_burden:
+                        type: object
+                        description: 'вклад фиксированных приёмов (напр. Сашин завтрак)'
+                        properties:
+                          sodium_mg: { type: number, format: float }
+                          saturated_fat_g: { type: number, format: float }
+                          processed_meat_g: { type: number, format: float }
+
+  /analytics/top-recipes:
+    get:
+      operationId: getTopRecipes
+      tags: [analytics]
+      summary: Топ рецептов по числу готовок
+      parameters:
+        - name: limit
+          in: query
+          schema: { type: integer, default: 10 }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/TopRecipe' }
+
+components:
+  securitySchemes:
+    apiToken:
+      type: apiKey
+      in: header
+      name: X-API-Token
+
+  parameters:
+    EaterId:
+      name: eaterId
+      in: path
+      required: true
+      schema: { type: integer, format: int64 }
+    ProductId:
+      name: productId
+      in: path
+      required: true
+      schema: { type: integer, format: int64 }
+    RecipeId:
+      name: recipeId
+      in: path
+      required: true
+      schema: { type: integer, format: int64 }
+    PlanId:
+      name: planId
+      in: path
+      required: true
+      schema: { type: integer, format: int64 }
+
+  responses:
+    NotFound:
+      description: Не найдено
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    ValidationError:
+      description: Ошибка валидации (graceful fail с деталями, SPEC §6)
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    EaterOK:
+      description: OK
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Eater' }
+    ProductOK:
+      description: OK
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Product' }
+    RecipeOK:
+      description: OK
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/RecipeTemplate' }
+    PlanOK:
+      description: OK
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Plan' }
+    ShoppingOK:
+      description: OK
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ShoppingList' }
+
+  schemas:
+    Macros:
+      type: object
+      properties:
+        protein_g: { type: number, format: float, minimum: 0 }
+        fat_g: { type: number, format: float, minimum: 0 }
+        carb_g: { type: number, format: float, minimum: 0 }
+        kcal: { type: integer, minimum: 0 }
+      required: [protein_g, fat_g, carb_g, kcal]
+
+    MacroRange:
+      type: object
+      description: Цель по БЖУ диапазонами (min–max) для Б, Ж, У и ккал
+      properties:
+        protein_min_g: { type: number, format: float, minimum: 0 }
+        protein_max_g: { type: number, format: float, minimum: 0 }
+        fat_min_g: { type: number, format: float, minimum: 0 }
+        fat_max_g: { type: number, format: float, minimum: 0 }
+        carb_min_g: { type: number, format: float, minimum: 0 }
+        carb_max_g: { type: number, format: float, minimum: 0 }
+        kcal_min: { type: integer, minimum: 0 }
+        kcal_max: { type: integer, minimum: 0 }
+      required:
+        [protein_min_g, protein_max_g, fat_min_g, fat_max_g,
+         carb_min_g, carb_max_g, kcal_min, kcal_max]
+
+    MacroGoal:
+      description: Версионированная цель по БЖУ
+      allOf:
+        - $ref: '#/components/schemas/MacroRange'
+        - type: object
+          properties:
+            id: { type: integer, format: int64 }
+            effective_from: { type: string, format: date }
+            note: { type: string, nullable: true }
+          required: [id, effective_from]
+
+    MacroGoalInput:
+      description: Новая версия цели; effective_from по умолчанию — сегодня
+      allOf:
+        - $ref: '#/components/schemas/MacroRange'
+        - type: object
+          properties:
+            effective_from: { type: string, format: date }
+            note: { type: string }
+
+    Sex:
+      type: string
+      enum: [male, female, unspecified]
+      description: Только для sex-specific дефолта клетчатки (25 ж / 35 м)
+
+    Eater:
+      type: object
+      properties:
+        id: { type: integer, format: int64 }
+        name: { type: string }
+        sex: { $ref: '#/components/schemas/Sex' }
+        current_goal:
+          allOf:
+            - $ref: '#/components/schemas/MacroGoal'
+          nullable: true
+          description: Действующая цель (макс. effective_from <= сегодня)
+        quality_profile:
+          allOf:
+            - $ref: '#/components/schemas/QualityProfile'
+          nullable: true
+        allergens:
+          type: array
+          items: { type: string }
+          description: Медицинские аллергены (casein, nuts, peanuts ...)
+        exclusions:
+          type: array
+          items: { $ref: '#/components/schemas/Exclusion' }
+          description: Личные исключения по предпочтениям (preference bans)
+      required: [id, name]
+
+    EaterInput:
+      type: object
+      properties:
+        name: { type: string }
+        sex: { $ref: '#/components/schemas/Sex' }
+        goal:
+          allOf:
+            - $ref: '#/components/schemas/MacroRange'
+          description: Начальная цель по БЖУ (создаёт первую запись eater_macro_goal)
+        allergens:
+          type: array
+          items: { type: string }
+      required: [name, goal]
+
+    Exclusion:
+      type: object
+      description: >
+        Личное исключение по предпочтению (preference ban), отдельно от аллергена.
+        Матчится по категории/роли/продукту; hard → не в план, soft → штраф веса (HC-10).
+      properties:
+        id: { type: integer, format: int64 }
+        target_kind: { type: string, enum: [food_group, role_tag, product] }
+        target_value:
+          type: string
+          description: "'fish_seafood' / 'protein:lean:thigh' / id продукта"
+        severity: { type: string, enum: [hard, soft], default: hard }
+        note: { type: string, nullable: true }
+      required: [id, target_kind, target_value, severity]
+
+    ExclusionInput:
+      type: object
+      properties:
+        target_kind: { type: string, enum: [food_group, role_tag, product] }
+        target_value: { type: string }
+        severity: { type: string, enum: [hard, soft], default: hard }
+        note: { type: string }
+      required: [target_kind, target_value]
+
+    QualityProfile:
+      type: object
+      description: >
+        Набор quality-правил едока (read-only в MVP). Сами правила — в конфиге.
+        Персональные per-eater override'ы (eater_rule_override) — v2/internal,
+        в публичном API MVP не выставляются.
+      properties:
+        guideline_set_code:
+          type: string
+          readOnly: true
+          example: 'who_nnr_dga_2025'
+        active_from: { type: string, format: date, readOnly: true }
+
+    FixedMealQuality:
+      type: object
+      description: >
+        Hot-path нутриенты + граммаж food-групп (нужен для rolling-7d правил) +
+        флаги учёта фикс. приёма в quality-слое. NULL = неизвестно.
+      properties:
+        saturated_fat_g: { type: number, format: float, nullable: true, minimum: 0 }
+        trans_fat_g: { type: number, format: float, nullable: true, minimum: 0 }
+        fiber_g: { type: number, format: float, nullable: true, minimum: 0 }
+        sodium_mg: { type: number, format: float, nullable: true, minimum: 0 }
+        added_sugars_g: { type: number, format: float, nullable: true, minimum: 0 }
+        free_sugars_g: { type: number, format: float, nullable: true, minimum: 0 }
+        processed_meat_g: { type: number, format: float, nullable: true, minimum: 0 }
+        red_meat_g: { type: number, format: float, nullable: true, minimum: 0 }
+        whole_grain_g_equiv: { type: number, format: float, nullable: true, minimum: 0 }
+        fruit_veg_g: { type: number, format: float, nullable: true, minimum: 0 }
+        include_in_analytics: { type: boolean, default: true }
+        include_in_warnings: { type: boolean, default: true }
+
+    FixedMeal:
+      type: object
+      properties:
+        id: { type: integer, format: int64 }
+        eater_id: { type: integer, format: int64 }
+        meal_type: { $ref: '#/components/schemas/MealType' }
+        label: { type: string }
+        macros: { $ref: '#/components/schemas/Macros' }
+        quality: { $ref: '#/components/schemas/FixedMealQuality' }
+        active: { type: boolean }
+      required: [id, eater_id, meal_type, label, macros]
+
+    FixedMealInput:
+      type: object
+      properties:
+        meal_type: { $ref: '#/components/schemas/MealType' }
+        label: { type: string }
+        macros: { $ref: '#/components/schemas/Macros' }
+        quality: { $ref: '#/components/schemas/FixedMealQuality' }
+      required: [meal_type, label, macros]
+
+    RoleTag:
+      type: object
+      properties:
+        id: { type: integer, format: int64 }
+        code: { type: string, example: 'protein:lean:breast' }
+        kind: { $ref: '#/components/schemas/RoleKind' }
+        label: { type: string }
+        parent_id: { type: integer, format: int64, nullable: true }
+      required: [id, code, kind, label]
+
+    RoleKind:
+      type: string
+      enum: [protein, carb, veg, sauce, fat, other]
+
+    # ---- Quality-слой (deep-research-report.md) ----
+    NutritionFacts:
+      type: object
+      description: >
+        Hot-path нутриенты на 100 г для quality-слоя. Все nullable: NULL = НЕИЗВЕСТНО
+        (не 0). Натрий и соль взаимоконвертируются (натрий_мг = соль_г/2.54*1000).
+      properties:
+        saturated_fat_per_100g: { type: number, format: float, nullable: true, minimum: 0 }
+        trans_fat_per_100g:
+          type: number
+          format: float
+          nullable: true
+          minimum: 0
+          description: 'транс-жиры ВСЕГО (может включать природные) → только warn'
+        industrial_trans_fat_per_100g:
+          type: number
+          format: float
+          nullable: true
+          minimum: 0
+          description: 'именно промышленные → hard reject (HC-9)'
+        fiber_per_100g: { type: number, format: float, nullable: true, minimum: 0 }
+        sodium_mg_per_100g: { type: number, format: float, nullable: true, minimum: 0 }
+        salt_g_per_100g: { type: number, format: float, nullable: true, minimum: 0 }
+        total_sugars_per_100g: { type: number, format: float, nullable: true, minimum: 0 }
+        added_sugars_per_100g: { type: number, format: float, nullable: true, minimum: 0 }
+        free_sugars_per_100g: { type: number, format: float, nullable: true, minimum: 0 }
+        contains_partially_hydrogenated_oils: { type: boolean, nullable: true }
+
+    NutritionDataQuality:
+      type: object
+      description: Происхождение и полнота нутриент-данных (unknown ≠ 0)
+      properties:
+        nutrition_data_quality:
+          type: string
+          enum: [label_exact, trusted_db, estimated, unknown]
+        nutrition_coverage_score:
+          type: number
+          format: float
+          nullable: true
+          readOnly: true          # производная метрика, считается сервером, не клиентом
+          minimum: 0
+          maximum: 1
+        source_kind:
+          type: string
+          nullable: true
+          enum: [pack_label, store_card, composition_table, manual_estimate]
+        source_note: { type: string, nullable: true }
+        last_verified_at: { type: string, format: date-time, nullable: true }
+
+    FoodClassification:
+      type: object
+      description: Пищевая классификация для food-based правил (отдельно от role_kind)
+      properties:
+        food_group:
+          type: string
+          enum: [fruit, vegetable, potato, grain, legume, nuts_seeds, dairy, dairy_alt,
+                 fish_seafood, egg, red_meat, white_meat, processed_meat, mixed,
+                 sauce_condiment, confectionery, beverage, other]
+        processing_level:
+          type: string
+          enum: [minimally_processed, processed_culinary, processed_food, ultra_processed, unknown]
+        processing_confidence: { type: number, format: float, nullable: true, minimum: 0, maximum: 1 }
+        counts_to_fruit_veg: { type: boolean }
+        is_legume: { type: boolean }
+        is_whole_grain: { type: boolean }
+        whole_grain_ratio: { type: number, format: float, nullable: true, minimum: 0, maximum: 1 }
+        is_red_meat: { type: boolean }
+        is_processed_meat: { type: boolean }
+        classification_note: { type: string, nullable: true }
+
+    Product:
+      type: object
+      properties:
+        id: { type: integer, format: int64 }
+        brand: { type: string }
+        name: { type: string }
+        protein_per_100g: { type: number, format: float, minimum: 0 }
+        fat_per_100g: { type: number, format: float, minimum: 0 }
+        carb_per_100g: { type: number, format: float, minimum: 0 }
+        kcal_per_100g: { type: number, format: float, minimum: 0 }
+        price_per_100g: { type: number, format: float, nullable: true, minimum: 0 }
+        default_unit: { type: string, default: 'g' }
+        purchasable: { type: boolean }
+        allergens:
+          type: array
+          items: { type: string }
+        roles:
+          type: array
+          items: { type: string, description: 'коды ролей' }
+        nutrition: { $ref: '#/components/schemas/NutritionFacts' }
+        data_quality: { $ref: '#/components/schemas/NutritionDataQuality' }
+        classification: { $ref: '#/components/schemas/FoodClassification' }
+      required: [id, brand, name, protein_per_100g, fat_per_100g, carb_per_100g, kcal_per_100g]
+
+    ProductInput:
+      type: object
+      properties:
+        brand: { type: string }
+        name: { type: string }
+        protein_per_100g: { type: number, format: float, minimum: 0 }
+        fat_per_100g: { type: number, format: float, minimum: 0 }
+        carb_per_100g: { type: number, format: float, minimum: 0 }
+        kcal_per_100g: { type: number, format: float, minimum: 0 }
+        price_per_100g: { type: number, format: float, nullable: true, minimum: 0 }
+        default_unit: { type: string, default: 'g' }
+        purchasable: { type: boolean, default: true }
+        allergens:
+          type: array
+          items: { type: string }
+        roles:
+          type: array
+          items: { type: string, description: 'коды ролей, напр. protein:lean:breast' }
+        nutrition: { $ref: '#/components/schemas/NutritionFacts' }
+        data_quality: { $ref: '#/components/schemas/NutritionDataQuality' }
+        classification: { $ref: '#/components/schemas/FoodClassification' }
+      required: [brand, name, protein_per_100g, fat_per_100g, carb_per_100g, kcal_per_100g, roles]
+
+    RecipeStatus:
+      type: string
+      enum: [draft, permanent, rejected]
+
+    StorageProfile:
+      type: string
+      enum: [keeps_3d, keeps_3d_reheat, assemble_fresh, eat_same_day]
+
+    MealType:
+      type: string
+      enum: [breakfast, lunch, dinner, snack]
+
+    Slot:
+      type: object
+      properties:
+        id: { type: integer, format: int64 }
+        role_tag: { type: string, description: 'код роли, который ловит слот' }
+        label: { type: string }
+        qty: { type: number, format: float }
+        unit: { type: string }
+        position: { type: integer }
+        optional: { type: boolean }
+      required: [role_tag, label, qty, unit, position]
+
+    RecipeTemplate:
+      type: object
+      properties:
+        id: { type: integer, format: int64 }
+        name: { type: string }
+        status: { $ref: '#/components/schemas/RecipeStatus' }
+        source: { type: string, enum: [llm, manual] }
+        cuisine: { type: string, nullable: true }
+        cooking_method: { type: string, nullable: true }
+        storage: { $ref: '#/components/schemas/StorageProfile' }
+        storage_notes: { type: string, nullable: true }
+        equipment:
+          type: array
+          items: { type: string }
+        instructions: { type: string, nullable: true }
+        weight: { type: number, format: float }
+        cooked_count: { type: integer }
+        slots:
+          type: array
+          items: { $ref: '#/components/schemas/Slot' }
+      required: [id, name, status, storage, slots]
+
+    RecipeTemplateInput:
+      type: object
+      properties:
+        name: { type: string }
+        cuisine: { type: string }
+        cooking_method: { type: string }
+        storage: { $ref: '#/components/schemas/StorageProfile' }
+        storage_notes: { type: string }
+        equipment:
+          type: array
+          items: { type: string }
+        instructions: { type: string }
+        slots:
+          type: array
+          items:
+            type: object
+            properties:
+              role_tag: { type: string }
+              label: { type: string }
+              qty: { type: number, format: float }
+              unit: { type: string, default: 'g' }
+              position: { type: integer }
+              optional: { type: boolean, default: false }
+            required: [role_tag, label, qty, position]
+      required: [name, storage, slots]
+
+    PlanGenerateInput:
+      type: object
+      properties:
+        label: { type: string }
+        start_date: { type: string, format: date }
+        days: { type: integer, default: 3 }
+        cook_date: { type: string, format: date }
+        novelty_level:
+          type: integer
+          minimum: 0
+          maximum: 3
+          default: 0
+          description: 'dial новизны (DESIGN §7); маппится в temperature LLM'
+        eater_ids:
+          type: array
+          items: { type: integer, format: int64 }
+          minItems: 1
+      required: [start_date, eater_ids]
+
+    PlanSummary:
+      type: object
+      properties:
+        id: { type: integer, format: int64 }
+        label: { type: string, nullable: true }
+        start_date: { type: string, format: date }
+        days: { type: integer }
+        status: { type: string, enum: [draft, active, archived] }
+        quality_score: { type: number, format: float, nullable: true }
+        quality_warnings_count: { type: integer }
+        shopping_list_stale: { type: boolean }
+      required: [id, start_date, days, status]
+
+    SlotFill:
+      type: object
+      properties:
+        id: { type: integer, format: int64 }
+        slot_id: { type: integer, format: int64 }
+        product_id: { type: integer, format: int64 }
+        qty_g: { type: number, format: float }
+        macros: { $ref: '#/components/schemas/Macros' }
+      required: [slot_id, product_id, qty_g]
+
+    PlanRecipe:
+      type: object
+      properties:
+        id: { type: integer, format: int64 }
+        template_id: { type: integer, format: int64 }
+        label: { type: string, nullable: true }
+        batch_qty: { type: number, format: float, nullable: true }
+        fills:
+          type: array
+          items: { $ref: '#/components/schemas/SlotFill' }
+      required: [id, template_id, fills]
+
+    PrepDependency:
+      type: object
+      properties:
+        dependent_recipe_id: { type: integer, format: int64 }
+        source_recipe_id: { type: integer, format: int64 }
+        note: { type: string, nullable: true }
+      required: [dependent_recipe_id, source_recipe_id]
+
+    Plan:
+      type: object
+      properties:
+        id: { type: integer, format: int64 }
+        label: { type: string, nullable: true }
+        start_date: { type: string, format: date }
+        days: { type: integer }
+        cook_date: { type: string, format: date }
+        novelty_level: { type: integer }
+        status: { type: string, enum: [draft, active, archived] }
+        recipes:
+          type: array
+          items: { $ref: '#/components/schemas/PlanRecipe' }
+        meals:
+          type: array
+          items: { $ref: '#/components/schemas/Meal' }
+        prep_dependencies:
+          type: array
+          items: { $ref: '#/components/schemas/PrepDependency' }
+        shopping_list_stale:
+          type: boolean
+          description: 'true если после свопа изменился состав продуктов (FR-5)'
+        quality_summary:
+          allOf:
+            - $ref: '#/components/schemas/NutritionQualitySummary'
+          nullable: true
+          description: 'Оценка качества плана (FR-3): план не блокируется за quality-fail'
+      required: [id, start_date, days, status, recipes]
+
+    RuleEvaluation:
+      type: object
+      description: >
+        Результат одного quality-правила (explainability, FR-3/FR-8). План на двоих,
+        поэтому оценка адресна: кому (eater_id), за что (date / окно), в каких единицах.
+      properties:
+        rule_code: { type: string, example: 'sodium_max_daily_mg' }
+        entity_type:
+          type: string
+          enum: [meal, day, rolling_window, plan]
+        eater_id: { type: integer, format: int64, nullable: true }
+        date:
+          type: string
+          format: date
+          nullable: true
+          description: 'для entity_type=day/meal'
+        window_start: { type: string, format: date, nullable: true }
+        window_end: { type: string, format: date, nullable: true }
+        status:
+          type: string
+          enum: [pass, soft_fail, warn, unknown]
+        actual_value: { type: number, format: float, nullable: true }
+        target_value: { type: number, format: float, nullable: true }
+        unit: { type: string, nullable: true, example: 'mg' }
+        coverage_score:
+          type: number
+          format: float
+          nullable: true
+          minimum: 0
+          maximum: 1
+          description: 'доверие к оценке; низкий coverage → status=unknown (unknown ≠ pass)'
+        message: { type: string, nullable: true }
+      required: [rule_code, status]
+
+    NutritionQualitySummary:
+      type: object
+      description: Сводка качества для дня/плана + rolling-проекции недели
+      properties:
+        quality_score: { type: number, format: float, nullable: true }
+        warnings_count: { type: integer }
+        data_coverage_score: { type: number, format: float, nullable: true }
+        fiber_g: { type: number, format: float, nullable: true }
+        sodium_mg: { type: number, format: float, nullable: true }
+        saturated_fat_g: { type: number, format: float, nullable: true }
+        added_sugars_g: { type: number, format: float, nullable: true }
+        fruit_veg_g: { type: number, format: float, nullable: true }
+        whole_grain_g_equiv: { type: number, format: float, nullable: true }
+        legume_g: { type: number, format: float, nullable: true }
+        red_meat_g_rolling_7d: { type: number, format: float, nullable: true }
+        processed_meat_g_rolling_7d: { type: number, format: float, nullable: true }
+        upf_kcal_share_est: { type: number, format: float, nullable: true }
+        rule_evaluations:
+          type: array
+          items: { $ref: '#/components/schemas/RuleEvaluation' }
+
+    SwapInput:
+      type: object
+      description: >
+        Своп одного из четырёх уровней. Для fill-уровня указывается slot_fill_id +
+        новый product_id; для уровня блюда — plan_recipe_id + новый template_id.
+      properties:
+        level:
+          type: string
+          enum: [fill, recipe, rotation]
+          description: 'fill = смена продукта в слоте; recipe = смена шаблона; rotation = весь план'
+        slot_fill_id: { type: integer, format: int64 }
+        new_product_id: { type: integer, format: int64 }
+        plan_recipe_id: { type: integer, format: int64 }
+        new_template_id: { type: integer, format: int64 }
+      required: [level]
+
+    SwapPreview:
+      type: object
+      description: Blast radius до подтверждения (FR-4)
+      properties:
+        level:
+          type: string
+          enum: [fill_to_fill, protein_change, recipe_change, full_rotation]
+        macro_diff:
+          type: object
+          description: 'изменение БЖУ дня (новое минус старое)'
+          properties:
+            by_eater:
+              type: array
+              items:
+                type: object
+                properties:
+                  eater_id: { type: integer, format: int64 }
+                  date: { type: string, format: date }
+                  delta: { $ref: '#/components/schemas/Macros' }
+        affected_meals:
+          type: array
+          items: { type: integer, format: int64 }
+        invalidated_recipes:
+          type: array
+          description: 'блюда, которые станут невалидны по prep-графу'
+          items:
+            type: object
+            properties:
+              plan_recipe_id: { type: integer, format: int64 }
+              reason: { type: string }
+        shopping_delta:
+          type: object
+          properties:
+            added: { type: array, items: { type: integer, format: int64 } }
+            removed: { type: array, items: { type: integer, format: int64 } }
+        quality_diff:
+          type: object
+          description: 'Изменение качества (FR-4): нутриенты, food-group объёмы, coverage'
+          properties:
+            fiber_g: { type: number, format: float }
+            sodium_mg: { type: number, format: float }
+            saturated_fat_g: { type: number, format: float }
+            added_sugars_g: { type: number, format: float }
+            fruit_veg_g: { type: number, format: float }
+            red_meat_g_rolling_7d: { type: number, format: float }
+            processed_meat_g_rolling_7d: { type: number, format: float }
+            coverage_score: { type: number, format: float }
+            changed_rules:
+              type: array
+              items: { $ref: '#/components/schemas/RuleEvaluation' }
+        summary:
+          type: string
+          example: 'свопнём лосось на треску — 0 изменений'
+      required: [level, summary]
+
+    ShoppingItem:
+      type: object
+      properties:
+        id: { type: integer, format: int64 }
+        product_id: { type: integer, format: int64 }
+        product_name: { type: string }
+        total_qty_g: { type: number, format: float }
+        unit: { type: string }
+        est_cost: { type: number, format: float, nullable: true }
+        checked: { type: boolean }
+      required: [id, product_id, total_qty_g, unit, checked]
+
+    ShoppingList:
+      type: object
+      properties:
+        id: { type: integer, format: int64 }
+        plan_id: { type: integer, format: int64 }
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/ShoppingItem' }
+        est_total: { type: number, format: float, nullable: true }
+      required: [id, plan_id, items]
+
+    Meal:
+      type: object
+      properties:
+        id: { type: integer, format: int64 }
+        plan_id: { type: integer, format: int64 }
+        eater_id: { type: integer, format: int64 }
+        meal_date: { type: string, format: date }
+        meal_type: { $ref: '#/components/schemas/MealType' }
+        plan_recipe_id: { type: integer, format: int64, nullable: true }
+        fixed_meal_id: { type: integer, format: int64, nullable: true }
+        planned: { $ref: '#/components/schemas/Macros' }
+        actual:
+          allOf:
+            - $ref: '#/components/schemas/Macros'
+          nullable: true
+        cooked_by: { type: integer, format: int64, nullable: true }
+        logged_by: { type: integer, format: int64, nullable: true }
+        log_status:
+          type: string
+          enum: [planned, eaten_as_planned, eaten_modified, skipped]
+      required: [id, plan_id, eater_id, meal_date, meal_type, planned, log_status]
+
+    MealLogInput:
+      type: object
+      description: >
+        В MVP вручную вводятся только actual-МАКРОСЫ. Actual quality-нутриенты
+        вручную НЕ вводятся: при eaten_modified без structured replacement
+        quality-метрики приёма становятся 'unknown' (FR-6), а не фикция.
+      properties:
+        log_status:
+          type: string
+          enum: [eaten_as_planned, eaten_modified, skipped]
+        logged_by: { type: integer, format: int64 }
+        cooked_by: { type: integer, format: int64 }
+        actual:
+          allOf:
+            - $ref: '#/components/schemas/Macros'
+          nullable: true
+          description: 'actual-макросы; заполняется только при отклонении (FR-6)'
+      required: [log_status, logged_by]
+
+    FeedbackInput:
+      type: object
+      properties:
+        eater_id: { type: integer, format: int64 }
+        target_type:
+          type: string
+          enum: [recipe_template, product, meal, slot_fill]
+        target_id: { type: integer, format: int64 }
+        rating: { type: integer, minimum: -2, maximum: 2, nullable: true }
+        comment: { type: string, nullable: true }
+      required: [eater_id, target_type, target_id]
+
+    FeedbackEvent:
+      type: object
+      properties:
+        id: { type: integer, format: int64 }
+        eater_id: { type: integer, format: int64 }
+        target_type: { type: string }
+        target_id: { type: integer, format: int64 }
+        rating: { type: integer, nullable: true }
+        comment: { type: string, nullable: true }
+        weight_delta: { type: number, format: float, nullable: true }
+        created_at: { type: string, format: date-time }
+      required: [id, eater_id, target_type, target_id]
+
+    MacroSummary:
+      type: object
+      properties:
+        eater_id: { type: integer, format: int64 }
+        from: { type: string, format: date }
+        to: { type: string, format: date }
+        avg_planned: { $ref: '#/components/schemas/Macros' }
+        avg_actual: { $ref: '#/components/schemas/Macros' }
+        days: { type: integer }
+      required: [eater_id, from, to, avg_planned]
+
+    TopRecipe:
+      type: object
+      properties:
+        recipe_id: { type: integer, format: int64 }
+        name: { type: string }
+        cooked_count: { type: integer }
+      required: [recipe_id, name, cooked_count]
+
+    SolverError:
+      type: object
+      properties:
+        error: { type: string }
+        message: { type: string }
+        unmet_constraints:
+          type: array
+          description: 'какого класса/тега не хватило для попадания в БЖУ'
+          items:
+            type: object
+            properties:
+              role_tag: { type: string }
+              reason: { type: string }
+      required: [error, message]
+
+    Error:
+      type: object
+      properties:
+        error: { type: string }
+        message: { type: string }
+        details:
+          type: array
+          items: { type: string }
+      required: [error, message]
