@@ -23,4 +23,9 @@ Core rules:
 - Do not invent fields or endpoints. `docs/schema.sql` and `api/openapi.yaml` are the source of truth.
 - Keep v1 scope: HTTP API only. Telegram bot, Mini App, voice, vision/barcode, FatSecret sync, inventory, RAG, agents and fine-tuning are v2+ or explicitly out of scope.
 
+Git conventions:
+
+- Commits follow **Conventional Commits**: `type(scope): summary` (e.g. `feat(planning): reuse-first plan generation`). Types: `feat`, `fix`, `chore`, `docs`, `refactor`, `test`, `perf`, `build`, `ci`.
+- Branches mirror the commit type: `type/short-description`, kebab-case, e.g. `feat/eater-exclusions`; prefix the issue number when there is one: `feat/42-generate-plan`.
+
 When unsure, choose the simplest implementation that preserves the important boundary: **deterministic Go core first, external adapters second**.
