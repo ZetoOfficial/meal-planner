@@ -3,27 +3,46 @@ package postgres
 import (
 	"context"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+
+	"github.com/ZetoOfficial/meal-planner/internal/postgres/repositories"
+	planninguc "github.com/ZetoOfficial/meal-planner/internal/usecase/planning"
 )
 
-// TxManager реализует транзакционную границу для use case layer (ARCHITECTURE §11).
-type TxManager struct {
-	pool *pgxpool.Pool
+type txBeginner interface {
+	Begin(ctx context.Context) (pgx.Tx, error)
 }
 
-// NewTxManager создаёт менеджер транзакций.
-func NewTxManager(pool *pgxpool.Pool) *TxManager { return &TxManager{pool: pool} }
+// TxManager implements the usecase transaction boundary.
+type TxManager struct {
+	db txBeginner
+}
 
-// WithTx выполняет fn внутри транзакции: commit при nil-ошибке, иначе rollback.
-// TODO: прокидывать pgx.Tx в контекст, чтобы репозитории его подхватывали.
+func NewTxManager(pool *pgxpool.Pool) *TxManager {
+	return newTxManagerWithBeginner(pool)
+}
+
+func newTxManagerWithBeginner(db txBeginner) *TxManager {
+	return &TxManager{db: db}
+}
+
 func (m *TxManager) WithTx(ctx context.Context, fn func(ctx context.Context) error) error {
-	tx, err := m.pool.Begin(ctx)
+	return m.WithinTx(ctx, func(ctx context.Context, _ planninguc.Repositories) error {
+		return fn(ctx)
+	})
+}
+
+func (m *TxManager) WithinTx(ctx context.Context, fn func(ctx context.Context, repos planninguc.Repositories) error) error {
+	tx, err := m.db.Begin(ctx)
 	if err != nil {
 		return err
 	}
-	if err := fn(ctx); err != nil {
+
+	if err := fn(ctx, repositories.New(tx).Planning()); err != nil {
 		_ = tx.Rollback(ctx)
 		return err
 	}
+
 	return tx.Commit(ctx)
 }
