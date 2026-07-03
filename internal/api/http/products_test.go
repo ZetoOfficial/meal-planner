@@ -9,7 +9,7 @@ import (
 	"sort"
 	"testing"
 
-	"github.com/ZetoOfficial/meal-planner/internal/api/openapi"
+	api "github.com/ZetoOfficial/meal-planner/internal/api/openapi"
 	catalogdom "github.com/ZetoOfficial/meal-planner/internal/domain/catalog"
 	apperr "github.com/ZetoOfficial/meal-planner/internal/errors"
 	cataloguc "github.com/ZetoOfficial/meal-planner/internal/usecase/catalog"
@@ -22,7 +22,7 @@ func TestProductCRUDHandlers(t *testing.T) {
 		Catalog:  cataloguc.NewService(repo),
 	})
 
-	created := requestJSON[openapi.Product](t, handler, http.MethodPost, "/products", productRequestBody(), http.StatusCreated)
+	created := requestJSON[api.Product](t, handler, http.MethodPost, "/products", productRequestBody(), http.StatusCreated)
 	if created.Id == 0 {
 		t.Fatal("created product id is zero")
 	}
@@ -36,12 +36,12 @@ func TestProductCRUDHandlers(t *testing.T) {
 		t.Fatalf("fiber not round-tripped: %#v", created.Nutrition)
 	}
 
-	listed := requestJSON[[]openapi.Product](t, handler, http.MethodGet, "/products?role=protein:lean:breast", nil, http.StatusOK)
+	listed := requestJSON[[]api.Product](t, handler, http.MethodGet, "/products?role=protein:lean:breast", nil, http.StatusOK)
 	if len(listed) != 1 || listed[0].Id != created.Id {
 		t.Fatalf("listed products = %#v, want created product", listed)
 	}
 
-	got := requestJSON[openapi.Product](t, handler, http.MethodGet, "/products/1", nil, http.StatusOK)
+	got := requestJSON[api.Product](t, handler, http.MethodGet, "/products/1", nil, http.StatusOK)
 	if got.Id != created.Id {
 		t.Fatalf("got id = %d, want %d", got.Id, created.Id)
 	}
@@ -49,7 +49,7 @@ func TestProductCRUDHandlers(t *testing.T) {
 	updateBody := productRequestBody()
 	updateBody["name"] = "updated breast"
 	updateBody["roles"] = []string{"protein:lean:thigh"}
-	updated := requestJSON[openapi.Product](t, handler, http.MethodPut, "/products/1", updateBody, http.StatusOK)
+	updated := requestJSON[api.Product](t, handler, http.MethodPut, "/products/1", updateBody, http.StatusOK)
 	if updated.Name != "updated breast" {
 		t.Fatalf("updated name = %q", updated.Name)
 	}
@@ -70,7 +70,7 @@ func TestCreateProductValidationError(t *testing.T) {
 	body["roles"] = []string{}
 	body["fiber_per_100g"] = -1
 
-	var response openapi.Error
+	var response api.Error
 	rec := doRequest(t, handler, http.MethodPost, "/products", body)
 	if rec.Code != http.StatusUnprocessableEntity {
 		t.Fatalf("status = %d, want %d", rec.Code, http.StatusUnprocessableEntity)

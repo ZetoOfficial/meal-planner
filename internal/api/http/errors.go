@@ -5,7 +5,7 @@ import (
 	"log/slog"
 	"net/http"
 
-	"github.com/ZetoOfficial/meal-planner/internal/api/openapi"
+	api "github.com/ZetoOfficial/meal-planner/internal/api/openapi"
 	apperr "github.com/ZetoOfficial/meal-planner/internal/errors"
 )
 
@@ -25,14 +25,14 @@ func mapError(err error) (status int, body any) {
 
 	var app *apperr.Error
 	if errors.As(err, &app) {
-		return statusForCode(app.Code), openapi.Error{
+		return statusForCode(app.Code), api.Error{
 			Error:   string(app.Code),
 			Message: app.Error(),
 			Details: optionalDetails(app.Details),
 		}
 	}
 
-	return http.StatusInternalServerError, openapi.Error{
+	return http.StatusInternalServerError, api.Error{
 		Error:   string(apperr.CodeInternal),
 		Message: "internal server error",
 	}
@@ -64,8 +64,8 @@ func optionalDetails(details []string) *[]string {
 	return &details
 }
 
-func solverError(err *apperr.ImpossiblePlanError) openapi.SolverError {
-	body := openapi.SolverError{
+func solverError(err *apperr.ImpossiblePlanError) api.SolverError {
+	body := api.SolverError{
 		Error:   string(apperr.CodeImpossiblePlan),
 		Message: err.Error(),
 	}
@@ -73,9 +73,9 @@ func solverError(err *apperr.ImpossiblePlanError) openapi.SolverError {
 		return body
 	}
 
-	constraints := make([]openapi.UnmetConstraint, 0, len(err.UnmetConstraints))
+	constraints := make([]api.UnmetConstraint, 0, len(err.UnmetConstraints))
 	for _, constraint := range err.UnmetConstraints {
-		constraints = append(constraints, openapi.UnmetConstraint{
+		constraints = append(constraints, api.UnmetConstraint{
 			Reason:  constraint.Reason,
 			RoleTag: constraint.RoleTag,
 		})

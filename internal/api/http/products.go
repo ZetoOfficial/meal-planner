@@ -1,128 +1,154 @@
 package httpapi
 
 import (
-	"encoding/json"
+	"context"
 	"net/http"
 
-	"github.com/ZetoOfficial/meal-planner/internal/api/openapi"
+	api "github.com/ZetoOfficial/meal-planner/internal/api/openapi"
 	catalogdom "github.com/ZetoOfficial/meal-planner/internal/domain/catalog"
-	apperr "github.com/ZetoOfficial/meal-planner/internal/errors"
 	cataloguc "github.com/ZetoOfficial/meal-planner/internal/usecase/catalog"
 )
 
-func (a *API) listProducts(w http.ResponseWriter, r *http.Request, params openapi.ListProductsParams) {
+func (a *API) ListProducts(ctx context.Context, request api.ListProductsRequestObject) (api.ListProductsResponseObject, error) {
 	if a.deps.Catalog == nil {
-		a.notImplemented(w)
-		return
+		return api.ListProducts501JSONResponse{NotImplementedJSONResponse: notImplemented()}, nil
 	}
-	filter := cataloguc.ProductFilter{Role: params.Role}
-	products, err := a.deps.Catalog.ListProducts(r.Context(), filter)
+	filter := cataloguc.ProductFilter{Role: request.Params.Role}
+	products, err := a.deps.Catalog.ListProducts(ctx, filter)
 	if err != nil {
-		writeError(w, err)
-		return
+		return nil, err
 	}
-	out := make([]openapi.Product, 0, len(products))
+	out := make([]api.Product, 0, len(products))
 	for _, product := range products {
 		out = append(out, productToAPI(product))
 	}
-	writeJSON(w, http.StatusOK, out)
+	return api.ListProducts200JSONResponse(out), nil
 }
 
-func (a *API) createProduct(w http.ResponseWriter, r *http.Request) {
+func (a *API) CreateProduct(ctx context.Context, request api.CreateProductRequestObject) (api.CreateProductResponseObject, error) {
 	if a.deps.Catalog == nil {
-		a.notImplemented(w)
-		return
+		return api.CreateProduct501JSONResponse{NotImplementedJSONResponse: notImplemented()}, nil
 	}
-	input, ok := decodeProductInput(w, r)
-	if !ok {
-		return
+	if request.Body == nil {
+		body := validationBody("request body is required")
+		return api.CreateProduct422JSONResponse{ValidationErrorJSONResponse: api.ValidationErrorJSONResponse(body)}, nil
 	}
-	product, err := a.deps.Catalog.CreateProduct(r.Context(), productInputToDomain(input))
+	product, err := a.deps.Catalog.CreateProduct(ctx, productInputToDomain(*request.Body))
 	if err != nil {
-		writeError(w, err)
-		return
+		return createProductError(err), nil
 	}
-	writeJSON(w, http.StatusCreated, productToAPI(product))
+	return api.CreateProduct201JSONResponse{ProductOKJSONResponse: api.ProductOKJSONResponse(productToAPI(product))}, nil
 }
 
-func (a *API) getProduct(w http.ResponseWriter, r *http.Request, productID openapi.ProductId) {
+func (a *API) GetProduct(ctx context.Context, request api.GetProductRequestObject) (api.GetProductResponseObject, error) {
 	if a.deps.Catalog == nil {
-		a.notImplemented(w)
-		return
+		return api.GetProduct501JSONResponse{NotImplementedJSONResponse: notImplemented()}, nil
 	}
-	product, err := a.deps.Catalog.GetProduct(r.Context(), catalogdom.ProductID(productID))
+	product, err := a.deps.Catalog.GetProduct(ctx, catalogdom.ProductID(request.ProductId))
 	if err != nil {
-		writeError(w, err)
-		return
+		return getProductError(err), nil
 	}
-	writeJSON(w, http.StatusOK, productToAPI(product))
+	return api.GetProduct200JSONResponse{ProductOKJSONResponse: api.ProductOKJSONResponse(productToAPI(product))}, nil
 }
 
-func (a *API) updateProduct(w http.ResponseWriter, r *http.Request, productID openapi.ProductId) {
+func (a *API) UpdateProduct(ctx context.Context, request api.UpdateProductRequestObject) (api.UpdateProductResponseObject, error) {
 	if a.deps.Catalog == nil {
-		a.notImplemented(w)
-		return
+		return api.UpdateProduct501JSONResponse{NotImplementedJSONResponse: notImplemented()}, nil
 	}
-	input, ok := decodeProductInput(w, r)
-	if !ok {
-		return
+	if request.Body == nil {
+		body := validationBody("request body is required")
+		return api.UpdateProduct422JSONResponse{ValidationErrorJSONResponse: api.ValidationErrorJSONResponse(body)}, nil
 	}
-	product, err := a.deps.Catalog.UpdateProduct(r.Context(), catalogdom.ProductID(productID), productInputToDomain(input))
+	product, err := a.deps.Catalog.UpdateProduct(ctx, catalogdom.ProductID(request.ProductId), productInputToDomain(*request.Body))
 	if err != nil {
-		writeError(w, err)
-		return
+		return updateProductError(err), nil
 	}
-	writeJSON(w, http.StatusOK, productToAPI(product))
+	return api.UpdateProduct200JSONResponse{ProductOKJSONResponse: api.ProductOKJSONResponse(productToAPI(product))}, nil
 }
 
-func (a *API) deleteProduct(w http.ResponseWriter, r *http.Request, productID openapi.ProductId) {
+func (a *API) DeleteProduct(ctx context.Context, request api.DeleteProductRequestObject) (api.DeleteProductResponseObject, error) {
 	if a.deps.Catalog == nil {
-		a.notImplemented(w)
-		return
+		return api.DeleteProduct501JSONResponse{NotImplementedJSONResponse: notImplemented()}, nil
 	}
-	if err := a.deps.Catalog.DeleteProduct(r.Context(), catalogdom.ProductID(productID)); err != nil {
-		writeError(w, err)
-		return
+	if err := a.deps.Catalog.DeleteProduct(ctx, catalogdom.ProductID(request.ProductId)); err != nil {
+		return deleteProductError(err), nil
 	}
-	w.WriteHeader(http.StatusNoContent)
+	return api.DeleteProduct204Response{}, nil
 }
 
-func (a *API) listRoleTags(w http.ResponseWriter, r *http.Request) {
+func (a *API) ListRoleTags(ctx context.Context, request api.ListRoleTagsRequestObject) (api.ListRoleTagsResponseObject, error) {
 	if a.deps.Catalog == nil {
-		a.notImplemented(w)
-		return
+		return api.ListRoleTags501JSONResponse{NotImplementedJSONResponse: notImplemented()}, nil
 	}
-	roles, err := a.deps.Catalog.ListRoleTags(r.Context())
+	roles, err := a.deps.Catalog.ListRoleTags(ctx)
 	if err != nil {
-		writeError(w, err)
-		return
+		return nil, err
 	}
-	out := make([]openapi.RoleTag, 0, len(roles))
+	out := make([]api.RoleTag, 0, len(roles))
 	for _, role := range roles {
-		out = append(out, openapi.RoleTag{
+		out = append(out, api.RoleTag{
 			Id:       role.ID,
 			Code:     role.Code,
-			Kind:     openapi.RoleKind(role.Kind),
+			Kind:     api.RoleKind(role.Kind),
 			Label:    role.Label,
 			ParentId: role.ParentID,
 		})
 	}
-	writeJSON(w, http.StatusOK, out)
+	return api.ListRoleTags200JSONResponse(out), nil
 }
 
-func decodeProductInput(w http.ResponseWriter, r *http.Request) (openapi.ProductInput, bool) {
-	defer r.Body.Close()
-	var input openapi.ProductInput
-	decoder := json.NewDecoder(r.Body)
-	decoder.DisallowUnknownFields()
-	if err := decoder.Decode(&input); err != nil {
-		writeError(w, apperr.Validation("invalid product request body", err.Error()))
-		return openapi.ProductInput{}, false
+func createProductError(err error) api.CreateProductResponseObject {
+	return api.CreateProduct422JSONResponse{ValidationErrorJSONResponse: api.ValidationErrorJSONResponse(errorBody(err))}
+}
+
+func getProductError(err error) api.GetProductResponseObject {
+	return api.GetProduct404JSONResponse{NotFoundJSONResponse: api.NotFoundJSONResponse(errorBody(err))}
+}
+
+func updateProductError(err error) api.UpdateProductResponseObject {
+	status, body := apiError(err)
+	switch status {
+	case http.StatusNotFound:
+		return api.UpdateProduct404JSONResponse{NotFoundJSONResponse: api.NotFoundJSONResponse(body)}
+	default:
+		return api.UpdateProduct422JSONResponse{ValidationErrorJSONResponse: api.ValidationErrorJSONResponse(body)}
 	}
-	return input, true
 }
 
-func productInputToDomain(input openapi.ProductInput) catalogdom.Product {
+func deleteProductError(err error) api.DeleteProductResponseObject {
+	status, body := apiError(err)
+	switch status {
+	case http.StatusNotFound:
+		return api.DeleteProduct404JSONResponse{NotFoundJSONResponse: api.NotFoundJSONResponse(body)}
+	default:
+		return api.DeleteProduct422JSONResponse{ValidationErrorJSONResponse: api.ValidationErrorJSONResponse(body)}
+	}
+}
+
+func errorBody(err error) api.Error {
+	_, body := apiError(err)
+	return body
+}
+
+func apiError(err error) (int, api.Error) {
+	status, body := mapError(err)
+	if response, ok := body.(api.Error); ok {
+		return status, response
+	}
+	return http.StatusInternalServerError, api.Error{
+		Error:   "internal_error",
+		Message: "internal server error",
+	}
+}
+
+func validationBody(message string) api.Error {
+	return api.Error{
+		Error:   "validation_failed",
+		Message: message,
+	}
+}
+
+func productInputToDomain(input api.ProductInput) catalogdom.Product {
 	product := catalogdom.Product{
 		Brand:          input.Brand,
 		Name:           input.Name,
@@ -144,8 +170,8 @@ func productInputToDomain(input openapi.ProductInput) catalogdom.Product {
 	return product
 }
 
-func productToAPI(product catalogdom.Product) openapi.Product {
-	out := openapi.Product{
+func productToAPI(product catalogdom.Product) api.Product {
+	out := api.Product{
 		Id:             int64(product.ID),
 		Brand:          product.Brand,
 		Name:           product.Name,
@@ -167,7 +193,7 @@ func productToAPI(product catalogdom.Product) openapi.Product {
 	return out
 }
 
-func nutritionInputToDomain(input *openapi.NutritionFacts) *catalogdom.NutritionFacts {
+func nutritionInputToDomain(input *api.NutritionFacts) *catalogdom.NutritionFacts {
 	if input == nil {
 		return nil
 	}
@@ -185,11 +211,11 @@ func nutritionInputToDomain(input *openapi.NutritionFacts) *catalogdom.Nutrition
 	}
 }
 
-func nutritionToAPI(n *catalogdom.NutritionFacts) *openapi.NutritionFacts {
+func nutritionToAPI(n *catalogdom.NutritionFacts) *api.NutritionFacts {
 	if n == nil {
 		return nil
 	}
-	return &openapi.NutritionFacts{
+	return &api.NutritionFacts{
 		SaturatedFatPer100g:               float64PtrToFloat32Ptr(n.SaturatedFatPer100g),
 		TransFatPer100g:                   float64PtrToFloat32Ptr(n.TransFatPer100g),
 		IndustrialTransFatPer100g:         float64PtrToFloat32Ptr(n.IndustrialTransFatPer100g),
@@ -203,7 +229,7 @@ func nutritionToAPI(n *catalogdom.NutritionFacts) *openapi.NutritionFacts {
 	}
 }
 
-func dataQualityInputToDomain(input *openapi.NutritionDataQuality) *catalogdom.NutritionDataQualityMetadata {
+func dataQualityInputToDomain(input *api.NutritionDataQuality) *catalogdom.NutritionDataQualityMetadata {
 	if input == nil {
 		return nil
 	}
@@ -226,21 +252,21 @@ func dataQualityInputToDomain(input *openapi.NutritionDataQuality) *catalogdom.N
 	}
 }
 
-func dataQualityToAPI(input *catalogdom.NutritionDataQualityMetadata) *openapi.NutritionDataQuality {
+func dataQualityToAPI(input *catalogdom.NutritionDataQualityMetadata) *api.NutritionDataQuality {
 	if input == nil {
 		return nil
 	}
-	var quality *openapi.NutritionDataQualityNutritionDataQuality
+	var quality *api.NutritionDataQualityNutritionDataQuality
 	if input.NutritionDataQuality != nil {
-		value := openapi.NutritionDataQualityNutritionDataQuality(*input.NutritionDataQuality)
+		value := api.NutritionDataQualityNutritionDataQuality(*input.NutritionDataQuality)
 		quality = &value
 	}
-	var sourceKind *openapi.NutritionDataQualitySourceKind
+	var sourceKind *api.NutritionDataQualitySourceKind
 	if input.SourceKind != nil {
-		value := openapi.NutritionDataQualitySourceKind(*input.SourceKind)
+		value := api.NutritionDataQualitySourceKind(*input.SourceKind)
 		sourceKind = &value
 	}
-	return &openapi.NutritionDataQuality{
+	return &api.NutritionDataQuality{
 		NutritionDataQuality:   quality,
 		NutritionCoverageScore: float64PtrToFloat32Ptr(input.NutritionCoverageScore),
 		SourceKind:             sourceKind,
@@ -249,7 +275,7 @@ func dataQualityToAPI(input *catalogdom.NutritionDataQualityMetadata) *openapi.N
 	}
 }
 
-func classificationInputToDomain(input *openapi.FoodClassification) *catalogdom.FoodClassification {
+func classificationInputToDomain(input *api.FoodClassification) *catalogdom.FoodClassification {
 	if input == nil {
 		return nil
 	}
@@ -277,21 +303,21 @@ func classificationInputToDomain(input *openapi.FoodClassification) *catalogdom.
 	}
 }
 
-func classificationToAPI(input *catalogdom.FoodClassification) *openapi.FoodClassification {
+func classificationToAPI(input *catalogdom.FoodClassification) *api.FoodClassification {
 	if input == nil {
 		return nil
 	}
-	var foodGroup *openapi.FoodClassificationFoodGroup
+	var foodGroup *api.FoodClassificationFoodGroup
 	if input.FoodGroup != nil {
-		value := openapi.FoodClassificationFoodGroup(*input.FoodGroup)
+		value := api.FoodClassificationFoodGroup(*input.FoodGroup)
 		foodGroup = &value
 	}
-	var processingLevel *openapi.FoodClassificationProcessingLevel
+	var processingLevel *api.FoodClassificationProcessingLevel
 	if input.ProcessingLevel != nil {
-		value := openapi.FoodClassificationProcessingLevel(*input.ProcessingLevel)
+		value := api.FoodClassificationProcessingLevel(*input.ProcessingLevel)
 		processingLevel = &value
 	}
-	return &openapi.FoodClassification{
+	return &api.FoodClassification{
 		FoodGroup:            foodGroup,
 		ProcessingLevel:      processingLevel,
 		ProcessingConfidence: float64PtrToFloat32Ptr(input.ProcessingConfidence),

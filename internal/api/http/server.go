@@ -48,10 +48,7 @@ func New(d Deps) http.Handler {
 			writeError(w, apperr.Validation(err.Error()))
 		},
 		ResponseErrorHandlerFunc: func(w http.ResponseWriter, r *http.Request, err error) {
-			writeJSON(w, http.StatusInternalServerError, map[string]string{
-				"error":   "internal_error",
-				"message": "internal server error",
-			})
+			writeError(w, err)
 		},
 	})
 	api.HandlerWithOptions(strictHandler, api.StdHTTPServerOptions{
