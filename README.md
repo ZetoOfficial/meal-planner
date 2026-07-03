@@ -83,6 +83,21 @@ make run
 | `LLM_MODEL` | Имя модели. |
 | `LLM_API_KEY` | API key провайдера. Сейчас реальный client еще не подключен. |
 
+## Integration tests
+
+Postgres integration tests are opt-in. Set `TEST_DATABASE_URL` to a local
+Postgres database; each test run creates a temporary schema, applies migrations
+from `migrations/`, and drops the schema during cleanup.
+
+```bash
+make test-db-up
+TEST_DATABASE_URL='postgres://postgres:postgres@localhost:5432/meal_planner?sslmode=disable' make test-integration
+```
+
+`make test` always runs unit tests. If `TEST_DATABASE_URL` is empty, it reports
+that integration tests were skipped. If `TEST_DATABASE_URL` is set, it also runs
+`make test-integration`.
+
 ## API
 
 - Контракт: `api/openapi.yaml`.
@@ -112,7 +127,10 @@ make migrate-status           # статус миграций
 make new-migration name=add_x # создать новую миграцию
 make build                    # собрать bin/server
 make run                      # запустить ./cmd/api
-make test                     # go test ./...
+make test                     # unit tests + integration-test status
+make test-unit                # go test ./...
+make test-integration         # Postgres integration tests, requires TEST_DATABASE_URL
+make test-db-up               # start local Postgres for integration tests
 make lint                     # golangci-lint run
 make up                       # docker compose up --build
 make down                     # docker compose down
