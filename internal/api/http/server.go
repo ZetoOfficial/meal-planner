@@ -1,5 +1,5 @@
-// Package httpapi — delivery-адаптер: роутинг, auth, маппинг DTO ↔ usecase (ARCHITECTURE §9).
-// В хендлерах нет solver/SQL/quality/LLM-логики — только транспорт.
+// Package httpapi is the HTTP delivery adapter: routing, auth, DTO mapping,
+// and error mapping. Business logic belongs in use cases and domain packages.
 package httpapi
 
 import (
@@ -8,41 +8,50 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/ZetoOfficial/meal-planner/internal/api/openapi"
 	"github.com/ZetoOfficial/meal-planner/internal/llm"
 )
 
-// Deps — зависимости HTTP-слоя. Собираются в composition root (internal/app),
-// сюда передаётся уже готовый набор, без импорта app (избегаем цикла).
+// Deps are HTTP-layer dependencies assembled by the composition root.
 type Deps struct {
 	APIToken string
 	DB       *pgxpool.Pool
 	LLM      llm.Client
-	// TODO: use cases (catalog/eater/recipe/planning/...) монтируются сюда.
+	// TODO: add use cases here as they are implemented.
 }
 
-// New возвращает корневой http.Handler.
-// Сгенерированные oapi-codegen хендлеры монтируются здесь после `make generate`:
-//
-//	openapi.HandlerFromMux(apiImpl, mux)  // см. internal/api/openapi/generated.go
+// New returns the root HTTP handler.
 func New(d Deps) http.Handler {
 	mux := http.NewServeMux()
 
-	// healthcheck — без авторизации (для docker healthcheck / k8s probe).
+	// Healthcheck stays unauthenticated for docker/k8s probes.
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, r *http.Request) {
-		if err := d.DB.Ping(r.Context()); err != nil {
-			writeJSON(w, http.StatusServiceUnavailable, map[string]string{
-				"status": "down", "error": "database unreachable",
-			})
-			return
+		if d.DB != nil {
+			if err := d.DB.Ping(r.Context()); err != nil {
+				writeJSON(w, http.StatusServiceUnavailable, map[string]string{
+					"status": "down",
+					"error":  "database unreachable",
+				})
+				return
+			}
 		}
 		writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
 	})
 
-	// Защищённый API монтируется под auth-middleware.
+	openapi.HandlerWithOptions(NewAPI(d), openapi.StdHTTPServerOptions{
+		BaseRouter: mux,
+		ErrorHandlerFunc: func(w http.ResponseWriter, r *http.Request, err error) {
+			writeJSON(w, http.StatusBadRequest, map[string]string{
+				"error":   "bad_request",
+				"message": err.Error(),
+			})
+		},
+	})
+
 	return withAuth(d.APIToken, mux)
 }
 
-// withAuth — статический X-API-Token (owner-only, SPEC §9). /healthz пропускаем.
+// withAuth enforces static owner-only X-API-Token auth. /healthz is public.
 func withAuth(token string, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if token == "" || r.URL.Path == "/healthz" {
@@ -51,7 +60,8 @@ func withAuth(token string, next http.Handler) http.Handler {
 		}
 		if r.Header.Get("X-API-Token") != token {
 			writeJSON(w, http.StatusUnauthorized, map[string]string{
-				"error": "unauthorized", "message": "missing or invalid X-API-Token",
+				"error":   "unauthorized",
+				"message": "missing or invalid X-API-Token",
 			})
 			return
 		}
