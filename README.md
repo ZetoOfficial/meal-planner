@@ -25,7 +25,7 @@ Owner-only HTTP API для планирования домашнего meal-prep
 - DB contract: `docs/schema.sql` + начальная tern-миграция.
 - Генерация DTO/handlers через `oapi-codegen`.
 - Генерация type-safe DB-кода через `sqlc`.
-- HTTP-сервер на std `net/http`, `/healthz`, graceful shutdown.
+- HTTP-сервер на std `net/http`, `/livez` + `/readyz`, graceful shutdown.
 - Postgres pool, config loading, статический `X-API-Token`.
 - Структура domain/usecase/solver/quality/llm под DDD-lite и ports/adapters.
 
@@ -53,7 +53,7 @@ Docker-first запуск:
 cp .env.example .env
 make generate
 make up
-curl localhost:8080/healthz
+curl localhost:8080/readyz
 ```
 
 `make up` поднимает Postgres, одноразово прогоняет миграции через сервис
@@ -87,13 +87,14 @@ make run
 
 - Контракт: `api/openapi.yaml`.
 - Base URL для локального запуска: `http://localhost:8080`.
-- Healthcheck без авторизации: `GET /healthz`.
+- Probes без авторизации: `GET /livez` and `GET /readyz`.
 - Остальной API защищается заголовком `X-API-Token`, если `API_TOKEN` не пустой.
 
 Проверка healthcheck:
 
 ```bash
-curl localhost:8080/healthz
+curl localhost:8080/livez
+curl localhost:8080/readyz
 ```
 
 Пример запроса к защищенному API после подключения хендлеров:
@@ -138,7 +139,7 @@ make down                     # docker compose down
 ```text
 cmd/api/              entrypoint HTTP API
 internal/app/         config + composition root
-internal/api/http/    net/http adapter, auth, /healthz
+internal/api/http/    net/http adapter, auth, /livez, /readyz
 internal/api/openapi/ generated oapi-codegen code
 internal/domain/      чистые доменные типы и правила
 internal/usecase/     application scenarios + consumer-side ports

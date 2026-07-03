@@ -4,6 +4,7 @@ package: openapi
 output: internal/api/openapi/generated.go
 generate:
   std-http-server: true   # сервер на голом net/http (Go 1.22+), как в SPEC §11
+  strict-server: true
   models: true            # DTO из schemas
   embedded-spec: true     # встроить спеку для self-serve / валидации
 output-options:
