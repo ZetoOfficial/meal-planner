@@ -9,6 +9,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	api "github.com/ZetoOfficial/meal-planner/internal/api/openapi"
+	apperr "github.com/ZetoOfficial/meal-planner/internal/errors"
 	"github.com/ZetoOfficial/meal-planner/internal/llm"
 )
 
@@ -44,10 +45,7 @@ func New(d Deps) http.Handler {
 	apiMux := http.NewServeMux()
 	strictHandler := api.NewStrictHandlerWithOptions(NewAPI(d), nil, api.StrictHTTPServerOptions{
 		RequestErrorHandlerFunc: func(w http.ResponseWriter, r *http.Request, err error) {
-			writeJSON(w, http.StatusBadRequest, map[string]string{
-				"error":   "bad_request",
-				"message": err.Error(),
-			})
+			writeError(w, apperr.Validation(err.Error()))
 		},
 		ResponseErrorHandlerFunc: func(w http.ResponseWriter, r *http.Request, err error) {
 			writeJSON(w, http.StatusInternalServerError, map[string]string{
@@ -59,10 +57,7 @@ func New(d Deps) http.Handler {
 	api.HandlerWithOptions(strictHandler, api.StdHTTPServerOptions{
 		BaseRouter: apiMux,
 		ErrorHandlerFunc: func(w http.ResponseWriter, r *http.Request, err error) {
-			writeJSON(w, http.StatusBadRequest, map[string]string{
-				"error":   "bad_request",
-				"message": err.Error(),
-			})
+			writeError(w, apperr.Validation(err.Error()))
 		},
 	})
 
@@ -79,10 +74,7 @@ func withAuth(token string, next http.Handler) http.Handler {
 			return
 		}
 		if r.Header.Get("X-API-Token") != token {
-			writeJSON(w, http.StatusUnauthorized, map[string]string{
-				"error":   "unauthorized",
-				"message": "missing or invalid X-API-Token",
-			})
+			writeError(w, apperr.Unauthorized("missing or invalid X-API-Token"))
 			return
 		}
 		next.ServeHTTP(w, r)
