@@ -124,26 +124,6 @@ func (a *API) PreviewSwap(ctx context.Context, request api.PreviewSwapRequestObj
 	return api.PreviewSwap501JSONResponse{NotImplementedJSONResponse: notImplemented()}, nil
 }
 
-func (a *API) ListProducts(ctx context.Context, request api.ListProductsRequestObject) (api.ListProductsResponseObject, error) {
-	return api.ListProducts501JSONResponse{NotImplementedJSONResponse: notImplemented()}, nil
-}
-
-func (a *API) CreateProduct(ctx context.Context, request api.CreateProductRequestObject) (api.CreateProductResponseObject, error) {
-	return api.CreateProduct501JSONResponse{NotImplementedJSONResponse: notImplemented()}, nil
-}
-
-func (a *API) DeleteProduct(ctx context.Context, request api.DeleteProductRequestObject) (api.DeleteProductResponseObject, error) {
-	return api.DeleteProduct501JSONResponse{NotImplementedJSONResponse: notImplemented()}, nil
-}
-
-func (a *API) GetProduct(ctx context.Context, request api.GetProductRequestObject) (api.GetProductResponseObject, error) {
-	return api.GetProduct501JSONResponse{NotImplementedJSONResponse: notImplemented()}, nil
-}
-
-func (a *API) UpdateProduct(ctx context.Context, request api.UpdateProductRequestObject) (api.UpdateProductResponseObject, error) {
-	return api.UpdateProduct501JSONResponse{NotImplementedJSONResponse: notImplemented()}, nil
-}
-
 func (a *API) ListRecipes(ctx context.Context, request api.ListRecipesRequestObject) (api.ListRecipesResponseObject, error) {
 	return api.ListRecipes501JSONResponse{NotImplementedJSONResponse: notImplemented()}, nil
 }
@@ -158,10 +138,6 @@ func (a *API) GetRecipe(ctx context.Context, request api.GetRecipeRequestObject)
 
 func (a *API) PromoteRecipe(ctx context.Context, request api.PromoteRecipeRequestObject) (api.PromoteRecipeResponseObject, error) {
 	return api.PromoteRecipe501JSONResponse{NotImplementedJSONResponse: notImplemented()}, nil
-}
-
-func (a *API) ListRoleTags(ctx context.Context, request api.ListRoleTagsRequestObject) (api.ListRoleTagsResponseObject, error) {
-	return api.ListRoleTags501JSONResponse{NotImplementedJSONResponse: notImplemented()}, nil
 }
 
 func (a *API) UpdateShoppingListItem(ctx context.Context, request api.UpdateShoppingListItemRequestObject) (api.UpdateShoppingListItemResponseObject, error) {

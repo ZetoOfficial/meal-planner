@@ -45,6 +45,7 @@ func run(log *slog.Logger) error {
 		APIToken:   cfg.APIToken,
 		ReadyCheck: application.Ping,
 		LLM:        application.LLM,
+		Catalog:    application.Catalog,
 	})
 
 	srv := &http.Server{

@@ -1,14 +1,21 @@
-// Package catalog — личная база продуктов, роли, аллергены, food classification,
-// nutrition facts. Не знает про планировщик (ARCHITECTURE §5.1).
 package catalog
 
-// ProductID — идентификатор продукта.
 type ProductID int64
 
-// Product — бренд с реальными БЖУ на 100 г и quality-полями. TODO: nutrition facts,
-// classification, data-quality метаданные (см. docs/schema.sql).
 type Product struct {
-	ID    ProductID
-	Brand string
-	Name  string
+	ID             ProductID
+	Brand          string
+	Name           string
+	ProteinPer100g float64
+	FatPer100g     float64
+	CarbPer100g    float64
+	KcalPer100g    float64
+	PricePer100g   *float64
+	DefaultUnit    string
+	Purchasable    bool
+	Allergens      []string
+	Roles          []string
+	Nutrition      *NutritionFacts
+	DataQuality    *NutritionDataQualityMetadata
+	Classification *FoodClassification
 }

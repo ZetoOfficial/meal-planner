@@ -10,6 +10,7 @@ import (
 	api "github.com/ZetoOfficial/meal-planner/internal/api/openapi"
 	apperr "github.com/ZetoOfficial/meal-planner/internal/errors"
 	"github.com/ZetoOfficial/meal-planner/internal/llm"
+	cataloguc "github.com/ZetoOfficial/meal-planner/internal/usecase/catalog"
 )
 
 // Deps are HTTP-layer dependencies assembled by the composition root.
@@ -17,7 +18,7 @@ type Deps struct {
 	APIToken   string
 	ReadyCheck func(context.Context) error
 	LLM        llm.Client
-	// TODO: add use cases here as they are implemented.
+	Catalog    *cataloguc.Service
 }
 
 // New returns the root HTTP handler.

@@ -24,12 +24,9 @@ type Repositories struct {
 }
 
 func New(db sqlc.DBTX) Repositories {
-	return NewFromQuerier(sqlc.New(db))
-}
-
-func NewFromQuerier(q sqlc.Querier) Repositories {
+	q := sqlc.New(db)
 	return Repositories{
-		Products: NewProductRepository(q),
+		Products: NewProductRepository(db),
 		Eaters:   NewEaterRepository(),
 		Recipes:  NewRecipeRepository(q),
 		Plans:    NewPlanRepository(q),

@@ -8,12 +8,14 @@ import (
 	"github.com/ZetoOfficial/meal-planner/internal/llm"
 	"github.com/ZetoOfficial/meal-planner/internal/postgres"
 	"github.com/ZetoOfficial/meal-planner/internal/postgres/repositories"
+	cataloguc "github.com/ZetoOfficial/meal-planner/internal/usecase/catalog"
 )
 
 // App is the composition root for infrastructure adapters and use cases.
 type App struct {
 	Cfg          Config
 	Repositories repositories.Repositories
+	Catalog      *cataloguc.Service
 	LLM          llm.Client
 	pool         *pgxpool.Pool
 }
@@ -23,9 +25,11 @@ func New(ctx context.Context, cfg Config) (*App, error) {
 	if err != nil {
 		return nil, err
 	}
+	repos := repositories.New(pool)
 	return &App{
 		Cfg:          cfg,
-		Repositories: repositories.New(pool),
+		Repositories: repos,
+		Catalog:      cataloguc.NewService(repos.Products),
 		LLM:          llm.StubClient{Model: cfg.LLMModel},
 		pool:         pool,
 	}, nil

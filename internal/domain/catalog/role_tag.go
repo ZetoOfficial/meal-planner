@@ -1,10 +1,20 @@
 package catalog
 
-// RoleKind — верхний уровень роли продукта в слоте.
 type RoleKind string
 
-// RoleTag — ролевой тег с подклассами; code = "kind:value[:subclass]".
+const (
+	RoleKindProtein RoleKind = "protein"
+	RoleKindCarb    RoleKind = "carb"
+	RoleKindVeg     RoleKind = "veg"
+	RoleKindSauce   RoleKind = "sauce"
+	RoleKindFat     RoleKind = "fat"
+	RoleKindOther   RoleKind = "other"
+)
+
 type RoleTag struct {
-	Code string
-	Kind RoleKind
+	ID       int64
+	Code     string
+	Kind     RoleKind
+	Label    string
+	ParentID *int64
 }

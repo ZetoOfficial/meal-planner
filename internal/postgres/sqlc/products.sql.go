@@ -11,24 +11,97 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const addProductAllergen = `-- name: AddProductAllergen :exec
+INSERT INTO product_allergen (product_id, allergen)
+VALUES ($1, $2)
+ON CONFLICT DO NOTHING
+`
+
+type AddProductAllergenParams struct {
+	ProductID int64  `json:"product_id"`
+	Allergen  string `json:"allergen"`
+}
+
+func (q *Queries) AddProductAllergen(ctx context.Context, arg AddProductAllergenParams) error {
+	_, err := q.db.Exec(ctx, addProductAllergen, arg.ProductID, arg.Allergen)
+	return err
+}
+
+const addProductRole = `-- name: AddProductRole :exec
+INSERT INTO product_role (product_id, role_tag_id)
+VALUES ($1, $2)
+ON CONFLICT DO NOTHING
+`
+
+type AddProductRoleParams struct {
+	ProductID int64 `json:"product_id"`
+	RoleTagID int64 `json:"role_tag_id"`
+}
+
+func (q *Queries) AddProductRole(ctx context.Context, arg AddProductRoleParams) error {
+	_, err := q.db.Exec(ctx, addProductRole, arg.ProductID, arg.RoleTagID)
+	return err
+}
+
 const createProduct = `-- name: CreateProduct :one
 INSERT INTO product (
-    brand, name, protein_per_100g, fat_per_100g, carb_per_100g, kcal_per_100g,
-    price_per_100g, default_unit, purchasable
-) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+    brand,
+    name,
+    protein_per_100g,
+    fat_per_100g,
+    carb_per_100g,
+    kcal_per_100g,
+    price_per_100g,
+    default_unit,
+    purchasable,
+    saturated_fat_per_100g,
+    trans_fat_per_100g,
+    industrial_trans_fat_per_100g,
+    fiber_per_100g,
+    sodium_mg_per_100g,
+    salt_g_per_100g,
+    total_sugars_per_100g,
+    added_sugars_per_100g,
+    free_sugars_per_100g,
+    contains_partially_hydrogenated_oils,
+    nutrition_data_quality,
+    nutrition_coverage_score,
+    source_kind,
+    source_note,
+    last_verified_at
+) VALUES (
+    $1, $2, $3, $4, $5, $6, $7, $8, $9,
+    $10, $11, $12, $13, $14, $15, $16, $17, $18,
+    $19, $20, $21, $22, $23, $24
+)
 RETURNING id, brand, name, protein_per_100g, fat_per_100g, carb_per_100g, kcal_per_100g, price_per_100g, default_unit, purchasable, notes, saturated_fat_per_100g, trans_fat_per_100g, industrial_trans_fat_per_100g, fiber_per_100g, sodium_mg_per_100g, salt_g_per_100g, total_sugars_per_100g, added_sugars_per_100g, free_sugars_per_100g, contains_partially_hydrogenated_oils, nutrition_data_quality, nutrition_coverage_score, source_kind, source_note, last_verified_at, created_at, updated_at
 `
 
 type CreateProductParams struct {
-	Brand          string         `json:"brand"`
-	Name           string         `json:"name"`
-	ProteinPer100g pgtype.Numeric `json:"protein_per_100g"`
-	FatPer100g     pgtype.Numeric `json:"fat_per_100g"`
-	CarbPer100g    pgtype.Numeric `json:"carb_per_100g"`
-	KcalPer100g    pgtype.Numeric `json:"kcal_per_100g"`
-	PricePer100g   pgtype.Numeric `json:"price_per_100g"`
-	DefaultUnit    string         `json:"default_unit"`
-	Purchasable    bool           `json:"purchasable"`
+	Brand                             string               `json:"brand"`
+	Name                              string               `json:"name"`
+	ProteinPer100g                    pgtype.Numeric       `json:"protein_per_100g"`
+	FatPer100g                        pgtype.Numeric       `json:"fat_per_100g"`
+	CarbPer100g                       pgtype.Numeric       `json:"carb_per_100g"`
+	KcalPer100g                       pgtype.Numeric       `json:"kcal_per_100g"`
+	PricePer100g                      pgtype.Numeric       `json:"price_per_100g"`
+	DefaultUnit                       string               `json:"default_unit"`
+	Purchasable                       bool                 `json:"purchasable"`
+	SaturatedFatPer100g               pgtype.Numeric       `json:"saturated_fat_per_100g"`
+	TransFatPer100g                   pgtype.Numeric       `json:"trans_fat_per_100g"`
+	IndustrialTransFatPer100g         pgtype.Numeric       `json:"industrial_trans_fat_per_100g"`
+	FiberPer100g                      pgtype.Numeric       `json:"fiber_per_100g"`
+	SodiumMgPer100g                   pgtype.Numeric       `json:"sodium_mg_per_100g"`
+	SaltGPer100g                      pgtype.Numeric       `json:"salt_g_per_100g"`
+	TotalSugarsPer100g                pgtype.Numeric       `json:"total_sugars_per_100g"`
+	AddedSugarsPer100g                pgtype.Numeric       `json:"added_sugars_per_100g"`
+	FreeSugarsPer100g                 pgtype.Numeric       `json:"free_sugars_per_100g"`
+	ContainsPartiallyHydrogenatedOils *bool                `json:"contains_partially_hydrogenated_oils"`
+	NutritionDataQuality              NutritionDataQuality `json:"nutrition_data_quality"`
+	NutritionCoverageScore            pgtype.Numeric       `json:"nutrition_coverage_score"`
+	SourceKind                        *SourceKind          `json:"source_kind"`
+	SourceNote                        *string              `json:"source_note"`
+	LastVerifiedAt                    pgtype.Timestamptz   `json:"last_verified_at"`
 }
 
 func (q *Queries) CreateProduct(ctx context.Context, arg CreateProductParams) (Product, error) {
@@ -42,6 +115,21 @@ func (q *Queries) CreateProduct(ctx context.Context, arg CreateProductParams) (P
 		arg.PricePer100g,
 		arg.DefaultUnit,
 		arg.Purchasable,
+		arg.SaturatedFatPer100g,
+		arg.TransFatPer100g,
+		arg.IndustrialTransFatPer100g,
+		arg.FiberPer100g,
+		arg.SodiumMgPer100g,
+		arg.SaltGPer100g,
+		arg.TotalSugarsPer100g,
+		arg.AddedSugarsPer100g,
+		arg.FreeSugarsPer100g,
+		arg.ContainsPartiallyHydrogenatedOils,
+		arg.NutritionDataQuality,
+		arg.NutritionCoverageScore,
+		arg.SourceKind,
+		arg.SourceNote,
+		arg.LastVerifiedAt,
 	)
 	var i Product
 	err := row.Scan(
@@ -77,12 +165,42 @@ func (q *Queries) CreateProduct(ctx context.Context, arg CreateProductParams) (P
 	return i, err
 }
 
-const deleteProduct = `-- name: DeleteProduct :exec
+const deleteProduct = `-- name: DeleteProduct :execrows
 DELETE FROM product WHERE id = $1
 `
 
-func (q *Queries) DeleteProduct(ctx context.Context, id int64) error {
-	_, err := q.db.Exec(ctx, deleteProduct, id)
+func (q *Queries) DeleteProduct(ctx context.Context, id int64) (int64, error) {
+	result, err := q.db.Exec(ctx, deleteProduct, id)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
+const deleteProductAllergens = `-- name: DeleteProductAllergens :exec
+DELETE FROM product_allergen WHERE product_id = $1
+`
+
+func (q *Queries) DeleteProductAllergens(ctx context.Context, productID int64) error {
+	_, err := q.db.Exec(ctx, deleteProductAllergens, productID)
+	return err
+}
+
+const deleteProductFoodClassification = `-- name: DeleteProductFoodClassification :exec
+DELETE FROM product_food_classification WHERE product_id = $1
+`
+
+func (q *Queries) DeleteProductFoodClassification(ctx context.Context, productID int64) error {
+	_, err := q.db.Exec(ctx, deleteProductFoodClassification, productID)
+	return err
+}
+
+const deleteProductRoles = `-- name: DeleteProductRoles :exec
+DELETE FROM product_role WHERE product_id = $1
+`
+
+func (q *Queries) DeleteProductRoles(ctx context.Context, productID int64) error {
+	_, err := q.db.Exec(ctx, deleteProductRoles, productID)
 	return err
 }
 
@@ -124,6 +242,85 @@ func (q *Queries) GetProduct(ctx context.Context, id int64) (Product, error) {
 		&i.UpdatedAt,
 	)
 	return i, err
+}
+
+const getProductFoodClassification = `-- name: GetProductFoodClassification :one
+SELECT product_id, food_group, processing_level, processing_confidence, counts_to_fruit_veg, is_legume, is_whole_grain, whole_grain_ratio, is_red_meat, is_processed_meat, classification_source, classification_note FROM product_food_classification
+WHERE product_id = $1
+`
+
+func (q *Queries) GetProductFoodClassification(ctx context.Context, productID int64) (ProductFoodClassification, error) {
+	row := q.db.QueryRow(ctx, getProductFoodClassification, productID)
+	var i ProductFoodClassification
+	err := row.Scan(
+		&i.ProductID,
+		&i.FoodGroup,
+		&i.ProcessingLevel,
+		&i.ProcessingConfidence,
+		&i.CountsToFruitVeg,
+		&i.IsLegume,
+		&i.IsWholeGrain,
+		&i.WholeGrainRatio,
+		&i.IsRedMeat,
+		&i.IsProcessedMeat,
+		&i.ClassificationSource,
+		&i.ClassificationNote,
+	)
+	return i, err
+}
+
+const listProductAllergens = `-- name: ListProductAllergens :many
+SELECT allergen FROM product_allergen
+WHERE product_id = $1
+ORDER BY allergen
+`
+
+func (q *Queries) ListProductAllergens(ctx context.Context, productID int64) ([]string, error) {
+	rows, err := q.db.Query(ctx, listProductAllergens, productID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []string{}
+	for rows.Next() {
+		var allergen string
+		if err := rows.Scan(&allergen); err != nil {
+			return nil, err
+		}
+		items = append(items, allergen)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listProductRoles = `-- name: ListProductRoles :many
+SELECT rt.code
+FROM product_role pr
+JOIN role_tag rt ON rt.id = pr.role_tag_id
+WHERE pr.product_id = $1
+ORDER BY rt.code
+`
+
+func (q *Queries) ListProductRoles(ctx context.Context, productID int64) ([]string, error) {
+	rows, err := q.db.Query(ctx, listProductRoles, productID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []string{}
+	for rows.Next() {
+		var code string
+		if err := rows.Scan(&code); err != nil {
+			return nil, err
+		}
+		items = append(items, code)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const listProducts = `-- name: ListProducts :many
@@ -235,4 +432,261 @@ func (q *Queries) ListProductsByRole(ctx context.Context, code string) ([]Produc
 		return nil, err
 	}
 	return items, nil
+}
+
+const listRoleTags = `-- name: ListRoleTags :many
+SELECT id, code, kind, label, parent_id
+FROM role_tag
+ORDER BY code
+`
+
+func (q *Queries) ListRoleTags(ctx context.Context) ([]RoleTag, error) {
+	rows, err := q.db.Query(ctx, listRoleTags)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []RoleTag{}
+	for rows.Next() {
+		var i RoleTag
+		if err := rows.Scan(
+			&i.ID,
+			&i.Code,
+			&i.Kind,
+			&i.Label,
+			&i.ParentID,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const updateProduct = `-- name: UpdateProduct :one
+UPDATE product
+SET
+    brand = $2,
+    name = $3,
+    protein_per_100g = $4,
+    fat_per_100g = $5,
+    carb_per_100g = $6,
+    kcal_per_100g = $7,
+    price_per_100g = $8,
+    default_unit = $9,
+    purchasable = $10,
+    saturated_fat_per_100g = $11,
+    trans_fat_per_100g = $12,
+    industrial_trans_fat_per_100g = $13,
+    fiber_per_100g = $14,
+    sodium_mg_per_100g = $15,
+    salt_g_per_100g = $16,
+    total_sugars_per_100g = $17,
+    added_sugars_per_100g = $18,
+    free_sugars_per_100g = $19,
+    contains_partially_hydrogenated_oils = $20,
+    nutrition_data_quality = $21,
+    nutrition_coverage_score = $22,
+    source_kind = $23,
+    source_note = $24,
+    last_verified_at = $25,
+    updated_at = now()
+WHERE id = $1
+RETURNING id, brand, name, protein_per_100g, fat_per_100g, carb_per_100g, kcal_per_100g, price_per_100g, default_unit, purchasable, notes, saturated_fat_per_100g, trans_fat_per_100g, industrial_trans_fat_per_100g, fiber_per_100g, sodium_mg_per_100g, salt_g_per_100g, total_sugars_per_100g, added_sugars_per_100g, free_sugars_per_100g, contains_partially_hydrogenated_oils, nutrition_data_quality, nutrition_coverage_score, source_kind, source_note, last_verified_at, created_at, updated_at
+`
+
+type UpdateProductParams struct {
+	ID                                int64                `json:"id"`
+	Brand                             string               `json:"brand"`
+	Name                              string               `json:"name"`
+	ProteinPer100g                    pgtype.Numeric       `json:"protein_per_100g"`
+	FatPer100g                        pgtype.Numeric       `json:"fat_per_100g"`
+	CarbPer100g                       pgtype.Numeric       `json:"carb_per_100g"`
+	KcalPer100g                       pgtype.Numeric       `json:"kcal_per_100g"`
+	PricePer100g                      pgtype.Numeric       `json:"price_per_100g"`
+	DefaultUnit                       string               `json:"default_unit"`
+	Purchasable                       bool                 `json:"purchasable"`
+	SaturatedFatPer100g               pgtype.Numeric       `json:"saturated_fat_per_100g"`
+	TransFatPer100g                   pgtype.Numeric       `json:"trans_fat_per_100g"`
+	IndustrialTransFatPer100g         pgtype.Numeric       `json:"industrial_trans_fat_per_100g"`
+	FiberPer100g                      pgtype.Numeric       `json:"fiber_per_100g"`
+	SodiumMgPer100g                   pgtype.Numeric       `json:"sodium_mg_per_100g"`
+	SaltGPer100g                      pgtype.Numeric       `json:"salt_g_per_100g"`
+	TotalSugarsPer100g                pgtype.Numeric       `json:"total_sugars_per_100g"`
+	AddedSugarsPer100g                pgtype.Numeric       `json:"added_sugars_per_100g"`
+	FreeSugarsPer100g                 pgtype.Numeric       `json:"free_sugars_per_100g"`
+	ContainsPartiallyHydrogenatedOils *bool                `json:"contains_partially_hydrogenated_oils"`
+	NutritionDataQuality              NutritionDataQuality `json:"nutrition_data_quality"`
+	NutritionCoverageScore            pgtype.Numeric       `json:"nutrition_coverage_score"`
+	SourceKind                        *SourceKind          `json:"source_kind"`
+	SourceNote                        *string              `json:"source_note"`
+	LastVerifiedAt                    pgtype.Timestamptz   `json:"last_verified_at"`
+}
+
+func (q *Queries) UpdateProduct(ctx context.Context, arg UpdateProductParams) (Product, error) {
+	row := q.db.QueryRow(ctx, updateProduct,
+		arg.ID,
+		arg.Brand,
+		arg.Name,
+		arg.ProteinPer100g,
+		arg.FatPer100g,
+		arg.CarbPer100g,
+		arg.KcalPer100g,
+		arg.PricePer100g,
+		arg.DefaultUnit,
+		arg.Purchasable,
+		arg.SaturatedFatPer100g,
+		arg.TransFatPer100g,
+		arg.IndustrialTransFatPer100g,
+		arg.FiberPer100g,
+		arg.SodiumMgPer100g,
+		arg.SaltGPer100g,
+		arg.TotalSugarsPer100g,
+		arg.AddedSugarsPer100g,
+		arg.FreeSugarsPer100g,
+		arg.ContainsPartiallyHydrogenatedOils,
+		arg.NutritionDataQuality,
+		arg.NutritionCoverageScore,
+		arg.SourceKind,
+		arg.SourceNote,
+		arg.LastVerifiedAt,
+	)
+	var i Product
+	err := row.Scan(
+		&i.ID,
+		&i.Brand,
+		&i.Name,
+		&i.ProteinPer100g,
+		&i.FatPer100g,
+		&i.CarbPer100g,
+		&i.KcalPer100g,
+		&i.PricePer100g,
+		&i.DefaultUnit,
+		&i.Purchasable,
+		&i.Notes,
+		&i.SaturatedFatPer100g,
+		&i.TransFatPer100g,
+		&i.IndustrialTransFatPer100g,
+		&i.FiberPer100g,
+		&i.SodiumMgPer100g,
+		&i.SaltGPer100g,
+		&i.TotalSugarsPer100g,
+		&i.AddedSugarsPer100g,
+		&i.FreeSugarsPer100g,
+		&i.ContainsPartiallyHydrogenatedOils,
+		&i.NutritionDataQuality,
+		&i.NutritionCoverageScore,
+		&i.SourceKind,
+		&i.SourceNote,
+		&i.LastVerifiedAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const upsertProductFoodClassification = `-- name: UpsertProductFoodClassification :one
+INSERT INTO product_food_classification (
+    product_id,
+    food_group,
+    processing_level,
+    processing_confidence,
+    counts_to_fruit_veg,
+    is_legume,
+    is_whole_grain,
+    whole_grain_ratio,
+    is_red_meat,
+    is_processed_meat,
+    classification_note
+) VALUES (
+    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11
+)
+ON CONFLICT (product_id) DO UPDATE SET
+    food_group = EXCLUDED.food_group,
+    processing_level = EXCLUDED.processing_level,
+    processing_confidence = EXCLUDED.processing_confidence,
+    counts_to_fruit_veg = EXCLUDED.counts_to_fruit_veg,
+    is_legume = EXCLUDED.is_legume,
+    is_whole_grain = EXCLUDED.is_whole_grain,
+    whole_grain_ratio = EXCLUDED.whole_grain_ratio,
+    is_red_meat = EXCLUDED.is_red_meat,
+    is_processed_meat = EXCLUDED.is_processed_meat,
+    classification_note = EXCLUDED.classification_note
+RETURNING product_id, food_group, processing_level, processing_confidence, counts_to_fruit_veg, is_legume, is_whole_grain, whole_grain_ratio, is_red_meat, is_processed_meat, classification_source, classification_note
+`
+
+type UpsertProductFoodClassificationParams struct {
+	ProductID            int64           `json:"product_id"`
+	FoodGroup            FoodGroup       `json:"food_group"`
+	ProcessingLevel      ProcessingLevel `json:"processing_level"`
+	ProcessingConfidence pgtype.Numeric  `json:"processing_confidence"`
+	CountsToFruitVeg     bool            `json:"counts_to_fruit_veg"`
+	IsLegume             bool            `json:"is_legume"`
+	IsWholeGrain         bool            `json:"is_whole_grain"`
+	WholeGrainRatio      pgtype.Numeric  `json:"whole_grain_ratio"`
+	IsRedMeat            bool            `json:"is_red_meat"`
+	IsProcessedMeat      bool            `json:"is_processed_meat"`
+	ClassificationNote   *string         `json:"classification_note"`
+}
+
+func (q *Queries) UpsertProductFoodClassification(ctx context.Context, arg UpsertProductFoodClassificationParams) (ProductFoodClassification, error) {
+	row := q.db.QueryRow(ctx, upsertProductFoodClassification,
+		arg.ProductID,
+		arg.FoodGroup,
+		arg.ProcessingLevel,
+		arg.ProcessingConfidence,
+		arg.CountsToFruitVeg,
+		arg.IsLegume,
+		arg.IsWholeGrain,
+		arg.WholeGrainRatio,
+		arg.IsRedMeat,
+		arg.IsProcessedMeat,
+		arg.ClassificationNote,
+	)
+	var i ProductFoodClassification
+	err := row.Scan(
+		&i.ProductID,
+		&i.FoodGroup,
+		&i.ProcessingLevel,
+		&i.ProcessingConfidence,
+		&i.CountsToFruitVeg,
+		&i.IsLegume,
+		&i.IsWholeGrain,
+		&i.WholeGrainRatio,
+		&i.IsRedMeat,
+		&i.IsProcessedMeat,
+		&i.ClassificationSource,
+		&i.ClassificationNote,
+	)
+	return i, err
+}
+
+const upsertRoleTag = `-- name: UpsertRoleTag :one
+INSERT INTO role_tag (code, kind, label)
+VALUES ($1, $2, $3)
+ON CONFLICT (code) DO UPDATE
+SET code = EXCLUDED.code
+RETURNING id, code, kind, label, parent_id
+`
+
+type UpsertRoleTagParams struct {
+	Code  string   `json:"code"`
+	Kind  RoleKind `json:"kind"`
+	Label string   `json:"label"`
+}
+
+func (q *Queries) UpsertRoleTag(ctx context.Context, arg UpsertRoleTagParams) (RoleTag, error) {
+	row := q.db.QueryRow(ctx, upsertRoleTag, arg.Code, arg.Kind, arg.Label)
+	var i RoleTag
+	err := row.Scan(
+		&i.ID,
+		&i.Code,
+		&i.Kind,
+		&i.Label,
+		&i.ParentID,
+	)
+	return i, err
 }
