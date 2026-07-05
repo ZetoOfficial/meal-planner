@@ -2,6 +2,7 @@ package httpapi
 
 import (
 	"errors"
+	"log/slog"
 	"net/http"
 
 	"github.com/ZetoOfficial/meal-planner/internal/api/openapi"
@@ -10,6 +11,9 @@ import (
 
 func writeError(w http.ResponseWriter, err error) {
 	status, body := mapError(err)
+	if status >= http.StatusInternalServerError {
+		slog.Error("http internal error", slog.Any("error", err))
+	}
 	writeJSON(w, status, body)
 }
 
