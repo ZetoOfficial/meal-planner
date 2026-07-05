@@ -28,24 +28,9 @@ func mapError(err error) (int, any) {
 		}
 	}
 
-	switch {
-	case errors.Is(err, apperr.ErrValidation):
-		return simpleError(http.StatusUnprocessableEntity, apperr.CodeValidation, "validation failed")
-	case errors.Is(err, apperr.ErrNotFound):
-		return simpleError(http.StatusNotFound, apperr.CodeNotFound, "not found")
-	case errors.Is(err, apperr.ErrConflict):
-		return simpleError(http.StatusConflict, apperr.CodeConflict, "conflict")
-	case errors.Is(err, apperr.ErrUnauthorized):
-		return simpleError(http.StatusUnauthorized, apperr.CodeUnauthorized, "unauthorized")
-	case errors.Is(err, apperr.ErrUnavailable):
-		return simpleError(http.StatusServiceUnavailable, apperr.CodeUnavailable, "temporarily unavailable")
-	case errors.Is(err, apperr.ErrImpossiblePlan):
-		return http.StatusUnprocessableEntity, openapi.SolverError{
-			Error:   string(apperr.CodeImpossiblePlan),
-			Message: "plan cannot satisfy constraints",
-		}
-	default:
-		return simpleError(http.StatusInternalServerError, "internal_error", "internal server error")
+	return http.StatusInternalServerError, openapi.Error{
+		Error:   string(apperr.CodeInternal),
+		Message: "internal server error",
 	}
 }
 
@@ -68,13 +53,6 @@ func statusForCode(code apperr.Code) int {
 	}
 }
 
-func simpleError(status int, code apperr.Code, message string) (int, openapi.Error) {
-	return status, openapi.Error{
-		Error:   string(code),
-		Message: message,
-	}
-}
-
 func optionalDetails(details []string) *[]string {
 	if len(details) == 0 {
 		return nil
@@ -91,17 +69,11 @@ func solverError(err *apperr.ImpossiblePlanError) openapi.SolverError {
 		return body
 	}
 
-	constraints := make([]struct {
-		Reason  *string `json:"reason,omitempty"`
-		RoleTag *string `json:"role_tag,omitempty"`
-	}, 0, len(err.UnmetConstraints))
+	constraints := make([]openapi.UnmetConstraint, 0, len(err.UnmetConstraints))
 	for _, constraint := range err.UnmetConstraints {
 		reason := constraint.Reason
 		roleTag := constraint.RoleTag
-		constraints = append(constraints, struct {
-			Reason  *string `json:"reason,omitempty"`
-			RoleTag *string `json:"role_tag,omitempty"`
-		}{
+		constraints = append(constraints, openapi.UnmetConstraint{
 			Reason:  optionalString(reason),
 			RoleTag: optionalString(roleTag),
 		})

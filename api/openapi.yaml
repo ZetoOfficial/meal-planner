@@ -1450,11 +1450,14 @@ components:
           type: array
           description: 'какого класса/тега не хватило для попадания в БЖУ'
           items:
-            type: object
-            properties:
-              role_tag: { type: string }
-              reason: { type: string }
+            $ref: '#/components/schemas/UnmetConstraint'
       required: [error, message]
+
+    UnmetConstraint:
+      type: object
+      properties:
+        role_tag: { type: string }
+        reason: { type: string }
 
     Error:
       type: object

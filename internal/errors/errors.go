@@ -15,6 +15,7 @@ const (
 	CodeUnauthorized   Code = "unauthorized"
 	CodeUnavailable    Code = "unavailable"
 	CodeImpossiblePlan Code = "impossible_plan"
+	CodeInternal       Code = "internal_error"
 )
 
 var (
@@ -24,6 +25,7 @@ var (
 	ErrUnauthorized   = errors.New(string(CodeUnauthorized))
 	ErrUnavailable    = errors.New(string(CodeUnavailable))
 	ErrImpossiblePlan = errors.New(string(CodeImpossiblePlan))
+	ErrInternal       = errors.New(string(CodeInternal))
 )
 
 // Error is a shared application error that can be returned by use cases without
@@ -133,6 +135,8 @@ func sentinel(code Code) error {
 		return ErrUnavailable
 	case CodeImpossiblePlan:
 		return ErrImpossiblePlan
+	case CodeInternal:
+		return ErrInternal
 	default:
 		return nil
 	}
