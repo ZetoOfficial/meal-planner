@@ -59,67 +59,88 @@ func (s *Service) ListRoleTags(ctx context.Context) ([]catalogdom.RoleTag, error
 
 func validateProduct(p catalogdom.Product, requireRoles bool) error {
 	var details []string
-	if strings.TrimSpace(p.Brand) == "" {
-		details = append(details, "brand is required")
-	}
-	if strings.TrimSpace(p.Name) == "" {
-		details = append(details, "name is required")
-	}
-	if p.ProteinPer100g < 0 {
-		details = append(details, "protein_per_100g must be non-negative")
-	}
-	if p.FatPer100g < 0 {
-		details = append(details, "fat_per_100g must be non-negative")
-	}
-	if p.CarbPer100g < 0 {
-		details = append(details, "carb_per_100g must be non-negative")
-	}
-	if p.KcalPer100g < 0 {
-		details = append(details, "kcal_per_100g must be non-negative")
-	}
-	if p.PricePer100g != nil && *p.PricePer100g < 0 {
-		details = append(details, "price_per_100g must be non-negative")
-	}
-	if requireRoles && len(p.Roles) == 0 {
-		details = append(details, "roles is required")
-	}
-	for _, role := range p.Roles {
-		if err := validateRoleCode(role); err != nil {
-			details = append(details, err.Error())
-		}
-	}
-	validateOptionalNonNegative("saturated_fat_per_100g", nutritionValue(p.Nutrition, func(n *catalogdom.NutritionFacts) *float64 { return n.SaturatedFatPer100g }), &details)
-	validateOptionalNonNegative("trans_fat_per_100g", nutritionValue(p.Nutrition, func(n *catalogdom.NutritionFacts) *float64 { return n.TransFatPer100g }), &details)
-	validateOptionalNonNegative("industrial_trans_fat_per_100g", nutritionValue(p.Nutrition, func(n *catalogdom.NutritionFacts) *float64 { return n.IndustrialTransFatPer100g }), &details)
-	validateOptionalNonNegative("fiber_per_100g", nutritionValue(p.Nutrition, func(n *catalogdom.NutritionFacts) *float64 { return n.FiberPer100g }), &details)
-	validateOptionalNonNegative("sodium_mg_per_100g", nutritionValue(p.Nutrition, func(n *catalogdom.NutritionFacts) *float64 { return n.SodiumMgPer100g }), &details)
-	validateOptionalNonNegative("salt_g_per_100g", nutritionValue(p.Nutrition, func(n *catalogdom.NutritionFacts) *float64 { return n.SaltGPer100g }), &details)
-	validateOptionalNonNegative("total_sugars_per_100g", nutritionValue(p.Nutrition, func(n *catalogdom.NutritionFacts) *float64 { return n.TotalSugarsPer100g }), &details)
-	validateOptionalNonNegative("added_sugars_per_100g", nutritionValue(p.Nutrition, func(n *catalogdom.NutritionFacts) *float64 { return n.AddedSugarsPer100g }), &details)
-	validateOptionalNonNegative("free_sugars_per_100g", nutritionValue(p.Nutrition, func(n *catalogdom.NutritionFacts) *float64 { return n.FreeSugarsPer100g }), &details)
-	if p.DataQuality != nil {
-		validateOptionalRange("nutrition_coverage_score", p.DataQuality.NutritionCoverageScore, &details)
-		if p.DataQuality.NutritionDataQuality != nil && !validNutritionDataQuality(*p.DataQuality.NutritionDataQuality) {
-			details = append(details, "nutrition_data_quality is invalid")
-		}
-		if p.DataQuality.SourceKind != nil && !validSourceKind(*p.DataQuality.SourceKind) {
-			details = append(details, "source_kind is invalid")
-		}
-	}
-	if p.Classification != nil {
-		validateOptionalRange("processing_confidence", p.Classification.ProcessingConfidence, &details)
-		validateOptionalRange("whole_grain_ratio", p.Classification.WholeGrainRatio, &details)
-		if p.Classification.FoodGroup != nil && !validFoodGroup(*p.Classification.FoodGroup) {
-			details = append(details, "food_group is invalid")
-		}
-		if p.Classification.ProcessingLevel != nil && !validProcessingLevel(*p.Classification.ProcessingLevel) {
-			details = append(details, "processing_level is invalid")
-		}
-	}
+	validateProductBasics(p, requireRoles, &details)
+	validateProductNutrition(p.Nutrition, &details)
+	validateProductDataQuality(p.DataQuality, &details)
+	validateProductClassification(p.Classification, &details)
+
 	if len(details) > 0 {
 		return apperr.Validation("invalid product", details...)
 	}
 	return nil
+}
+
+func validateProductBasics(p catalogdom.Product, requireRoles bool, details *[]string) {
+	if strings.TrimSpace(p.Brand) == "" {
+		*details = append(*details, "brand is required")
+	}
+	if strings.TrimSpace(p.Name) == "" {
+		*details = append(*details, "name is required")
+	}
+	if p.ProteinPer100g < 0 {
+		*details = append(*details, "protein_per_100g must be non-negative")
+	}
+	if p.FatPer100g < 0 {
+		*details = append(*details, "fat_per_100g must be non-negative")
+	}
+	if p.CarbPer100g < 0 {
+		*details = append(*details, "carb_per_100g must be non-negative")
+	}
+	if p.KcalPer100g < 0 {
+		*details = append(*details, "kcal_per_100g must be non-negative")
+	}
+	if p.PricePer100g != nil && *p.PricePer100g < 0 {
+		*details = append(*details, "price_per_100g must be non-negative")
+	}
+	if requireRoles && len(p.Roles) == 0 {
+		*details = append(*details, "roles is required")
+	}
+	for _, role := range p.Roles {
+		if err := validateRoleCode(role); err != nil {
+			*details = append(*details, err.Error())
+		}
+	}
+}
+
+func validateProductNutrition(n *catalogdom.NutritionFacts, details *[]string) {
+	validateOptionalNonNegative("saturated_fat_per_100g", nutritionValue(n, func(n *catalogdom.NutritionFacts) *float64 { return n.SaturatedFatPer100g }), details)
+	validateOptionalNonNegative("trans_fat_per_100g", nutritionValue(n, func(n *catalogdom.NutritionFacts) *float64 { return n.TransFatPer100g }), details)
+	validateOptionalNonNegative("industrial_trans_fat_per_100g", nutritionValue(n, func(n *catalogdom.NutritionFacts) *float64 { return n.IndustrialTransFatPer100g }), details)
+	validateOptionalNonNegative("fiber_per_100g", nutritionValue(n, func(n *catalogdom.NutritionFacts) *float64 { return n.FiberPer100g }), details)
+	validateOptionalNonNegative("sodium_mg_per_100g", nutritionValue(n, func(n *catalogdom.NutritionFacts) *float64 { return n.SodiumMgPer100g }), details)
+	validateOptionalNonNegative("salt_g_per_100g", nutritionValue(n, func(n *catalogdom.NutritionFacts) *float64 { return n.SaltGPer100g }), details)
+	validateOptionalNonNegative("total_sugars_per_100g", nutritionValue(n, func(n *catalogdom.NutritionFacts) *float64 { return n.TotalSugarsPer100g }), details)
+	validateOptionalNonNegative("added_sugars_per_100g", nutritionValue(n, func(n *catalogdom.NutritionFacts) *float64 { return n.AddedSugarsPer100g }), details)
+	validateOptionalNonNegative("free_sugars_per_100g", nutritionValue(n, func(n *catalogdom.NutritionFacts) *float64 { return n.FreeSugarsPer100g }), details)
+}
+
+func validateProductDataQuality(q *catalogdom.NutritionDataQualityMetadata, details *[]string) {
+	if q == nil {
+		return
+	}
+
+	validateOptionalRange("nutrition_coverage_score", q.NutritionCoverageScore, details)
+	if q.NutritionDataQuality != nil && !validNutritionDataQuality(*q.NutritionDataQuality) {
+		*details = append(*details, "nutrition_data_quality is invalid")
+	}
+	if q.SourceKind != nil && !validSourceKind(*q.SourceKind) {
+		*details = append(*details, "source_kind is invalid")
+	}
+}
+
+func validateProductClassification(c *catalogdom.FoodClassification, details *[]string) {
+	if c == nil {
+		return
+	}
+
+	validateOptionalRange("processing_confidence", c.ProcessingConfidence, details)
+	validateOptionalRange("whole_grain_ratio", c.WholeGrainRatio, details)
+	if c.FoodGroup != nil && !validFoodGroup(*c.FoodGroup) {
+		*details = append(*details, "food_group is invalid")
+	}
+	if c.ProcessingLevel != nil && !validProcessingLevel(*c.ProcessingLevel) {
+		*details = append(*details, "processing_level is invalid")
+	}
 }
 
 func normalizeProduct(p catalogdom.Product) catalogdom.Product {

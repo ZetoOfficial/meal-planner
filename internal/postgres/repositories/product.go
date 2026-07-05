@@ -119,8 +119,8 @@ func (r *ProductRepository) ListRoleTags(ctx context.Context) ([]catalogdom.Role
 
 func (r *ProductRepository) hydrateProducts(ctx context.Context, rows []sqlc.Product) ([]catalogdom.Product, error) {
 	products := make([]catalogdom.Product, 0, len(rows))
-	for _, row := range rows {
-		product, err := r.hydrateProduct(ctx, row)
+	for i := range rows {
+		product, err := r.hydrateProduct(ctx, rows[i])
 		if err != nil {
 			return nil, err
 		}

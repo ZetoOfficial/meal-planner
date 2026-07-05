@@ -164,7 +164,8 @@ func newMemoryProductRepo() *memoryProductRepo {
 
 func (r *memoryProductRepo) List(_ context.Context, filter cataloguc.ProductFilter) ([]catalogdom.Product, error) {
 	out := make([]catalogdom.Product, 0, len(r.records))
-	for _, product := range r.records {
+	for id := range r.records {
+		product := r.records[id]
 		if filter.Role != nil && *filter.Role != "" && !contains(product.Roles, *filter.Role) {
 			continue
 		}

@@ -19,8 +19,8 @@ func (a *API) ListProducts(ctx context.Context, request api.ListProductsRequestO
 		return nil, err
 	}
 	out := make([]api.Product, 0, len(products))
-	for _, product := range products {
-		out = append(out, productToAPI(product))
+	for i := range products {
+		out = append(out, productToAPI(products[i]))
 	}
 	return api.ListProducts200JSONResponse(out), nil
 }
