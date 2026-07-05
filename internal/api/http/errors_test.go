@@ -2,6 +2,7 @@ package httpapi
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -43,7 +44,7 @@ func TestWriteErrorMapsApplicationErrorClasses(t *testing.T) {
 		},
 		{
 			name:   "unavailable",
-			err:    apperr.Unavailable("generation unavailable", fmt.Errorf("provider timeout")),
+			err:    apperr.Unavailable("generation unavailable", errors.New("provider timeout")),
 			status: http.StatusServiceUnavailable,
 			code:   string(apperr.CodeUnavailable),
 		},

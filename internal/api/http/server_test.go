@@ -49,7 +49,7 @@ func TestOpenAPIRouteRequiresTokenWhenConfigured(t *testing.T) {
 func TestOpenAPIRouteReturnsNotImplementedWithValidToken(t *testing.T) {
 	handler := New(Deps{APIToken: "secret"})
 
-	req := httptest.NewRequest(http.MethodGet, "/eaters", nil)
+	req := httptest.NewRequest(http.MethodGet, "/eaters", http.NoBody)
 	req.Header.Set("X-API-Token", "secret")
 	rec := httptest.NewRecorder()
 
@@ -74,7 +74,7 @@ func TestOpenAPIRouteReturnsNotImplementedWithValidToken(t *testing.T) {
 func TestOpenAPIValidationErrorsMapToUnprocessableEntity(t *testing.T) {
 	handler := New(Deps{APIToken: "secret"})
 
-	req := httptest.NewRequest(http.MethodGet, "/analytics/macros", nil)
+	req := httptest.NewRequest(http.MethodGet, "/analytics/macros", http.NoBody)
 	req.Header.Set("X-API-Token", "secret")
 	rec := httptest.NewRecorder()
 

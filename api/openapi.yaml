@@ -1458,6 +1458,7 @@ components:
       properties:
         role_tag: { type: string }
         reason: { type: string }
+      required: [role_tag, reason]
 
     Error:
       type: object

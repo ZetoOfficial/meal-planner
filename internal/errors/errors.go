@@ -3,7 +3,6 @@ package apperr
 
 import (
 	"errors"
-	"fmt"
 )
 
 type Code string
@@ -66,7 +65,7 @@ func Validation(message string, details ...string) error {
 }
 
 func NotFound(resource string) error {
-	return New(CodeNotFound, fmt.Sprintf("%s not found", resource))
+	return New(CodeNotFound, resource+" not found")
 }
 
 func Conflict(message string, details ...string) error {

@@ -13,7 +13,7 @@ func writeError(w http.ResponseWriter, err error) {
 	writeJSON(w, status, body)
 }
 
-func mapError(err error) (int, any) {
+func mapError(err error) (status int, body any) {
 	var impossible *apperr.ImpossiblePlanError
 	if errors.As(err, &impossible) {
 		return http.StatusUnprocessableEntity, solverError(impossible)
@@ -71,20 +71,11 @@ func solverError(err *apperr.ImpossiblePlanError) openapi.SolverError {
 
 	constraints := make([]openapi.UnmetConstraint, 0, len(err.UnmetConstraints))
 	for _, constraint := range err.UnmetConstraints {
-		reason := constraint.Reason
-		roleTag := constraint.RoleTag
 		constraints = append(constraints, openapi.UnmetConstraint{
-			Reason:  optionalString(reason),
-			RoleTag: optionalString(roleTag),
+			Reason:  constraint.Reason,
+			RoleTag: constraint.RoleTag,
 		})
 	}
 	body.UnmetConstraints = &constraints
 	return body
-}
-
-func optionalString(value string) *string {
-	if value == "" {
-		return nil
-	}
-	return &value
 }
