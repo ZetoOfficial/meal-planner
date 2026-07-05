@@ -18,4 +18,6 @@ type Evaluator struct {
 func NewEvaluator(rules Ruleset) *Evaluator { return &Evaluator{rules: rules} }
 
 // EvaluatePlan — TODO: вернуть набор RuleEvaluationResult + score.
-func (e *Evaluator) EvaluatePlan(_ context.Context, _ any) []nutrition.RuleEvaluationResult { return nil }
+func (e *Evaluator) EvaluatePlan(_ context.Context, _ any) []nutrition.RuleEvaluationResult {
+	return nil
+}

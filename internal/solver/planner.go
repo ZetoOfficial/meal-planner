@@ -7,8 +7,8 @@ package solver
 import (
 	"context"
 
-	eaterdom "github.com/ZetoOfficial/meal-planner/internal/domain/eater"
 	catalogdom "github.com/ZetoOfficial/meal-planner/internal/domain/catalog"
+	eaterdom "github.com/ZetoOfficial/meal-planner/internal/domain/eater"
 	recipedom "github.com/ZetoOfficial/meal-planner/internal/domain/recipe"
 )
 

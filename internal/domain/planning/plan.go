@@ -7,9 +7,9 @@ type PlanID int64
 
 // Plan — партия готовки на N дней. TODO: компоненты, meals, prep-граф, quality summary.
 type Plan struct {
-	ID    PlanID
-	Days  int
+	ID   PlanID
+	Days int
 }
 
 // AttachQuality навешивает результат quality-оценки на план (см. ARCHITECTURE §11).
-func (p *Plan) AttachQuality(_ any) { /* TODO */ }
+func (p *Plan) AttachQuality(_ any) {}

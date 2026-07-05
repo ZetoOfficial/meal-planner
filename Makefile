@@ -57,6 +57,11 @@ lint: ## golangci-lint (конфиг .golangci.yml)
 tidy: ## go mod tidy
 	go mod tidy
 
+.PHONY: hooks
+hooks: ## Подключить git-хуки из .githooks (валидация имени ветки на push)
+	git config core.hooksPath .githooks
+	chmod +x .githooks/*
+
 .PHONY: up
 up: ## docker compose up (postgres + миграции + app)
 	docker compose up --build

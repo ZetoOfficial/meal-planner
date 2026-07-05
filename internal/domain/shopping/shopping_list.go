@@ -10,7 +10,7 @@ type List struct {
 
 // Item — позиция списка покупок.
 type Item struct {
-	ProductID  int64
-	TotalQtyG  float64
-	Checked    bool
+	ProductID int64
+	TotalQtyG float64
+	Checked   bool
 }

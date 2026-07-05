@@ -1,0 +1,43 @@
+#!/usr/bin/env sh
+# Блокирует push веток, чьи имена не следуют нашей конвенции:
+#   type/[<issue>-]kebab-description
+# Типы: feat, fix, chore, docs, refactor, test, perf, build, ci
+# Обход в исключительном случае: git push --no-verify
+set -eu
+
+pattern='^(feat|fix|chore|docs|refactor|test|perf|build|ci)/([0-9]+-)?[a-z0-9]+(-[a-z0-9]+)*$'
+max_len=60
+
+status=0
+# git подаёт на stdin строки: <local_ref> <local_sha> <remote_ref> <remote_sha>
+while read -r local_ref local_sha remote_ref remote_sha; do
+	# пропускаем удаление ветки (local_sha состоит из одних нулей)
+	case "$local_sha" in
+		*[!0]*) : ;;
+		*) continue ;;
+	esac
+
+	case "$local_ref" in
+		refs/heads/*) branch=${local_ref#refs/heads/} ;;
+		*) continue ;;
+	esac
+
+	case "$branch" in
+		master|main) continue ;;
+	esac
+
+	if ! printf '%s' "$branch" | grep -Eq "$pattern"; then
+		echo "✗ Ветка '$branch' не соответствует шаблону: type/[<issue>-]kebab-description" >&2
+		echo "  Типы: feat, fix, chore, docs, refactor, test, perf, build, ci" >&2
+		echo "  Примеры: feat/eater-exclusions, feat/42-generate-plan" >&2
+		status=1
+	fi
+
+	len=${#branch}
+	if [ "$len" -gt "$max_len" ]; then
+		echo "✗ Ветка '$branch' слишком длинная: $len символов (максимум $max_len)" >&2
+		status=1
+	fi
+done
+
+exit $status

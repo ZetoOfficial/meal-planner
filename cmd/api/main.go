@@ -10,9 +10,12 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/ZetoOfficial/meal-planner/internal/app"
 	httpapi "github.com/ZetoOfficial/meal-planner/internal/api/http"
+	"github.com/ZetoOfficial/meal-planner/internal/app"
 )
+
+// readHeaderTimeout — защита от Slowloris на чтении заголовков.
+const readHeaderTimeout = 10 * time.Second
 
 func main() {
 	log := slog.New(slog.NewJSONHandler(os.Stdout, nil))
@@ -47,7 +50,7 @@ func run(log *slog.Logger) error {
 	srv := &http.Server{
 		Addr:              cfg.HTTPAddr,
 		Handler:           handler,
-		ReadHeaderTimeout: 10 * time.Second,
+		ReadHeaderTimeout: readHeaderTimeout,
 	}
 
 	go func() {

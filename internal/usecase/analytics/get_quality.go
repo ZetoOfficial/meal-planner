@@ -11,4 +11,6 @@ func NewGetNutritionQualityAnalytics(repo AnalyticsRepository) *GetNutritionQual
 }
 
 // Handle — TODO.
-func (uc *GetNutritionQualityAnalytics) Handle(_ context.Context, _ any) (any, error) { return nil, nil }
+func (uc *GetNutritionQualityAnalytics) Handle(_ context.Context, _ any) (any, error) {
+	return nil, nil
+}

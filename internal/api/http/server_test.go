@@ -9,7 +9,7 @@ import (
 func TestLivezDoesNotRequireAPIToken(t *testing.T) {
 	handler := New(Deps{APIToken: "secret"})
 
-	req := httptest.NewRequest(http.MethodGet, "/livez", nil)
+	req := httptest.NewRequest(http.MethodGet, "/livez", http.NoBody)
 	rec := httptest.NewRecorder()
 
 	handler.ServeHTTP(rec, req)
@@ -22,7 +22,7 @@ func TestLivezDoesNotRequireAPIToken(t *testing.T) {
 func TestReadyzDoesNotRequireAPIToken(t *testing.T) {
 	handler := New(Deps{APIToken: "secret"})
 
-	req := httptest.NewRequest(http.MethodGet, "/readyz", nil)
+	req := httptest.NewRequest(http.MethodGet, "/readyz", http.NoBody)
 	rec := httptest.NewRecorder()
 
 	handler.ServeHTTP(rec, req)
@@ -35,7 +35,7 @@ func TestReadyzDoesNotRequireAPIToken(t *testing.T) {
 func TestOpenAPIRouteRequiresTokenWhenConfigured(t *testing.T) {
 	handler := New(Deps{APIToken: "secret"})
 
-	req := httptest.NewRequest(http.MethodGet, "/eaters", nil)
+	req := httptest.NewRequest(http.MethodGet, "/eaters", http.NoBody)
 	rec := httptest.NewRecorder()
 
 	handler.ServeHTTP(rec, req)

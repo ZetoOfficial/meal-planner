@@ -16,5 +16,8 @@ func (m Macros) Add(o Macros) Macros {
 	return Macros{m.ProteinG + o.ProteinG, m.FatG + o.FatG, m.CarbG + o.CarbG, m.Kcal + o.Kcal}
 }
 
+// mgPerG — миллиграммов в грамме (перевод г → мг).
+const mgPerG = 1000
+
 // SodiumMgFromSaltG конвертирует соль (г) в натрий (мг): натрий = соль/2.54*1000 (NNR).
-func SodiumMgFromSaltG(saltG float64) float64 { return saltG / 2.54 * 1000 }
+func SodiumMgFromSaltG(saltG float64) float64 { return saltG / 2.54 * mgPerG }

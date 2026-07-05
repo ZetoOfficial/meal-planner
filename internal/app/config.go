@@ -2,9 +2,16 @@
 package app
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"time"
+)
+
+// Дефолты таймаутов (SPEC §11).
+const (
+	defaultLLMTimeout   = 30 * time.Second
+	defaultShutdownWait = 10 * time.Second
 )
 
 // Config — конфигурация сервиса (owner-only, без секрет-менеджера).
@@ -28,11 +35,11 @@ func Load() (Config, error) {
 		LLMProvider:  env("LLM_PROVIDER", "anthropic"),
 		LLMModel:     env("LLM_MODEL", "claude-sonnet-4-6"),
 		LLMAPIKey:    os.Getenv("LLM_API_KEY"),
-		LLMTimeout:   30 * time.Second,
-		ShutdownWait: 10 * time.Second,
+		LLMTimeout:   defaultLLMTimeout,
+		ShutdownWait: defaultShutdownWait,
 	}
 	if cfg.DatabaseURL == "" {
-		return Config{}, fmt.Errorf("config: DATABASE_URL (или DB_* переменные) обязателен")
+		return Config{}, errors.New("config: DATABASE_URL (или DB_* переменные) обязателен")
 	}
 	return cfg, nil
 }

@@ -8,6 +8,28 @@ permissions:
   contents: read
 
 jobs:
+  lint:
+    name: golangci-lint
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Install golangci-lint
+        run: |
+          curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh \
+            | sh -s -- -b "$(go env GOPATH)/bin" v2.4.0
+
+      - name: Run golangci-lint
+        run: "$(go env GOPATH)/bin/golangci-lint run --timeout 5m"
+
   test:
     name: Build and test
     runs-on: ubuntu-latest
