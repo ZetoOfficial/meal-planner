@@ -23,7 +23,6 @@ func TestTxManagerWithinTxCommitsOnSuccess(t *testing.T) {
 		_, _ = repos.Products.Get(ctx, 42)
 		return nil
 	})
-
 	if err != nil {
 		t.Fatalf("WithinTx returned error: %v", err)
 	}

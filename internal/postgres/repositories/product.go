@@ -24,8 +24,8 @@ func (r *ProductRepository) ListUsable(ctx context.Context) ([]catalogdom.Produc
 		return nil, err
 	}
 	products := make([]catalogdom.Product, 0, len(rows))
-	for _, row := range rows {
-		products = append(products, productFromRow(row))
+	for i := range rows {
+		products = append(products, productFromRow(rows[i]))
 	}
 	return products, nil
 }
