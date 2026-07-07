@@ -2,6 +2,7 @@ package postgrestest
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -14,7 +15,11 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-const TestDatabaseURLEnv = "TEST_DATABASE_URL"
+const (
+	TestDatabaseURLEnv = "TEST_DATABASE_URL"
+	setupTimeout       = 30 * time.Second
+	cleanupTimeout     = 10 * time.Second
+)
 
 type Database struct {
 	Pool   *pgxpool.Pool
@@ -29,7 +34,7 @@ func RequireDatabase(t *testing.T) Database {
 		t.Skipf("set %s to run Postgres integration tests", TestDatabaseURLEnv)
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), setupTimeout)
 	defer cancel()
 
 	adminPool, err := pgxpool.New(ctx, dsn)
@@ -93,7 +98,9 @@ func applyMigrations(ctx context.Context, pool *pgxpool.Pool, schema string) err
 	if err != nil {
 		return fmt.Errorf("begin migration transaction: %w", err)
 	}
-	defer tx.Rollback(ctx)
+	defer func() {
+		_ = tx.Rollback(ctx)
+	}()
 
 	if _, err := tx.Exec(ctx, "SET LOCAL search_path TO "+pgx.Identifier{schema}.Sanitize()+", public"); err != nil {
 		return fmt.Errorf("set migration search_path: %w", err)
@@ -130,14 +137,14 @@ func projectRoot() (string, error) {
 		}
 		parent := filepath.Dir(dir)
 		if parent == dir {
-			return "", fmt.Errorf("could not find project root containing migrations")
+			return "", errors.New("could not find project root containing migrations")
 		}
 		dir = parent
 	}
 }
 
 func cleanupSchema(pool *pgxpool.Pool, schema string) {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), cleanupTimeout)
 	defer cancel()
 	_, _ = pool.Exec(ctx, "DROP SCHEMA IF EXISTS "+pgx.Identifier{schema}.Sanitize()+" CASCADE")
 }
