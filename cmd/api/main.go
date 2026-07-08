@@ -42,9 +42,9 @@ func run(log *slog.Logger) error {
 	defer application.Close()
 
 	handler := httpapi.New(httpapi.Deps{
-		APIToken: cfg.APIToken,
-		DB:       application.Pool,
-		LLM:      application.LLM,
+		APIToken:   cfg.APIToken,
+		ReadyCheck: application.Ping,
+		LLM:        application.LLM,
 	})
 
 	srv := &http.Server{

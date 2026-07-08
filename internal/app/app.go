@@ -13,10 +13,9 @@ import (
 // App is the composition root for infrastructure adapters and use cases.
 type App struct {
 	Cfg          Config
-	Pool         *pgxpool.Pool
 	Repositories repositories.Repositories
-	TxManager    *postgres.TxManager
 	LLM          llm.Client
+	pool         *pgxpool.Pool
 }
 
 func New(ctx context.Context, cfg Config) (*App, error) {
@@ -26,15 +25,21 @@ func New(ctx context.Context, cfg Config) (*App, error) {
 	}
 	return &App{
 		Cfg:          cfg,
-		Pool:         pool,
 		Repositories: repositories.New(pool),
-		TxManager:    postgres.NewTxManager(pool),
 		LLM:          llm.StubClient{Model: cfg.LLMModel},
+		pool:         pool,
 	}, nil
 }
 
+func (a *App) Ping(ctx context.Context) error {
+	if a.pool == nil {
+		return nil
+	}
+	return a.pool.Ping(ctx)
+}
+
 func (a *App) Close() {
-	if a.Pool != nil {
-		a.Pool.Close()
+	if a.pool != nil {
+		a.pool.Close()
 	}
 }

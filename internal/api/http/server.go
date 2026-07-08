@@ -3,10 +3,9 @@
 package httpapi
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
-
-	"github.com/jackc/pgx/v5/pgxpool"
 
 	api "github.com/ZetoOfficial/meal-planner/internal/api/openapi"
 	apperr "github.com/ZetoOfficial/meal-planner/internal/errors"
@@ -15,9 +14,9 @@ import (
 
 // Deps are HTTP-layer dependencies assembled by the composition root.
 type Deps struct {
-	APIToken string
-	DB       *pgxpool.Pool
-	LLM      llm.Client
+	APIToken   string
+	ReadyCheck func(context.Context) error
+	LLM        llm.Client
 	// TODO: add use cases here as they are implemented.
 }
 
@@ -30,8 +29,8 @@ func New(d Deps) http.Handler {
 	})
 
 	mux.HandleFunc("GET /readyz", func(w http.ResponseWriter, r *http.Request) {
-		if d.DB != nil {
-			if err := d.DB.Ping(r.Context()); err != nil {
+		if d.ReadyCheck != nil {
+			if err := d.ReadyCheck(r.Context()); err != nil {
 				writeJSON(w, http.StatusServiceUnavailable, map[string]string{
 					"status": "down",
 					"error":  "database unreachable",
