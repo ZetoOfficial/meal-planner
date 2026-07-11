@@ -27,6 +27,7 @@ Owner-only HTTP API для планирования домашнего meal-prep
 - Генерация type-safe DB-кода через `sqlc`.
 - HTTP-сервер на std `net/http`, `/livez` + `/readyz`, graceful shutdown.
 - Postgres pool, config loading, статический `X-API-Token`.
+- Opt-in Postgres integration-test harness с изолированной schema и миграциями.
 - Структура domain/usecase/solver/quality/llm под DDD-lite и ports/adapters.
 
 Пока в основном каркас / следующий слой реализации:
@@ -36,7 +37,7 @@ Owner-only HTTP API для планирования домашнего meal-prep
 - quality evaluator;
 - реальные HTTP-хендлеры поверх OpenAPI;
 - реальный LLM client вместо stub;
-- полноценные repositories и интеграционные сценарии.
+- полноценные repositories и бизнесовые integration-сценарии.
 
 ## Быстрый старт
 
@@ -79,6 +80,7 @@ make run
 | `API_TOKEN` | Статический owner-only токен для `X-API-Token`. Пустое значение отключает auth. |
 | `DATABASE_URL` | Полный Postgres DSN. Имеет приоритет над `DB_*`. |
 | `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`, `DB_SSLMODE` | Альтернатива `DATABASE_URL`. |
+| `TEST_DATABASE_URL` | Opt-in URL Postgres для integration-тестов. Каждый тест создаёт отдельную schema, применяет миграции и удаляет schema при cleanup; указывайте выделенную тестовую БД, а не development database. |
 | `LLM_PROVIDER` | Провайдер LLM, сейчас конфигурируется как `anthropic` / `openai`. |
 | `LLM_MODEL` | Имя модели. |
 | `LLM_API_KEY` | API key провайдера. Сейчас реальный client еще не подключен. |
@@ -112,13 +114,21 @@ make migrate-status           # статус миграций
 make new-migration name=add_x # создать новую миграцию
 make build                    # собрать bin/server
 make run                      # запустить ./cmd/api
-make test                     # go test ./...
+make test-unit                # запустить только unit-тесты
+make test-integration         # integration-тесты Postgres (нужен TEST_DATABASE_URL)
+make test                     # unit-тесты + integration при заданном TEST_DATABASE_URL
 make lint                     # golangci-lint run
 make up                       # docker compose up --build
 make down                     # docker compose down
 ```
 
 Кодогенерация использует версии инструментов из `Makefile`.
+
+`make test` всегда запускает unit-тесты. Если `TEST_DATABASE_URL` не задан,
+после них он печатает `integration tests skipped: set TEST_DATABASE_URL to run
+make test-integration`. Для integration-тестов задайте URL выделенной тестовой
+БД: harness создаёт в ней уникальную schema, применяет только up-части всех
+миграций и удаляет schema после теста.
 
 ## Архитектурные правила
 

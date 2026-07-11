@@ -1,7 +1,9 @@
 package httpapi
 
 import (
+	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -30,6 +32,24 @@ func TestReadyzDoesNotRequireAPIToken(t *testing.T) {
 
 	if rec.Code != http.StatusOK {
 		t.Fatalf("GET /readyz status = %d, want %d", rec.Code, http.StatusOK)
+	}
+}
+
+func TestReadyzReturnsServiceUnavailableWhenReadinessFails(t *testing.T) {
+	handler := New(Deps{
+		APIToken: "secret",
+		Readiness: func(context.Context) error {
+			return errors.New("database unavailable")
+		},
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/readyz", http.NoBody)
+	rec := httptest.NewRecorder()
+
+	handler.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusServiceUnavailable {
+		t.Fatalf("GET /readyz status = %d, want %d", rec.Code, http.StatusServiceUnavailable)
 	}
 }
 

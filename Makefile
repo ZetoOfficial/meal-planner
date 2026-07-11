@@ -45,9 +45,21 @@ build: ## Собрать бинарь
 run: ## Запустить локально
 	go run ./cmd/api
 
-.PHONY: test
-test: ## Тесты
+.PHONY: test-unit
+test-unit: ## Запустить unit-тесты
 	go test ./...
+
+.PHONY: test-integration
+test-integration: ## Запустить Postgres integration-тесты (нужен TEST_DATABASE_URL)
+	go test -tags=integration -count=1 -v ./internal/postgres/...
+
+.PHONY: test
+test: test-unit ## Запустить unit-тесты и integration-тесты при TEST_DATABASE_URL
+	@if [ -n "$(TEST_DATABASE_URL)" ]; then \
+		$(MAKE) test-integration; \
+	else \
+		echo "integration tests skipped: set TEST_DATABASE_URL to run make test-integration"; \
+	fi
 
 .PHONY: lint
 lint: ## golangci-lint (конфиг .golangci.yml)
