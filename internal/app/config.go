@@ -1,4 +1,3 @@
-// Package app — состав приложения (config + wiring контейнер).
 package app
 
 import (
@@ -8,25 +7,22 @@ import (
 	"time"
 )
 
-// Дефолты таймаутов (SPEC §11).
 const (
 	defaultLLMTimeout   = 30 * time.Second
 	defaultShutdownWait = 10 * time.Second
 )
 
-// Config — конфигурация сервиса (owner-only, без секрет-менеджера).
 type Config struct {
-	HTTPAddr     string        // адрес HTTP-сервера, напр. ":8080"
-	DatabaseURL  string        // postgres connection string
-	APIToken     string        // статический токен для X-API-Token (SPEC §9)
-	LLMProvider  string        // "anthropic" | "openai"
-	LLMModel     string        // напр. "claude-sonnet-4-6"
-	LLMAPIKey    string        // ключ провайдера
-	LLMTimeout   time.Duration // таймаут вызова LLM (SPEC §11: 30s)
-	ShutdownWait time.Duration // grace-период на остановку
+	HTTPAddr     string
+	DatabaseURL  string
+	APIToken     string
+	LLMProvider  string
+	LLMModel     string
+	LLMAPIKey    string
+	LLMTimeout   time.Duration
+	ShutdownWait time.Duration
 }
 
-// Load читает конфиг из окружения. DatabaseURL обязателен.
 func Load() (Config, error) {
 	cfg := Config{
 		HTTPAddr:     env("HTTP_ADDR", ":8080"),
@@ -44,7 +40,6 @@ func Load() (Config, error) {
 	return cfg, nil
 }
 
-// databaseURL берёт готовый DATABASE_URL либо собирает из DB_* переменных.
 func databaseURL() string {
 	if u := os.Getenv("DATABASE_URL"); u != "" {
 		return u

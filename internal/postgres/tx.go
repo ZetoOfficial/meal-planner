@@ -14,19 +14,16 @@ type txBeginner interface {
 	Begin(context.Context) (pgx.Tx, error)
 }
 
-// TxManager реализует транзакционную границу для use case layer (ARCHITECTURE §11).
 type TxManager struct {
 	beginner txBeginner
 }
 
-// NewTxManager создаёт менеджер транзакций.
 func NewTxManager(pool *pgxpool.Pool) *TxManager { return newTxManager(pool) }
 
 func newTxManager(beginner txBeginner) *TxManager {
 	return &TxManager{beginner: beginner}
 }
 
-// WithTx выполняет fn внутри транзакции: commit при nil-ошибке, иначе rollback.
 func (m *TxManager) WithTx(ctx context.Context, fn func(ctx context.Context) error) error {
 	tx, err := m.beginner.Begin(ctx)
 	if err != nil {

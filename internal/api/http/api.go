@@ -8,7 +8,6 @@ import (
 
 var _ api.StrictServerInterface = (*API)(nil)
 
-// API adapts generated OpenAPI handlers to application use cases.
 type API struct {
 	deps Deps
 }

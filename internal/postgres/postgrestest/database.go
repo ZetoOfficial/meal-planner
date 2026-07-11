@@ -1,6 +1,5 @@
 //go:build integration
 
-// Package postgrestest provides an opt-in isolated Postgres database for integration tests.
 package postgrestest
 
 import (
@@ -20,21 +19,17 @@ import (
 )
 
 const (
-	// TestDatabaseURLEnv is the opt-in connection string used only by integration tests.
 	TestDatabaseURLEnv = "TEST_DATABASE_URL"
 
 	migrationSeparator = "---- create above / drop below ----"
 	setupTimeout       = 30 * time.Second
 )
 
-// Database is an isolated schema and the pool configured to use it.
 type Database struct {
 	Pool   *pgxpool.Pool
 	Schema string
 }
 
-// RequireDatabase creates an isolated schema, applies the project's up migrations,
-// and schedules all resources for cleanup. It skips when no test database is configured.
 func RequireDatabase(t *testing.T) Database {
 	t.Helper()
 
@@ -88,8 +83,7 @@ func RequireDatabase(t *testing.T) Database {
 	if poolConfig.ConnConfig.RuntimeParams == nil {
 		poolConfig.ConnConfig.RuntimeParams = make(map[string]string)
 	}
-	// Keep public out of search_path so integration tests cannot read development data.
-	// PostgreSQL resolves pg_catalog implicitly.
+
 	poolConfig.ConnConfig.RuntimeParams["search_path"] = quotedSchema
 	poolConfig.ConnConfig.DefaultQueryExecMode = pgx.QueryExecModeSimpleProtocol
 

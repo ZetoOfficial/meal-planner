@@ -14,7 +14,6 @@ import (
 	"github.com/ZetoOfficial/meal-planner/internal/app"
 )
 
-// readHeaderTimeout — защита от Slowloris на чтении заголовков.
 const readHeaderTimeout = 10 * time.Second
 
 func main() {

@@ -1,9 +1,6 @@
-// Package httpapi is the HTTP delivery adapter: routing, auth, DTO mapping,
-// and error mapping. Business logic belongs in use cases and domain packages.
 package httpapi
 
 import (
-	"context"
 	"encoding/json"
 	"net/http"
 
@@ -12,15 +9,12 @@ import (
 	"github.com/ZetoOfficial/meal-planner/internal/llm"
 )
 
-// Deps are HTTP-layer dependencies assembled by the composition root.
 type Deps struct {
 	APIToken  string
-	Readiness func(context.Context) error
+	Readiness func() error
 	LLM       llm.Client
-	// TODO: add use cases here as they are implemented.
 }
 
-// New returns the root HTTP handler.
 func New(d Deps) http.Handler {
 	mux := http.NewServeMux()
 
@@ -30,7 +24,7 @@ func New(d Deps) http.Handler {
 
 	mux.HandleFunc("GET /readyz", func(w http.ResponseWriter, r *http.Request) {
 		if d.Readiness != nil {
-			if err := d.Readiness(r.Context()); err != nil {
+			if err := d.Readiness(); err != nil {
 				writeJSON(w, http.StatusServiceUnavailable, map[string]string{
 					"status": "down",
 					"error":  "database unreachable",
@@ -65,7 +59,6 @@ func New(d Deps) http.Handler {
 	return mux
 }
 
-// withAuth enforces static owner-only X-API-Token auth.
 func withAuth(token string, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if token == "" {

@@ -10,9 +10,6 @@ import (
 	"github.com/ZetoOfficial/meal-planner/internal/postgres/repositories"
 )
 
-// App — корневой контейнер зависимостей (composition root).
-// Здесь собираются pool, репозитории, use cases, solver, quality, llm и
-// передаются в HTTP-слой. Пока — минимальный каркас (ARCHITECTURE §4).
 type App struct {
 	Cfg          Config
 	Repositories *repositories.Repositories
@@ -22,7 +19,6 @@ type App struct {
 	pool *pgxpool.Pool
 }
 
-// New поднимает зависимости приложения по конфигу.
 func New(ctx context.Context, cfg Config) (*App, error) {
 	pool, err := postgres.NewPool(ctx, cfg.DatabaseURL)
 	if err != nil {
@@ -32,17 +28,15 @@ func New(ctx context.Context, cfg Config) (*App, error) {
 		Cfg:          cfg,
 		Repositories: repositories.New(pool),
 		TxManager:    postgres.NewTxManager(pool),
-		LLM:          llm.StubClient{Model: cfg.LLMModel}, // TODO: реальный провайдер
+		LLM:          llm.StubClient{Model: cfg.LLMModel},
 		pool:         pool,
 	}, nil
 }
 
-// Ping reports whether the application's database connection is ready.
-func (a *App) Ping(ctx context.Context) error {
-	return a.pool.Ping(ctx)
+func (a *App) Ping() error {
+	return a.pool.Ping(context.Background())
 }
 
-// Close освобождает ресурсы.
 func (a *App) Close() {
 	if a.pool != nil {
 		a.pool.Close()

@@ -1,6 +1,5 @@
 package nutrition
 
-// RuleEvalStatus — исход проверки одного quality-правила.
 type RuleEvalStatus string
 
 const (
@@ -10,7 +9,6 @@ const (
 	StatusUnknown  RuleEvalStatus = "unknown"
 )
 
-// RuleEvaluationResult — результат правила с explainability. TODO: поля из schema.sql.
 type RuleEvaluationResult struct {
 	RuleCode string
 	Status   RuleEvalStatus

@@ -1,7 +1,6 @@
 package httpapi
 
 import (
-	"context"
 	"encoding/json"
 	"errors"
 	"net/http"
@@ -38,7 +37,7 @@ func TestReadyzDoesNotRequireAPIToken(t *testing.T) {
 func TestReadyzReturnsServiceUnavailableWhenReadinessFails(t *testing.T) {
 	handler := New(Deps{
 		APIToken: "secret",
-		Readiness: func(context.Context) error {
+		Readiness: func() error {
 			return errors.New("database unavailable")
 		},
 	})
