@@ -62,7 +62,7 @@ Expected: PASS with Go 1.25 or newer. Commit the focused changes as
 ### Task 2: Isolated Postgres integration-test harness
 
 **Files:**
-- Create: `internal/postgres/postgrestest/database.go`
+- Create: `internal/testkit/postgres/database.go`
 - Create: `internal/postgres/integration_test.go`
 - Modify: `Makefile`
 - Modify: `.env.example`
@@ -72,7 +72,7 @@ Expected: PASS with Go 1.25 or newer. Commit the focused changes as
 - [ ] **Step 1: Write the failing tagged integration test**
 
 Create `internal/postgres/integration_test.go` with `//go:build integration`.
-Call `postgrestest.RequireDatabase(t)`, then query `information_schema.tables`
+Call `testpostgres.RequireDatabase(t)`, then query `information_schema.tables`
 for the `product` table in `db.Schema`; fail if it does not exist. This test
 must use `TEST_DATABASE_URL` rather than the development database URL.
 
@@ -80,12 +80,12 @@ must use `TEST_DATABASE_URL` rather than the development database URL.
 
 Run: `TEST_DATABASE_URL="$TEST_DATABASE_URL" go test -tags=integration -count=1 -v ./internal/postgres/...`
 
-Expected: compilation failure because `postgrestest.RequireDatabase` does not
+Expected: compilation failure because `testpostgres.RequireDatabase` does not
 exist, or a clear skip if `TEST_DATABASE_URL` is unset.
 
 - [ ] **Step 3: Implement the isolated-schema harness**
 
-Create `postgrestest.RequireDatabase(t)` to read `TEST_DATABASE_URL`, skip
+Create `testpostgres.RequireDatabase(t)` to read `TEST_DATABASE_URL`, skip
 with an actionable message if it is unset, create a schema named from a unique
 timestamp, configure a pool `search_path` as the isolated `<schema>` only, apply the up
 section of every sorted `migrations/*.sql` file inside that schema, and register

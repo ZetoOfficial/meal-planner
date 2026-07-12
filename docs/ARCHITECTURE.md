@@ -740,7 +740,8 @@ Solver и quality должны хорошо тестироваться без Po
 
 ## 17. Практический порядок реализации
 
-1. Поднять `cmd/api`, config, Postgres connection, migrations.
+1. Поднять `cmd/api` как composition root: загрузить config из `internal/app`,
+   подключить Postgres и запустить migrations.
 2. Сгенерировать OpenAPI handlers/DTO и sqlc queries.
 3. Реализовать `domain/nutrition`, `domain/catalog`, `domain/eater`.
 4. Реализовать CRUD products/eaters/goals/fixed meals.

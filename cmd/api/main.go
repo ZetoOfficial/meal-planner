@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"os"
@@ -12,6 +13,7 @@ import (
 
 	httpapi "github.com/ZetoOfficial/meal-planner/internal/api/http"
 	"github.com/ZetoOfficial/meal-planner/internal/app"
+	"github.com/ZetoOfficial/meal-planner/internal/postgres"
 )
 
 const readHeaderTimeout = 10 * time.Second
@@ -34,16 +36,17 @@ func run(log *slog.Logger) error {
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
-	application, err := app.New(ctx, cfg)
+	pool, err := postgres.NewPool(ctx, cfg.DatabaseURL)
 	if err != nil {
 		return err
 	}
-	defer application.Close()
+	defer pool.Close()
+	if err := pool.Ping(ctx); err != nil {
+		return fmt.Errorf("connect postgres: %w", err)
+	}
 
 	handler := httpapi.New(httpapi.Deps{
-		APIToken:  cfg.APIToken,
-		Readiness: application.Ping,
-		LLM:       application.LLM,
+		APIToken: cfg.APIToken,
 	})
 
 	srv := &http.Server{

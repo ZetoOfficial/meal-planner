@@ -14,7 +14,7 @@ func writeError(w http.ResponseWriter, err error) {
 	if status >= http.StatusInternalServerError {
 		slog.Error("http internal error", slog.Any("error", err))
 	}
-	writeJSON(w, status, body)
+	respondJSON(w, status, body)
 }
 
 func mapError(err error) (status int, body any) {

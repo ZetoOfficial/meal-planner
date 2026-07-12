@@ -3,50 +3,54 @@ package postgres
 import (
 	"context"
 	"errors"
-	"strings"
 	"testing"
 
-	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgconn"
+	"go.uber.org/mock/gomock"
 
+	"github.com/ZetoOfficial/meal-planner/internal/postgres/mocks"
 	"github.com/ZetoOfficial/meal-planner/internal/postgres/repositories"
 )
 
 func TestTxManagerWithTxCommitsAfterSuccessfulCallback(t *testing.T) {
-	tx := &fakeTx{}
-	beginner := &fakeBeginner{tx: tx}
+	ctrl := gomock.NewController(t)
+	ctx := context.Background()
+	beginner := mocks.NewMocktxBeginner(ctrl)
+	tx := mocks.NewMockTx(ctrl)
 	manager := newTxManager(beginner)
 	called := 0
 
-	err := manager.WithTx(context.Background(), func(context.Context) error {
+	gomock.InOrder(
+		beginner.EXPECT().Begin(ctx).Return(tx, nil),
+		tx.EXPECT().Commit(ctx).Return(nil),
+	)
+
+	err := manager.WithTx(ctx, func(context.Context) error {
 		called++
 		return nil
 	})
-
 	if err != nil {
 		t.Fatalf("WithTx() error = %v, want nil", err)
 	}
 	if called != 1 {
 		t.Fatalf("callback calls = %d, want 1", called)
 	}
-	if beginner.beginCalls != 1 {
-		t.Fatalf("begin calls = %d, want 1", beginner.beginCalls)
-	}
-	if tx.commitCalls != 1 {
-		t.Fatalf("commit calls = %d, want 1", tx.commitCalls)
-	}
-	if tx.rollbackCalls != 0 {
-		t.Fatalf("rollback calls = %d, want 0", tx.rollbackCalls)
-	}
 }
 
 func TestTxManagerWithTxRollsBackAndReturnsCallbackError(t *testing.T) {
-	tx := &fakeTx{}
-	manager := newTxManager(&fakeBeginner{tx: tx})
+	ctrl := gomock.NewController(t)
+	ctx := context.Background()
+	beginner := mocks.NewMocktxBeginner(ctrl)
+	tx := mocks.NewMockTx(ctrl)
+	manager := newTxManager(beginner)
 	want := errors.New("callback failed")
 	called := 0
 
-	err := manager.WithTx(context.Background(), func(context.Context) error {
+	gomock.InOrder(
+		beginner.EXPECT().Begin(ctx).Return(tx, nil),
+		tx.EXPECT().Rollback(ctx).Return(nil),
+	)
+
+	err := manager.WithTx(ctx, func(context.Context) error {
 		called++
 		return want
 	})
@@ -57,43 +61,50 @@ func TestTxManagerWithTxRollsBackAndReturnsCallbackError(t *testing.T) {
 	if called != 1 {
 		t.Fatalf("callback calls = %d, want 1", called)
 	}
-	if tx.commitCalls != 0 {
-		t.Fatalf("commit calls = %d, want 0", tx.commitCalls)
-	}
-	if tx.rollbackCalls != 1 {
-		t.Fatalf("rollback calls = %d, want 1", tx.rollbackCalls)
-	}
 }
 
 func TestTxManagerWithTxRollsBackOnCallbackPanic(t *testing.T) {
-	tx := &fakeTx{}
-	manager := newTxManager(&fakeBeginner{tx: tx})
+	ctrl := gomock.NewController(t)
+	ctx := context.Background()
+	beginner := mocks.NewMocktxBeginner(ctrl)
+	tx := mocks.NewMockTx(ctrl)
+	manager := newTxManager(beginner)
 	panicValue := errors.New("callback panic")
+
+	gomock.InOrder(
+		beginner.EXPECT().Begin(ctx).Return(tx, nil),
+		tx.EXPECT().Rollback(ctx).Return(nil),
+	)
 
 	func() {
 		defer func() {
-			if recovered := recover(); recovered != panicValue {
+			recovered, ok := recover().(error)
+			if !ok || !errors.Is(recovered, panicValue) {
 				t.Fatalf("panic = %v, want %v", recovered, panicValue)
 			}
 		}()
 
-		_ = manager.WithTx(context.Background(), func(context.Context) error {
+		_ = manager.WithTx(ctx, func(context.Context) error {
 			panic(panicValue)
 		})
 	}()
-
-	if tx.rollbackCalls != 1 {
-		t.Fatalf("rollback calls = %d, want 1", tx.rollbackCalls)
-	}
 }
 
 func TestTxManagerWithTxJoinsCallbackAndRollbackErrors(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	ctx := context.Background()
+	beginner := mocks.NewMocktxBeginner(ctrl)
+	tx := mocks.NewMockTx(ctrl)
+	manager := newTxManager(beginner)
 	callbackErr := errors.New("callback failed")
 	rollbackErr := errors.New("rollback failed")
-	tx := &fakeTx{rollbackErr: rollbackErr}
-	manager := newTxManager(&fakeBeginner{tx: tx})
 
-	err := manager.WithTx(context.Background(), func(context.Context) error {
+	gomock.InOrder(
+		beginner.EXPECT().Begin(ctx).Return(tx, nil),
+		tx.EXPECT().Rollback(ctx).Return(rollbackErr),
+	)
+
+	err := manager.WithTx(ctx, func(context.Context) error {
 		return callbackErr
 	})
 
@@ -105,165 +116,117 @@ func TestTxManagerWithTxJoinsCallbackAndRollbackErrors(t *testing.T) {
 	}
 }
 
-func TestTxManagerWithTxReturnsCommitError(t *testing.T) {
+func TestTxManagerWithTxRollsBackAfterCommitError(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	ctx := context.Background()
+	beginner := mocks.NewMocktxBeginner(ctrl)
+	tx := mocks.NewMockTx(ctrl)
+	manager := newTxManager(beginner)
 	want := errors.New("commit failed")
-	tx := &fakeTx{commitErr: want}
-	manager := newTxManager(&fakeBeginner{tx: tx})
 
-	err := manager.WithTx(context.Background(), func(context.Context) error { return nil })
+	gomock.InOrder(
+		beginner.EXPECT().Begin(ctx).Return(tx, nil),
+		tx.EXPECT().Commit(ctx).Return(want),
+		tx.EXPECT().Rollback(ctx).Return(nil),
+	)
+
+	err := manager.WithTx(ctx, func(context.Context) error { return nil })
 
 	if !errors.Is(err, want) {
 		t.Fatalf("WithTx() error = %v, want %v", err, want)
 	}
-	if tx.commitCalls != 1 {
-		t.Fatalf("commit calls = %d, want 1", tx.commitCalls)
-	}
-	if tx.rollbackCalls != 1 {
-		t.Fatalf("rollback calls = %d, want 1", tx.rollbackCalls)
-	}
 }
 
 func TestTxManagerWithTxReturnsBeginErrorWithoutInvokingCallback(t *testing.T) {
-	want := errors.New("begin failed")
-	beginner := &fakeBeginner{beginErr: want}
+	ctrl := gomock.NewController(t)
+	ctx := context.Background()
+	beginner := mocks.NewMocktxBeginner(ctrl)
 	manager := newTxManager(beginner)
-	called := false
+	want := errors.New("begin failed")
 
-	err := manager.WithTx(context.Background(), func(context.Context) error {
-		called = true
+	beginner.EXPECT().Begin(ctx).Return(nil, want)
+
+	err := manager.WithTx(ctx, func(context.Context) error {
+		t.Fatal("callback was invoked after Begin failed")
 		return nil
 	})
 
 	if !errors.Is(err, want) {
 		t.Fatalf("WithTx() error = %v, want %v", err, want)
 	}
-	if called {
-		t.Fatal("callback was invoked after Begin failed")
-	}
-	if beginner.beginCalls != 1 {
-		t.Fatalf("begin calls = %d, want 1", beginner.beginCalls)
-	}
 }
 
-func TestRepositoriesQueriesUseProvidedExecutor(t *testing.T) {
-	db := &fakeDBTX{}
+func TestRepositoriesQueriesUseDefaultExecutor(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	ctx := context.Background()
+	db := mocks.NewMockDBTX(ctrl)
+	row := mocks.NewMockRow(ctrl)
 	repos := repositories.New(db)
+	want := errors.New("row scan failed")
 
-	_, err := repos.Queries(context.Background()).GetEater(context.Background(), 42)
+	db.EXPECT().QueryRow(ctx, gomock.Any(), int64(42)).Return(row)
+	row.EXPECT().Scan(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(want)
 
-	if !errors.Is(err, errFakeRowScan) {
-		t.Fatalf("GetEater() error = %v, want %v", err, errFakeRowScan)
-	}
-	if db.queryRowCalls != 1 {
-		t.Fatalf("QueryRow calls = %d, want 1", db.queryRowCalls)
-	}
-	if !strings.Contains(db.lastQuery, "FROM eater") {
-		t.Fatalf("query = %q, want generated eater query", db.lastQuery)
-	}
-	if len(db.lastArgs) != 1 || db.lastArgs[0] != int64(42) {
-		t.Fatalf("query args = %#v, want [42]", db.lastArgs)
+	_, err := repos.Queries(ctx).GetEater(ctx, 42)
+
+	if !errors.Is(err, want) {
+		t.Fatalf("GetEater() error = %v, want %v", err, want)
 	}
 }
 
 func TestRepositoriesQueriesUseContextBoundTransactionExecutor(t *testing.T) {
-	defaultDB := &fakeDBTX{}
-	tx := &fakeTx{}
+	ctrl := gomock.NewController(t)
+	ctx := context.Background()
+	defaultDB := mocks.NewMockDBTX(ctrl)
+	tx := mocks.NewMockTx(ctrl)
+	row := mocks.NewMockRow(ctrl)
 	repos := repositories.New(defaultDB)
-	ctx := repositories.WithExecutor(context.Background(), tx)
+	want := errors.New("row scan failed")
+	txCtx := repositories.WithExecutor(ctx, tx)
 
-	_, err := repos.Queries(ctx).GetEater(ctx, 42)
+	tx.EXPECT().QueryRow(txCtx, gomock.Any(), int64(42)).Return(row)
+	row.EXPECT().Scan(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(want)
 
-	if !errors.Is(err, errFakeRowScan) {
-		t.Fatalf("GetEater() error = %v, want %v", err, errFakeRowScan)
-	}
-	if tx.queryRowCalls != 1 {
-		t.Fatalf("transaction QueryRow calls = %d, want 1", tx.queryRowCalls)
-	}
-	if defaultDB.queryRowCalls != 0 {
-		t.Fatalf("default QueryRow calls = %d, want 0", defaultDB.queryRowCalls)
+	_, err := repos.Queries(txCtx).GetEater(txCtx, 42)
+
+	if !errors.Is(err, want) {
+		t.Fatalf("GetEater() error = %v, want %v", err, want)
 	}
 }
 
 func TestTxManagerBindsTransactionExecutorForRepositories(t *testing.T) {
-	defaultDB := &fakeDBTX{}
-	tx := &fakeTx{}
+	ctrl := gomock.NewController(t)
+	ctx := context.Background()
+	defaultDB := mocks.NewMockDBTX(ctrl)
+	beginner := mocks.NewMocktxBeginner(ctrl)
+	tx := mocks.NewMockTx(ctrl)
+	row := mocks.NewMockRow(ctrl)
 	repos := repositories.New(defaultDB)
-	manager := newTxManager(&fakeBeginner{tx: tx})
+	manager := newTxManager(beginner)
+	want := errors.New("row scan failed")
 
-	err := manager.WithTx(context.Background(), func(ctx context.Context) error {
-		_, err := repos.Queries(ctx).GetProduct(ctx, 42)
+	beginner.EXPECT().Begin(ctx).Return(tx, nil)
+	tx.EXPECT().QueryRow(gomock.Any(), gomock.Any(), int64(42)).Return(row)
+	expectProductScan(row, want)
+	tx.EXPECT().Rollback(ctx).Return(nil)
+
+	err := manager.WithTx(ctx, func(txCtx context.Context) error {
+		_, err := repos.Queries(txCtx).GetProduct(txCtx, 42)
 		return err
 	})
 
-	if !errors.Is(err, errFakeRowScan) {
-		t.Fatalf("WithTx() error = %v, want %v", err, errFakeRowScan)
-	}
-	if tx.queryRowCalls != 1 {
-		t.Fatalf("transaction QueryRow calls = %d, want 1", tx.queryRowCalls)
-	}
-	if defaultDB.queryRowCalls != 0 {
-		t.Fatalf("default QueryRow calls = %d, want 0", defaultDB.queryRowCalls)
+	if !errors.Is(err, want) {
+		t.Fatalf("WithTx() error = %v, want %v", err, want)
 	}
 }
 
-type fakeBeginner struct {
-	tx         pgx.Tx
-	beginErr   error
-	beginCalls int
+func expectProductScan(row *mocks.MockRow, err error) {
+	row.EXPECT().Scan(
+		gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(),
+		gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(),
+		gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(),
+		gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(),
+		gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(),
+		gomock.Any(), gomock.Any(), gomock.Any(),
+	).Return(err)
 }
-
-func (f *fakeBeginner) Begin(context.Context) (pgx.Tx, error) {
-	f.beginCalls++
-	return f.tx, f.beginErr
-}
-
-type fakeTx struct {
-	pgx.Tx
-	commitCalls   int
-	rollbackCalls int
-	commitErr     error
-	rollbackErr   error
-	queryRowCalls int
-}
-
-func (f *fakeTx) Commit(context.Context) error {
-	f.commitCalls++
-	return f.commitErr
-}
-
-func (f *fakeTx) Rollback(context.Context) error {
-	f.rollbackCalls++
-	return f.rollbackErr
-}
-
-func (f *fakeTx) QueryRow(context.Context, string, ...interface{}) pgx.Row {
-	f.queryRowCalls++
-	return fakeRow{}
-}
-
-var errFakeRowScan = errors.New("fake row scan")
-
-type fakeDBTX struct {
-	queryRowCalls int
-	lastQuery     string
-	lastArgs      []interface{}
-}
-
-func (*fakeDBTX) Exec(context.Context, string, ...interface{}) (pgconn.CommandTag, error) {
-	return pgconn.CommandTag{}, nil
-}
-
-func (*fakeDBTX) Query(context.Context, string, ...interface{}) (pgx.Rows, error) {
-	return nil, nil
-}
-
-func (f *fakeDBTX) QueryRow(_ context.Context, query string, args ...interface{}) pgx.Row {
-	f.queryRowCalls++
-	f.lastQuery = query
-	f.lastArgs = args
-	return fakeRow{}
-}
-
-type fakeRow struct{}
-
-func (fakeRow) Scan(...any) error { return errFakeRowScan }

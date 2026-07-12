@@ -1,6 +1,6 @@
 //go:build integration
 
-package postgrestest
+package postgres
 
 import (
 	"context"
