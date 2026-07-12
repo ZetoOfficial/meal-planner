@@ -10,3 +10,9 @@ func respondJSON(w http.ResponseWriter, status int, body any) {
 	w.WriteHeader(status)
 	_ = json.NewEncoder(w).Encode(body)
 }
+
+func writeOpenAPIResponse(w http.ResponseWriter, visit func(http.ResponseWriter) error) {
+	if err := visit(w); err != nil {
+		writeError(w, err)
+	}
+}

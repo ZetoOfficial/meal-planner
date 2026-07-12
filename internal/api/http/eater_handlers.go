@@ -26,7 +26,7 @@ func (a *api) ListEaters(w http.ResponseWriter, r *http.Request) {
 	for i := range eaters {
 		result = append(result, eaterResponse(eaters[i]))
 	}
-	respondJSON(w, http.StatusOK, result)
+	writeOpenAPIResponse(w, openapi.ListEaters200JSONResponse(result).VisitListEatersResponse)
 }
 
 func (a *api) CreateEater(w http.ResponseWriter, r *http.Request) {
@@ -44,7 +44,9 @@ func (a *api) CreateEater(w http.ResponseWriter, r *http.Request) {
 		writeError(w, err)
 		return
 	}
-	respondJSON(w, http.StatusCreated, eaterResponse(eater))
+	writeOpenAPIResponse(w, openapi.CreateEater201JSONResponse{
+		EaterOKJSONResponse: openapi.EaterOKJSONResponse(eaterResponse(eater)),
+	}.VisitCreateEaterResponse)
 }
 
 func (a *api) GetEater(w http.ResponseWriter, r *http.Request, id openapi.EaterId) {
@@ -57,7 +59,9 @@ func (a *api) GetEater(w http.ResponseWriter, r *http.Request, id openapi.EaterI
 		writeError(w, err)
 		return
 	}
-	respondJSON(w, http.StatusOK, eaterResponse(eater))
+	writeOpenAPIResponse(w, openapi.GetEater200JSONResponse{
+		EaterOKJSONResponse: openapi.EaterOKJSONResponse(eaterResponse(eater)),
+	}.VisitGetEaterResponse)
 }
 
 func (a *api) UpdateEater(w http.ResponseWriter, r *http.Request, id openapi.EaterId) {
@@ -75,7 +79,9 @@ func (a *api) UpdateEater(w http.ResponseWriter, r *http.Request, id openapi.Eat
 		writeError(w, err)
 		return
 	}
-	respondJSON(w, http.StatusOK, eaterResponse(eater))
+	writeOpenAPIResponse(w, openapi.UpdateEater200JSONResponse{
+		EaterOKJSONResponse: openapi.EaterOKJSONResponse(eaterResponse(eater)),
+	}.VisitUpdateEaterResponse)
 }
 
 func (a *api) ListEaterGoals(w http.ResponseWriter, r *http.Request, id openapi.EaterId) {
@@ -92,7 +98,7 @@ func (a *api) ListEaterGoals(w http.ResponseWriter, r *http.Request, id openapi.
 	for i := range goals {
 		result = append(result, macroGoalResponse(goals[i]))
 	}
-	respondJSON(w, http.StatusOK, result)
+	writeOpenAPIResponse(w, openapi.ListEaterGoals200JSONResponse(result).VisitListEaterGoalsResponse)
 }
 
 func (a *api) CreateEaterGoal(w http.ResponseWriter, r *http.Request, id openapi.EaterId) {
@@ -110,7 +116,7 @@ func (a *api) CreateEaterGoal(w http.ResponseWriter, r *http.Request, id openapi
 		writeError(w, err)
 		return
 	}
-	respondJSON(w, http.StatusCreated, macroGoalResponse(goal))
+	writeOpenAPIResponse(w, openapi.CreateEaterGoal201JSONResponse(macroGoalResponse(goal)).VisitCreateEaterGoalResponse)
 }
 
 func (a *api) ListFixedMeals(w http.ResponseWriter, r *http.Request, id openapi.EaterId) {
@@ -127,7 +133,7 @@ func (a *api) ListFixedMeals(w http.ResponseWriter, r *http.Request, id openapi.
 	for i := range meals {
 		result = append(result, fixedMealResponse(meals[i]))
 	}
-	respondJSON(w, http.StatusOK, result)
+	writeOpenAPIResponse(w, openapi.ListFixedMeals200JSONResponse(result).VisitListFixedMealsResponse)
 }
 
 func (a *api) CreateFixedMeal(w http.ResponseWriter, r *http.Request, id openapi.EaterId) {
@@ -145,7 +151,7 @@ func (a *api) CreateFixedMeal(w http.ResponseWriter, r *http.Request, id openapi
 		writeError(w, err)
 		return
 	}
-	respondJSON(w, http.StatusCreated, fixedMealResponse(meal))
+	writeOpenAPIResponse(w, openapi.CreateFixedMeal201JSONResponse(fixedMealResponse(meal)).VisitCreateFixedMealResponse)
 }
 
 func (a *api) ListExclusions(w http.ResponseWriter, r *http.Request, id openapi.EaterId) {
@@ -162,7 +168,7 @@ func (a *api) ListExclusions(w http.ResponseWriter, r *http.Request, id openapi.
 	for i := range exclusions {
 		result = append(result, exclusionResponse(exclusions[i]))
 	}
-	respondJSON(w, http.StatusOK, result)
+	writeOpenAPIResponse(w, openapi.ListExclusions200JSONResponse(result).VisitListExclusionsResponse)
 }
 
 func (a *api) CreateExclusion(w http.ResponseWriter, r *http.Request, id openapi.EaterId) {
@@ -180,7 +186,7 @@ func (a *api) CreateExclusion(w http.ResponseWriter, r *http.Request, id openapi
 		writeError(w, err)
 		return
 	}
-	respondJSON(w, http.StatusCreated, exclusionResponse(exclusion))
+	writeOpenAPIResponse(w, openapi.CreateExclusion201JSONResponse(exclusionResponse(exclusion)).VisitCreateExclusionResponse)
 }
 
 func (a *api) DeleteExclusion(w http.ResponseWriter, r *http.Request, id int64) {
@@ -192,7 +198,7 @@ func (a *api) DeleteExclusion(w http.ResponseWriter, r *http.Request, id int64) 
 		writeError(w, err)
 		return
 	}
-	w.WriteHeader(http.StatusNoContent)
+	writeOpenAPIResponse(w, openapi.DeleteExclusion204Response{}.VisitDeleteExclusionResponse)
 }
 
 func eaterCommand(input openapi.EaterInput) usecaseeater.CreateEaterCommand {

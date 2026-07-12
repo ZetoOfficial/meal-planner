@@ -113,6 +113,9 @@ func TestProductCreateAndRoleFilteredList(t *testing.T) {
 	if created.Code != http.StatusCreated {
 		t.Fatalf("POST /products status = %d, want %d: %s", created.Code, http.StatusCreated, created.Body.String())
 	}
+	if contentType := created.Header().Get("Content-Type"); contentType != "application/json" {
+		t.Fatalf("POST /products Content-Type = %q, want application/json", contentType)
+	}
 	if catalog.created.Brand != "Acme" || catalog.created.Name != "Chicken breast" {
 		t.Fatalf("create command = %#v", catalog.created)
 	}

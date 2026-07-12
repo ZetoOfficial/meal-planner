@@ -30,7 +30,7 @@ func (a *api) ListProducts(w http.ResponseWriter, r *http.Request, params openap
 	for i := range products {
 		result = append(result, productResponse(products[i]))
 	}
-	respondJSON(w, http.StatusOK, result)
+	writeOpenAPIResponse(w, openapi.ListProducts200JSONResponse(result).VisitListProductsResponse)
 }
 
 func (a *api) CreateProduct(w http.ResponseWriter, r *http.Request) {
@@ -48,7 +48,9 @@ func (a *api) CreateProduct(w http.ResponseWriter, r *http.Request) {
 		writeError(w, err)
 		return
 	}
-	respondJSON(w, http.StatusCreated, productResponse(product))
+	writeOpenAPIResponse(w, openapi.CreateProduct201JSONResponse{
+		ProductOKJSONResponse: openapi.ProductOKJSONResponse(productResponse(product)),
+	}.VisitCreateProductResponse)
 }
 
 func (a *api) GetProduct(w http.ResponseWriter, r *http.Request, id openapi.ProductId) {
@@ -61,7 +63,9 @@ func (a *api) GetProduct(w http.ResponseWriter, r *http.Request, id openapi.Prod
 		writeError(w, err)
 		return
 	}
-	respondJSON(w, http.StatusOK, productResponse(product))
+	writeOpenAPIResponse(w, openapi.GetProduct200JSONResponse{
+		ProductOKJSONResponse: openapi.ProductOKJSONResponse(productResponse(product)),
+	}.VisitGetProductResponse)
 }
 
 func (a *api) UpdateProduct(w http.ResponseWriter, r *http.Request, id openapi.ProductId) {
@@ -79,7 +83,9 @@ func (a *api) UpdateProduct(w http.ResponseWriter, r *http.Request, id openapi.P
 		writeError(w, err)
 		return
 	}
-	respondJSON(w, http.StatusOK, productResponse(product))
+	writeOpenAPIResponse(w, openapi.UpdateProduct200JSONResponse{
+		ProductOKJSONResponse: openapi.ProductOKJSONResponse(productResponse(product)),
+	}.VisitUpdateProductResponse)
 }
 
 func (a *api) DeleteProduct(w http.ResponseWriter, r *http.Request, id openapi.ProductId) {
@@ -91,7 +97,7 @@ func (a *api) DeleteProduct(w http.ResponseWriter, r *http.Request, id openapi.P
 		writeError(w, err)
 		return
 	}
-	w.WriteHeader(http.StatusNoContent)
+	writeOpenAPIResponse(w, openapi.DeleteProduct204Response{}.VisitDeleteProductResponse)
 }
 
 func (a *api) ListRoleTags(w http.ResponseWriter, r *http.Request) {
@@ -109,7 +115,7 @@ func (a *api) ListRoleTags(w http.ResponseWriter, r *http.Request) {
 		tag := &tags[i]
 		result = append(result, openapi.RoleTag{Id: tag.ID, Code: tag.Code, Kind: openapi.RoleKind(tag.Kind), Label: tag.Label, ParentId: tag.ParentID})
 	}
-	respondJSON(w, http.StatusOK, result)
+	writeOpenAPIResponse(w, openapi.ListRoleTags200JSONResponse(result).VisitListRoleTagsResponse)
 }
 
 type jsonObjectValidator func(map[string]json.RawMessage) error
