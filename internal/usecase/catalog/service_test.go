@@ -3,6 +3,7 @@ package catalog
 import (
 	"context"
 	"errors"
+	"math"
 	"slices"
 	"testing"
 
@@ -80,6 +81,84 @@ func TestCreateProductRejectsInvalidEnum(t *testing.T) {
 	}
 	if repository.created {
 		t.Fatal("CreateProduct() persisted an invalid enum")
+	}
+}
+
+func TestCreateProductRejectsNonFiniteAndOutOfRangeNumericValues(t *testing.T) {
+	tests := []struct {
+		name    string
+		command CreateProductCommand
+	}{
+		{
+			name:    "non-finite required macro",
+			command: CreateProductCommand{ProteinPer100G: math.NaN()},
+		},
+		{
+			name:    "required macro above numeric precision",
+			command: CreateProductCommand{ProteinPer100G: 10_000},
+		},
+		{
+			name:    "non-finite optional price",
+			command: CreateProductCommand{PricePer100G: float64ptr(math.Inf(1))},
+		},
+		{
+			name:    "quality nutrient above numeric precision",
+			command: CreateProductCommand{Nutrition: catalogdom.NutritionFacts{SodiumMgPer100G: float64ptr(1_000_000)}},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			repository := &catalogRepositoryStub{roleTags: map[string]catalogdom.RoleTag{
+				"protein:lean": {ID: 1, Code: "protein:lean", Kind: catalogdom.RoleKindProtein},
+			}}
+			service := NewService(repository, passthroughTxRunner{})
+			command := test.command
+			command.Brand = "Brand"
+			command.Name = "Product"
+			command.Roles = []string{"protein:lean"}
+
+			_, err := service.CreateProduct(t.Context(), command)
+			if !errors.Is(err, apperr.ErrValidation) {
+				t.Fatalf("CreateProduct() error = %v, want validation error", err)
+			}
+			if repository.created {
+				t.Fatal("CreateProduct() persisted an unrepresentable numeric value")
+			}
+		})
+	}
+}
+
+func TestCreateProductAcceptsNumericUpperBounds(t *testing.T) {
+	repository := &catalogRepositoryStub{roleTags: map[string]catalogdom.RoleTag{
+		"protein:lean": {ID: 1, Code: "protein:lean", Kind: catalogdom.RoleKindProtein},
+	}}
+	service := NewService(repository, passthroughTxRunner{})
+	price := 999_999.99
+	sodium := 999_999.99
+
+	_, err := service.CreateProduct(t.Context(), CreateProductCommand{
+		Brand:          "Brand",
+		Name:           "Product",
+		ProteinPer100G: 9_999.99,
+		FatPer100G:     9_999.99,
+		CarbPer100G:    9_999.99,
+		KcalPer100G:    99_999.99,
+		PricePer100G:   &price,
+		Nutrition: catalogdom.NutritionFacts{
+			SodiumMgPer100G: &sodium,
+		},
+		Classification: catalogdom.FoodClassification{
+			ProcessingConfidence: float64ptr(1),
+			WholeGrainRatio:      float64ptr(1),
+		},
+		Roles: []string{"protein:lean"},
+	})
+	if err != nil {
+		t.Fatalf("CreateProduct() error = %v, want nil", err)
+	}
+	if !repository.created {
+		t.Fatal("CreateProduct() did not persist numeric values at supported upper bounds")
 	}
 }
 

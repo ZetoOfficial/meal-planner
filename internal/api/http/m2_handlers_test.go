@@ -50,6 +50,7 @@ func (f *catalogFake) ListProducts(_ context.Context, role string) ([]catalogdom
 func (f *catalogFake) GetProduct(context.Context, catalogdom.ProductID) (catalogdom.Product, error) {
 	return f.created, f.err
 }
+
 func (f *catalogFake) UpdateProduct(context.Context, catalogdom.ProductID, usecasecatalog.UpdateProductCommand) (catalogdom.Product, error) {
 	return f.created, f.err
 }
@@ -65,24 +66,31 @@ func (eaterFake) ListEaters(context.Context) ([]eaterdom.Eater, error) { return 
 func (eaterFake) GetEater(context.Context, eaterdom.ID) (eaterdom.Eater, error) {
 	return eaterdom.Eater{}, nil
 }
+
 func (eaterFake) UpdateEater(context.Context, eaterdom.ID, usecaseeater.UpdateEaterCommand) (eaterdom.Eater, error) {
 	return eaterdom.Eater{}, nil
 }
+
 func (eaterFake) ListGoals(context.Context, eaterdom.ID) ([]eaterdom.MacroGoal, error) {
 	return nil, nil
 }
+
 func (eaterFake) CreateGoal(context.Context, eaterdom.ID, usecaseeater.MacroGoalCommand) (eaterdom.MacroGoal, error) {
 	return eaterdom.MacroGoal{}, nil
 }
+
 func (eaterFake) ListFixedMeals(context.Context, eaterdom.ID) ([]eaterdom.FixedMeal, error) {
 	return nil, nil
 }
+
 func (eaterFake) CreateFixedMeal(context.Context, eaterdom.ID, usecaseeater.CreateFixedMealCommand) (eaterdom.FixedMeal, error) {
 	return eaterdom.FixedMeal{}, nil
 }
+
 func (eaterFake) ListExclusions(context.Context, eaterdom.ID) ([]eaterdom.Exclusion, error) {
 	return nil, nil
 }
+
 func (eaterFake) CreateExclusion(context.Context, eaterdom.ID, usecaseeater.CreateExclusionCommand) (eaterdom.Exclusion, error) {
 	return eaterdom.Exclusion{}, nil
 }
@@ -130,7 +138,7 @@ func TestProductCreateAndRoleFilteredList(t *testing.T) {
 }
 
 func TestM2HandlerMapsApplicationErrors(t *testing.T) {
-	for _, test := range []struct {
+	tests := []struct {
 		name string
 		err  error
 		want int
@@ -138,7 +146,9 @@ func TestM2HandlerMapsApplicationErrors(t *testing.T) {
 		{name: "not found", err: apperr.NotFound("product"), want: http.StatusNotFound},
 		{name: "conflict", err: apperr.Conflict("duplicate product"), want: http.StatusConflict},
 		{name: "validation", err: apperr.Validation("invalid product"), want: http.StatusUnprocessableEntity},
-	} {
+	}
+	for i := range tests {
+		test := &tests[i]
 		t.Run(test.name, func(t *testing.T) {
 			handler := New(Deps{APIToken: "secret", Catalog: &catalogFake{err: test.err}})
 			req := httptest.NewRequest(http.MethodGet, "/products/42", http.NoBody)
@@ -191,7 +201,8 @@ func TestM2HandlersRejectMissingRequiredJSONFields(t *testing.T) {
 		},
 	}
 
-	for _, test := range tests {
+	for i := range tests {
+		test := &tests[i]
 		t.Run(test.name, func(t *testing.T) {
 			req := httptest.NewRequest(http.MethodPost, test.path, strings.NewReader(test.body))
 			req.Header.Set("X-API-Token", "secret")

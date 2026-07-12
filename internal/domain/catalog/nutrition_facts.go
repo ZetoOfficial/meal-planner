@@ -2,6 +2,8 @@ package catalog
 
 import "time"
 
+const nutritionFactCoverageFields = 10
+
 type NutritionFacts struct {
 	SaturatedFatPer100G               *float64
 	TransFatPer100G                   *float64
@@ -35,7 +37,7 @@ func (facts NutritionFacts) Coverage() float64 {
 	if facts.ContainsPartiallyHydrogenatedOils != nil {
 		populated++
 	}
-	return float64(populated) / 10
+	return float64(populated) / nutritionFactCoverageFields
 }
 
 type NutritionDataQuality string

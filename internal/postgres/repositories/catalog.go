@@ -52,8 +52,8 @@ func (r *Catalog) List(ctx context.Context, roleCode string) ([]catalogdom.Produ
 		return nil, mapCatalogError(err, "product")
 	}
 	products := make([]catalogdom.Product, 0, len(rows))
-	for _, row := range rows {
-		product, err := r.load(ctx, query, catalogdom.ProductID(row.ID))
+	for i := range rows {
+		product, err := r.load(ctx, query, catalogdom.ProductID(rows[i].ID))
 		if err != nil {
 			return nil, err
 		}

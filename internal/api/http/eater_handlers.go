@@ -4,11 +4,12 @@ import (
 	"encoding/json"
 	"net/http"
 
+	openapitypes "github.com/oapi-codegen/runtime/types"
+
 	"github.com/ZetoOfficial/meal-planner/internal/api/openapi"
 	eaterdom "github.com/ZetoOfficial/meal-planner/internal/domain/eater"
 	apperr "github.com/ZetoOfficial/meal-planner/internal/errors"
 	usecaseeater "github.com/ZetoOfficial/meal-planner/internal/usecase/eater"
-	openapitypes "github.com/oapi-codegen/runtime/types"
 )
 
 func (a *api) ListEaters(w http.ResponseWriter, r *http.Request) {
@@ -22,8 +23,8 @@ func (a *api) ListEaters(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	result := make([]openapi.Eater, 0, len(eaters))
-	for _, eater := range eaters {
-		result = append(result, eaterResponse(eater))
+	for i := range eaters {
+		result = append(result, eaterResponse(eaters[i]))
 	}
 	respondJSON(w, http.StatusOK, result)
 }
@@ -88,8 +89,8 @@ func (a *api) ListEaterGoals(w http.ResponseWriter, r *http.Request, id openapi.
 		return
 	}
 	result := make([]openapi.MacroGoal, 0, len(goals))
-	for _, goal := range goals {
-		result = append(result, macroGoalResponse(goal))
+	for i := range goals {
+		result = append(result, macroGoalResponse(goals[i]))
 	}
 	respondJSON(w, http.StatusOK, result)
 }
@@ -123,8 +124,8 @@ func (a *api) ListFixedMeals(w http.ResponseWriter, r *http.Request, id openapi.
 		return
 	}
 	result := make([]openapi.FixedMeal, 0, len(meals))
-	for _, meal := range meals {
-		result = append(result, fixedMealResponse(meal))
+	for i := range meals {
+		result = append(result, fixedMealResponse(meals[i]))
 	}
 	respondJSON(w, http.StatusOK, result)
 }
@@ -158,8 +159,8 @@ func (a *api) ListExclusions(w http.ResponseWriter, r *http.Request, id openapi.
 		return
 	}
 	result := make([]openapi.Exclusion, 0, len(exclusions))
-	for _, exclusion := range exclusions {
-		result = append(result, exclusionResponse(exclusion))
+	for i := range exclusions {
+		result = append(result, exclusionResponse(exclusions[i]))
 	}
 	respondJSON(w, http.StatusOK, result)
 }
@@ -307,12 +308,12 @@ func validateNestedObject(object map[string]json.RawMessage, field string, valid
 
 func eaterResponse(value eaterdom.Eater) openapi.Eater {
 	allergens := make([]string, len(value.Allergens))
-	for i, allergen := range value.Allergens {
-		allergens[i] = string(allergen)
+	for i := range value.Allergens {
+		allergens[i] = string(value.Allergens[i])
 	}
 	exclusions := make([]openapi.Exclusion, 0, len(value.Exclusions))
-	for _, exclusion := range value.Exclusions {
-		exclusions = append(exclusions, exclusionResponse(exclusion))
+	for i := range value.Exclusions {
+		exclusions = append(exclusions, exclusionResponse(value.Exclusions[i]))
 	}
 	result := openapi.Eater{Id: int64(value.ID), Name: value.Name, Allergens: &allergens, Exclusions: &exclusions}
 	sex := openapi.Sex(value.Sex)

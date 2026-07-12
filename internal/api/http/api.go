@@ -58,9 +58,11 @@ func notImplemented(w http.ResponseWriter) {
 func (a *api) GetMacroAnalytics(w http.ResponseWriter, _ *http.Request, _ openapi.GetMacroAnalyticsParams) {
 	notImplemented(w)
 }
+
 func (a *api) GetNutritionQualityAnalytics(w http.ResponseWriter, _ *http.Request, _ openapi.GetNutritionQualityAnalyticsParams) {
 	notImplemented(w)
 }
+
 func (a *api) GetTopRecipes(w http.ResponseWriter, _ *http.Request, _ openapi.GetTopRecipesParams) {
 	notImplemented(w)
 }
@@ -75,9 +77,11 @@ func (a *api) GetPlan(w http.ResponseWriter, _ *http.Request, _ openapi.PlanId) 
 func (a *api) ListPlanMeals(w http.ResponseWriter, _ *http.Request, _ openapi.PlanId, _ openapi.ListPlanMealsParams) {
 	notImplemented(w)
 }
+
 func (a *api) GetShoppingList(w http.ResponseWriter, _ *http.Request, _ openapi.PlanId) {
 	notImplemented(w)
 }
+
 func (a *api) RegenerateShoppingList(w http.ResponseWriter, _ *http.Request, _ openapi.PlanId) {
 	notImplemented(w)
 }
@@ -85,6 +89,7 @@ func (a *api) ApplySwap(w http.ResponseWriter, _ *http.Request, _ openapi.PlanId
 func (a *api) PreviewSwap(w http.ResponseWriter, _ *http.Request, _ openapi.PlanId) {
 	notImplemented(w)
 }
+
 func (a *api) ListRecipes(w http.ResponseWriter, _ *http.Request, _ openapi.ListRecipesParams) {
 	notImplemented(w)
 }
@@ -92,9 +97,11 @@ func (a *api) CreateRecipe(w http.ResponseWriter, _ *http.Request) { notImplemen
 func (a *api) GetRecipe(w http.ResponseWriter, _ *http.Request, _ openapi.RecipeId) {
 	notImplemented(w)
 }
+
 func (a *api) PromoteRecipe(w http.ResponseWriter, _ *http.Request, _ openapi.RecipeId) {
 	notImplemented(w)
 }
+
 func (a *api) UpdateShoppingListItem(w http.ResponseWriter, _ *http.Request, _ int64) {
 	notImplemented(w)
 }

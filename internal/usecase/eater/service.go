@@ -2,7 +2,6 @@ package eater
 
 import (
 	"context"
-	"fmt"
 	"math"
 	"strconv"
 	"strings"
@@ -17,6 +16,7 @@ const (
 	maxNumeric6_1 = 99_999.9
 	maxNumeric7_1 = 999_999.9
 	maxNumeric8_1 = 9_999_999.9
+	dayDuration   = 24 * time.Hour
 )
 
 type Service struct {
@@ -77,6 +77,7 @@ func (s *Service) UpdateEater(ctx context.Context, id eaterdom.ID, command Updat
 	if err := validateEaterID(id); err != nil {
 		return eaterdom.Eater{}, err
 	}
+	goalEffectiveFromDefaulted := command.Goal.EffectiveFrom.IsZero()
 	profile, goal, err := profileFromCommand(command)
 	if err != nil {
 		return eaterdom.Eater{}, err
@@ -84,6 +85,16 @@ func (s *Service) UpdateEater(ctx context.Context, id eaterdom.ID, command Updat
 	profile.ID, goal.EaterID = id, id
 	var updated eaterdom.Eater
 	err = s.transactions.WithTx(ctx, func(ctx context.Context) error {
+		if goalEffectiveFromDefaulted {
+			goals, err := s.eaters.ListGoals(ctx, id)
+			if err != nil {
+				return err
+			}
+			// PUT has no effective_from. Never overwrite today's immutable goal:
+			// when it already exists, schedule the replacement for the first free
+			// future date so the current goal remains historically correct today.
+			goal.EffectiveFrom = firstAvailableGoalDate(goals, goal.EffectiveFrom)
+		}
 		updated, err = s.eaters.Update(ctx, profile, goal)
 		return err
 	})
@@ -91,6 +102,23 @@ func (s *Service) UpdateEater(ctx context.Context, id eaterdom.ID, command Updat
 		return eaterdom.Eater{}, err
 	}
 	return updated, nil
+}
+
+func firstAvailableGoalDate(goals []eaterdom.MacroGoal, candidate time.Time) time.Time {
+	candidate = candidate.UTC().Truncate(dayDuration)
+	for {
+		occupied := false
+		for _, goal := range goals {
+			if goal.EffectiveFrom.UTC().Truncate(dayDuration).Equal(candidate) {
+				occupied = true
+				break
+			}
+		}
+		if !occupied {
+			return candidate
+		}
+		candidate = candidate.AddDate(0, 0, 1)
+	}
 }
 
 func (s *Service) ListGoals(ctx context.Context, eaterID eaterdom.ID) ([]eaterdom.MacroGoal, error) {
@@ -202,7 +230,7 @@ func profileFromCommand(command CreateEaterCommand) (eaterdom.Eater, eaterdom.Ma
 func goalFromCommand(eaterID eaterdom.ID, command MacroGoalCommand) (eaterdom.MacroGoal, error) {
 	goal := eaterdom.MacroGoal{EaterID: eaterID, EffectiveFrom: command.EffectiveFrom, Range: command.Range, Note: command.Note}
 	if goal.EffectiveFrom.IsZero() {
-		goal.EffectiveFrom = time.Now().UTC().Truncate(24 * time.Hour)
+		goal.EffectiveFrom = time.Now().UTC().Truncate(dayDuration)
 	}
 	if err := validateMacroRange(goal.Range); err != nil {
 		return eaterdom.MacroGoal{}, err
@@ -230,7 +258,7 @@ func validateMacroRange(value eaterdom.MacroRange) error {
 			return err
 		}
 		if limits[0] < 0 || limits[0] > limits[1] {
-			return apperr.Validation(fmt.Sprintf("%s range must be nonnegative and ordered", name))
+			return apperr.Validation(name + " range must be nonnegative and ordered")
 		}
 	}
 	if !validKcal(value.KcalMin) || !validKcal(value.KcalMax) || value.KcalMin > value.KcalMax {
@@ -256,8 +284,8 @@ func validateFixedMeal(meal *eaterdom.FixedMeal) error {
 		return apperr.Validation("fixed meal kcal must be a nonnegative int32")
 	}
 	for name, value := range map[string]struct {
-		value *float64
-		max   float64
+		value      *float64
+		upperBound float64
 	}{
 		"saturated_fat_g": {meal.Quality.SaturatedFatG, maxNumeric6_1}, "trans_fat_g": {meal.Quality.TransFatG, maxNumeric6_1},
 		"fiber_g": {meal.Quality.FiberG, maxNumeric6_1}, "sodium_mg": {meal.Quality.SodiumMg, maxNumeric8_1},
@@ -265,7 +293,7 @@ func validateFixedMeal(meal *eaterdom.FixedMeal) error {
 		"processed_meat_g": {meal.Quality.ProcessedMeatG, maxNumeric7_1}, "red_meat_g": {meal.Quality.RedMeatG, maxNumeric7_1},
 		"whole_grain_g_equiv": {meal.Quality.WholeGrainGEquiv, maxNumeric7_1}, "fruit_veg_g": {meal.Quality.FruitVegG, maxNumeric7_1},
 	} {
-		if value.value != nil && !validFiniteNumeric(*value.value, value.max) {
+		if value.value != nil && !validFiniteNumeric(*value.value, value.upperBound) {
 			return apperr.Validation("fixed meal " + name + " must be finite and fit the database column")
 		}
 	}
@@ -279,8 +307,8 @@ func validateNumeric6_1(name string, value float64) error {
 	return nil
 }
 
-func validFiniteNumeric(value, max float64) bool {
-	return !math.IsNaN(value) && !math.IsInf(value, 0) && value >= 0 && value <= max
+func validFiniteNumeric(value, upperBound float64) bool {
+	return !math.IsNaN(value) && !math.IsInf(value, 0) && value >= 0 && value <= upperBound
 }
 
 func validKcal(value int) bool {
@@ -352,9 +380,11 @@ func normalizeAllergens(values []eaterdom.Allergen) ([]eaterdom.Allergen, error)
 func validSex(value eaterdom.Sex) bool {
 	return value == eaterdom.SexMale || value == eaterdom.SexFemale || value == eaterdom.SexUnspecified
 }
+
 func validMealType(value eaterdom.MealType) bool {
 	return value == eaterdom.MealTypeBreakfast || value == eaterdom.MealTypeLunch || value == eaterdom.MealTypeDinner || value == eaterdom.MealTypeSnack
 }
+
 func validFoodGroup(value catalogdom.FoodGroup) bool {
 	switch value {
 	case catalogdom.FoodGroupFruit, catalogdom.FoodGroupVegetable, catalogdom.FoodGroupPotato, catalogdom.FoodGroupGrain, catalogdom.FoodGroupLegume, catalogdom.FoodGroupNutsSeeds, catalogdom.FoodGroupDairy, catalogdom.FoodGroupDairyAlt, catalogdom.FoodGroupFishSeafood, catalogdom.FoodGroupEgg, catalogdom.FoodGroupRedMeat, catalogdom.FoodGroupWhiteMeat, catalogdom.FoodGroupProcessedMeat, catalogdom.FoodGroupMixed, catalogdom.FoodGroupSauceCondiment, catalogdom.FoodGroupConfectionery, catalogdom.FoodGroupBeverage, catalogdom.FoodGroupOther:

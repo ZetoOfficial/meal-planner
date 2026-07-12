@@ -27,8 +27,8 @@ func (a *api) ListProducts(w http.ResponseWriter, r *http.Request, params openap
 		return
 	}
 	result := make([]openapi.Product, 0, len(products))
-	for _, product := range products {
-		result = append(result, productResponse(product))
+	for i := range products {
+		result = append(result, productResponse(products[i]))
 	}
 	respondJSON(w, http.StatusOK, result)
 }
@@ -105,7 +105,8 @@ func (a *api) ListRoleTags(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	result := make([]openapi.RoleTag, 0, len(tags))
-	for _, tag := range tags {
+	for i := range tags {
+		tag := &tags[i]
 		result = append(result, openapi.RoleTag{Id: tag.ID, Code: tag.Code, Kind: openapi.RoleKind(tag.Kind), Label: tag.Label, ParentId: tag.ParentID})
 	}
 	respondJSON(w, http.StatusOK, result)
@@ -246,12 +247,12 @@ func classificationCommand(input *openapi.FoodClassification) catalogdom.FoodCla
 
 func productResponse(product catalogdom.Product) openapi.Product {
 	roles := make([]string, len(product.Roles))
-	for i, role := range product.Roles {
-		roles[i] = role.Code
+	for i := range product.Roles {
+		roles[i] = product.Roles[i].Code
 	}
 	allergens := make([]string, len(product.Allergens))
-	for i, allergen := range product.Allergens {
-		allergens[i] = string(allergen)
+	for i := range product.Allergens {
+		allergens[i] = string(product.Allergens[i])
 	}
 	return openapi.Product{
 		Id:             int64(product.ID),

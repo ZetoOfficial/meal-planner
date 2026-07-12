@@ -3,10 +3,18 @@ package catalog
 import (
 	"context"
 	"fmt"
+	"math"
 	"strings"
 
 	catalogdom "github.com/ZetoOfficial/meal-planner/internal/domain/catalog"
 	apperr "github.com/ZetoOfficial/meal-planner/internal/errors"
+)
+
+const (
+	maxGramsPer100G  = 9_999.99
+	maxKcalPer100G   = 99_999.99
+	maxPricePer100G  = 999_999.99
+	maxSodiumPer100G = 999_999.99
 )
 
 type Service struct {
@@ -173,17 +181,17 @@ func validateProduct(product catalogdom.Product) error {
 	if product.Brand == "" || product.Name == "" {
 		return apperr.Validation("product brand and name must not be blank")
 	}
-	for name, value := range map[string]float64{
-		"protein_per_100g": product.ProteinPer100G,
-		"fat_per_100g":     product.FatPer100G,
-		"carb_per_100g":    product.CarbPer100G,
-		"kcal_per_100g":    product.KcalPer100G,
+	for name, value := range map[string]numericInput{
+		"protein_per_100g": {value: product.ProteinPer100G, upperBound: maxGramsPer100G},
+		"fat_per_100g":     {value: product.FatPer100G, upperBound: maxGramsPer100G},
+		"carb_per_100g":    {value: product.CarbPer100G, upperBound: maxGramsPer100G},
+		"kcal_per_100g":    {value: product.KcalPer100G, upperBound: maxKcalPer100G},
 	} {
-		if value < 0 {
-			return apperr.Validation(fmt.Sprintf("%s must not be negative", name))
+		if err := validateNumeric(name, value.value, value.upperBound); err != nil {
+			return err
 		}
 	}
-	if err := validateOptionalNonnegative("price_per_100g", product.PricePer100G); err != nil {
+	if err := validateOptionalNumeric("price_per_100g", product.PricePer100G, maxPricePer100G); err != nil {
 		return err
 	}
 	if !validNutritionDataQuality(product.DataQuality.Quality) {
@@ -198,18 +206,18 @@ func validateProduct(product catalogdom.Product) error {
 	if !validProcessingLevel(product.Classification.ProcessingLevel) {
 		return apperr.Validation("processing_level is invalid")
 	}
-	for name, value := range map[string]*float64{
-		"saturated_fat_per_100g":        product.Nutrition.SaturatedFatPer100G,
-		"trans_fat_per_100g":            product.Nutrition.TransFatPer100G,
-		"industrial_trans_fat_per_100g": product.Nutrition.IndustrialTransFatPer100G,
-		"fiber_per_100g":                product.Nutrition.FiberPer100G,
-		"sodium_mg_per_100g":            product.Nutrition.SodiumMgPer100G,
-		"salt_g_per_100g":               product.Nutrition.SaltGPer100G,
-		"total_sugars_per_100g":         product.Nutrition.TotalSugarsPer100G,
-		"added_sugars_per_100g":         product.Nutrition.AddedSugarsPer100G,
-		"free_sugars_per_100g":          product.Nutrition.FreeSugarsPer100G,
+	for name, value := range map[string]optionalNumericInput{
+		"saturated_fat_per_100g":        {value: product.Nutrition.SaturatedFatPer100G, upperBound: maxGramsPer100G},
+		"trans_fat_per_100g":            {value: product.Nutrition.TransFatPer100G, upperBound: maxGramsPer100G},
+		"industrial_trans_fat_per_100g": {value: product.Nutrition.IndustrialTransFatPer100G, upperBound: maxGramsPer100G},
+		"fiber_per_100g":                {value: product.Nutrition.FiberPer100G, upperBound: maxGramsPer100G},
+		"sodium_mg_per_100g":            {value: product.Nutrition.SodiumMgPer100G, upperBound: maxSodiumPer100G},
+		"salt_g_per_100g":               {value: product.Nutrition.SaltGPer100G, upperBound: maxGramsPer100G},
+		"total_sugars_per_100g":         {value: product.Nutrition.TotalSugarsPer100G, upperBound: maxGramsPer100G},
+		"added_sugars_per_100g":         {value: product.Nutrition.AddedSugarsPer100G, upperBound: maxGramsPer100G},
+		"free_sugars_per_100g":          {value: product.Nutrition.FreeSugarsPer100G, upperBound: maxGramsPer100G},
 	} {
-		if err := validateOptionalNonnegative(name, value); err != nil {
+		if err := validateOptionalNumeric(name, value.value, value.upperBound); err != nil {
 			return err
 		}
 	}
@@ -219,16 +227,33 @@ func validateProduct(product catalogdom.Product) error {
 	return validateRatio("whole_grain_ratio", product.Classification.WholeGrainRatio)
 }
 
-func validateOptionalNonnegative(name string, value *float64) error {
-	if value != nil && *value < 0 {
-		return apperr.Validation(fmt.Sprintf("%s must not be negative", name))
+type numericInput struct {
+	value      float64
+	upperBound float64
+}
+
+type optionalNumericInput struct {
+	value      *float64
+	upperBound float64
+}
+
+func validateOptionalNumeric(name string, value *float64, upperBound float64) error {
+	if value != nil {
+		return validateNumeric(name, *value, upperBound)
+	}
+	return nil
+}
+
+func validateNumeric(name string, value, upperBound float64) error {
+	if math.IsNaN(value) || math.IsInf(value, 0) || value < 0 || value > upperBound {
+		return apperr.Validation(fmt.Sprintf("%s must be between 0 and %g", name, upperBound))
 	}
 	return nil
 }
 
 func validateRatio(name string, value *float64) error {
-	if value != nil && (*value < 0 || *value > 1) {
-		return apperr.Validation(fmt.Sprintf("%s must be between 0 and 1", name))
+	if value != nil && (math.IsNaN(*value) || math.IsInf(*value, 0) || *value < 0 || *value > 1) {
+		return apperr.Validation(name + " must be between 0 and 1")
 	}
 	return nil
 }

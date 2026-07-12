@@ -38,6 +38,39 @@ func TestUpdateEaterReplacesAllergensAndAppendsGoal(t *testing.T) {
 	}
 }
 
+func TestUpdateEaterSchedulesSameDayGoalForNextAvailableDate(t *testing.T) {
+	repository := &sameDayEaterRepository{}
+	service := NewService(repository, passthroughTxRunner{})
+	created, err := service.CreateEater(t.Context(), CreateEaterCommand{
+		Name: "Pasha", Sex: eaterdom.SexMale, Allergens: []eaterdom.Allergen{"casein"},
+		Goal: MacroGoalCommand{Range: eaterdom.MacroRange{ProteinMaxG: 100, FatMaxG: 50, CarbMaxG: 150, KcalMax: 1800}},
+	})
+	if err != nil {
+		t.Fatalf("CreateEater() error = %v", err)
+	}
+
+	updated, err := service.UpdateEater(t.Context(), created.ID, UpdateEaterCommand{
+		Name: "Pasha Updated", Sex: eaterdom.SexMale, Allergens: []eaterdom.Allergen{"nuts"},
+		Goal: MacroGoalCommand{Range: eaterdom.MacroRange{ProteinMaxG: 120, FatMaxG: 60, CarbMaxG: 170, KcalMax: 2000}},
+	})
+	if err != nil {
+		t.Fatalf("UpdateEater() error = %v", err)
+	}
+	goals, err := service.ListGoals(t.Context(), created.ID)
+	if err != nil {
+		t.Fatalf("ListGoals() error = %v", err)
+	}
+	if len(goals) != 2 || !goals[1].EffectiveFrom.Equal(goals[0].EffectiveFrom.AddDate(0, 0, 1)) {
+		t.Fatalf("goal history = %#v, want immutable today goal and update scheduled tomorrow", goals)
+	}
+	if updated.CurrentGoal == nil || updated.CurrentGoal.ID != goals[0].ID {
+		t.Fatalf("current goal = %#v, want today's original goal", updated.CurrentGoal)
+	}
+	if updated.Name != "Pasha Updated" || !slices.Equal(updated.Allergens, []eaterdom.Allergen{"nuts"}) {
+		t.Fatalf("updated profile = %#v, want profile/allergen replacement in same transaction", updated)
+	}
+}
+
 func TestCreateExclusionRejectsInvalidProductTarget(t *testing.T) {
 	service := NewService(&eaterRepositoryStub{}, passthroughTxRunner{})
 
@@ -171,6 +204,39 @@ type eaterRepositoryStub struct {
 	updates []eaterUpdate
 }
 
+type sameDayEaterRepository struct {
+	eaterRepositoryStub
+	profile eaterdom.Eater
+	goals   []eaterdom.MacroGoal
+}
+
+func (r *sameDayEaterRepository) Create(_ context.Context, profile eaterdom.Eater, goal eaterdom.MacroGoal) (eaterdom.Eater, error) {
+	profile.ID, goal.ID, goal.EaterID = 1, 1, 1
+	r.profile, r.goals = profile, []eaterdom.MacroGoal{goal}
+	r.profile.CurrentGoal = &r.goals[0]
+	return r.profile, nil
+}
+
+func (r *sameDayEaterRepository) ListGoals(_ context.Context, eaterID eaterdom.ID) ([]eaterdom.MacroGoal, error) {
+	if eaterID != r.profile.ID {
+		return nil, apperr.NotFound("eater")
+	}
+	return slices.Clone(r.goals), nil
+}
+
+func (r *sameDayEaterRepository) Update(_ context.Context, profile eaterdom.Eater, goal eaterdom.MacroGoal) (eaterdom.Eater, error) {
+	for _, existing := range r.goals {
+		if existing.EffectiveFrom.Equal(goal.EffectiveFrom) {
+			return eaterdom.Eater{}, apperr.Conflict("macro goal already exists")
+		}
+	}
+	goal.ID = eaterdom.MacroGoalID(len(r.goals) + 1)
+	r.goals = append(r.goals, goal)
+	r.profile = profile
+	r.profile.CurrentGoal = eaterdom.CurrentGoalAt(r.goals, time.Now().UTC())
+	return r.profile, nil
+}
+
 type rollbackEaterRepository struct {
 	eaterRepositoryStub
 	profile eaterdom.Eater
@@ -198,9 +264,11 @@ func (r *eaterRollbackTxRunner) WithTx(ctx context.Context, fn func(context.Cont
 func (r *eaterRepositoryStub) Create(context.Context, eaterdom.Eater, eaterdom.MacroGoal) (eaterdom.Eater, error) {
 	return eaterdom.Eater{}, nil
 }
+
 func (r *eaterRepositoryStub) DeleteExclusion(context.Context, eaterdom.ExclusionID) error {
 	return nil
 }
+
 func (r *eaterRepositoryStub) Get(context.Context, eaterdom.ID) (eaterdom.Eater, error) {
 	return eaterdom.Eater{}, nil
 }
@@ -208,18 +276,23 @@ func (r *eaterRepositoryStub) List(context.Context) ([]eaterdom.Eater, error) { 
 func (r *eaterRepositoryStub) ListExclusions(context.Context, eaterdom.ID) ([]eaterdom.Exclusion, error) {
 	return nil, nil
 }
+
 func (r *eaterRepositoryStub) ListFixedMeals(context.Context, eaterdom.ID) ([]eaterdom.FixedMeal, error) {
 	return nil, nil
 }
+
 func (r *eaterRepositoryStub) ListGoals(context.Context, eaterdom.ID) ([]eaterdom.MacroGoal, error) {
 	return nil, nil
 }
+
 func (r *eaterRepositoryStub) CreateExclusion(_ context.Context, exclusion eaterdom.Exclusion) (eaterdom.Exclusion, error) {
 	return exclusion, nil
 }
+
 func (r *eaterRepositoryStub) CreateFixedMeal(_ context.Context, meal eaterdom.FixedMeal) (eaterdom.FixedMeal, error) {
 	return meal, nil
 }
+
 func (r *eaterRepositoryStub) CreateGoal(_ context.Context, goal eaterdom.MacroGoal) (eaterdom.MacroGoal, error) {
 	return goal, nil
 }

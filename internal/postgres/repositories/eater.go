@@ -2,6 +2,7 @@ package repositories
 
 import (
 	"context"
+	"math"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgtype"
@@ -77,8 +78,8 @@ func (r *Eater) ListGoals(ctx context.Context, eaterID eaterdom.ID) ([]eaterdom.
 		return nil, mapCatalogError(err, "macro goal")
 	}
 	goals := make([]eaterdom.MacroGoal, 0, len(rows))
-	for _, row := range rows {
-		goal, err := macroGoalFromRow(row)
+	for i := range rows {
+		goal, err := macroGoalFromRow(rows[i])
 		if err != nil {
 			return nil, err
 		}
@@ -105,8 +106,8 @@ func (r *Eater) ListFixedMeals(ctx context.Context, eaterID eaterdom.ID) ([]eate
 		return nil, mapCatalogError(err, "fixed meal")
 	}
 	meals := make([]eaterdom.FixedMeal, 0, len(rows))
-	for _, row := range rows {
-		meal, err := fixedMealFromRow(row)
+	for i := range rows {
+		meal, err := fixedMealFromRow(rows[i])
 		if err != nil {
 			return nil, err
 		}
@@ -137,8 +138,8 @@ func (r *Eater) ListExclusions(ctx context.Context, eaterID eaterdom.ID) ([]eate
 		return nil, mapCatalogError(err, "exclusion")
 	}
 	exclusions := make([]eaterdom.Exclusion, 0, len(rows))
-	for _, row := range rows {
-		exclusions = append(exclusions, exclusionFromRow(row))
+	for i := range rows {
+		exclusions = append(exclusions, exclusionFromRow(rows[i]))
 	}
 	return exclusions, nil
 }
@@ -202,8 +203,8 @@ func (r *Eater) load(ctx context.Context, query *sqlc.Queries, id eaterdom.ID) (
 		return eaterdom.Eater{}, mapCatalogError(err, "macro goal")
 	}
 	domainGoals := make([]eaterdom.MacroGoal, 0, len(goals))
-	for _, goal := range goals {
-		domainGoal, err := macroGoalFromRow(goal)
+	for i := range goals {
+		domainGoal, err := macroGoalFromRow(goals[i])
 		if err != nil {
 			return eaterdom.Eater{}, err
 		}
@@ -239,12 +240,17 @@ func (r *Eater) ensureEater(ctx context.Context, query *sqlc.Queries, id eaterdo
 }
 
 func macroGoalParams(goal eaterdom.MacroGoal) sqlc.CreateMacroGoalParams {
+	kcalMin := goal.Range.KcalMin
+	kcalMax := goal.Range.KcalMax
+	if kcalMin < 0 || int64(kcalMin) > math.MaxInt32 || kcalMax < 0 || int64(kcalMax) > math.MaxInt32 {
+		panic("macro goal kcal must be a nonnegative int32")
+	}
 	return sqlc.CreateMacroGoalParams{
 		EaterID: int64(goal.EaterID), EffectiveFrom: pgtype.Date{Time: goal.EffectiveFrom, Valid: true},
 		ProteinMinG: numeric(goal.Range.ProteinMinG), ProteinMaxG: numeric(goal.Range.ProteinMaxG),
 		FatMinG: numeric(goal.Range.FatMinG), FatMaxG: numeric(goal.Range.FatMaxG),
 		CarbMinG: numeric(goal.Range.CarbMinG), CarbMaxG: numeric(goal.Range.CarbMaxG),
-		KcalMin: int32(goal.Range.KcalMin), KcalMax: int32(goal.Range.KcalMax), Note: goal.Note,
+		KcalMin: int32(kcalMin), KcalMax: int32(kcalMax), Note: goal.Note,
 	}
 }
 
@@ -279,9 +285,31 @@ func macroGoalFromRow(row sqlc.EaterMacroGoal) (eaterdom.MacroGoal, error) {
 }
 
 func fixedMealParams(meal eaterdom.FixedMeal) sqlc.CreateFixedMealParams {
-	return sqlc.CreateFixedMealParams{EaterID: int64(meal.EaterID), MealType: sqlc.MealType(meal.MealType), Label: meal.Label,
-		ProteinG: numeric(meal.Macros.ProteinG), FatG: numeric(meal.Macros.FatG), CarbG: numeric(meal.Macros.CarbG), Kcal: int32(meal.Macros.Kcal),
-		SaturatedFatG: optionalNumeric(meal.Quality.SaturatedFatG), TransFatG: optionalNumeric(meal.Quality.TransFatG), FiberG: optionalNumeric(meal.Quality.FiberG), SodiumMg: optionalNumeric(meal.Quality.SodiumMg), AddedSugarsG: optionalNumeric(meal.Quality.AddedSugarsG), FreeSugarsG: optionalNumeric(meal.Quality.FreeSugarsG), ProcessedMeatG: optionalNumeric(meal.Quality.ProcessedMeatG), RedMeatG: optionalNumeric(meal.Quality.RedMeatG), WholeGrainGEquiv: optionalNumeric(meal.Quality.WholeGrainGEquiv), FruitVegG: optionalNumeric(meal.Quality.FruitVegG), IncludeInAnalytics: meal.Quality.IncludeInAnalytics, IncludeInWarnings: meal.Quality.IncludeInWarnings, Active: meal.Active,
+	kcal := meal.Macros.Kcal
+	if kcal < 0 || int64(kcal) > math.MaxInt32 {
+		panic("fixed meal kcal must be a nonnegative int32")
+	}
+	return sqlc.CreateFixedMealParams{
+		EaterID:            int64(meal.EaterID),
+		MealType:           sqlc.MealType(meal.MealType),
+		Label:              meal.Label,
+		ProteinG:           numeric(meal.Macros.ProteinG),
+		FatG:               numeric(meal.Macros.FatG),
+		CarbG:              numeric(meal.Macros.CarbG),
+		Kcal:               int32(kcal),
+		SaturatedFatG:      optionalNumeric(meal.Quality.SaturatedFatG),
+		TransFatG:          optionalNumeric(meal.Quality.TransFatG),
+		FiberG:             optionalNumeric(meal.Quality.FiberG),
+		SodiumMg:           optionalNumeric(meal.Quality.SodiumMg),
+		AddedSugarsG:       optionalNumeric(meal.Quality.AddedSugarsG),
+		FreeSugarsG:        optionalNumeric(meal.Quality.FreeSugarsG),
+		ProcessedMeatG:     optionalNumeric(meal.Quality.ProcessedMeatG),
+		RedMeatG:           optionalNumeric(meal.Quality.RedMeatG),
+		WholeGrainGEquiv:   optionalNumeric(meal.Quality.WholeGrainGEquiv),
+		FruitVegG:          optionalNumeric(meal.Quality.FruitVegG),
+		IncludeInAnalytics: meal.Quality.IncludeInAnalytics,
+		IncludeInWarnings:  meal.Quality.IncludeInWarnings,
+		Active:             meal.Active,
 	}
 }
 
