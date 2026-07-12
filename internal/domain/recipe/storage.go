@@ -1,6 +1,5 @@
 package recipe
 
-// StorageProfile — как долго блюдо живёт после готовки (hard constraint §1).
 type StorageProfile string
 
 const (

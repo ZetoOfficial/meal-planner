@@ -3,6 +3,8 @@
 # Версии кодген-инструментов (воспроизводимая сборка).
 SQLC        := go run github.com/sqlc-dev/sqlc/cmd/sqlc@v1.31.1
 OAPI        := go run github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@v2.7.1
+MOCKGEN     := go run go.uber.org/mock/mockgen@v0.6.0
+GOLANGCI    := go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.12.2
 # tern: закрепи конкретную версию после `go list -m -versions github.com/jackc/tern/v2`
 TERN        := go run github.com/jackc/tern/v2@latest
 
@@ -25,6 +27,12 @@ sqlc: ## Сгенерировать type-safe DB-код (схема docs/schema.
 oapi: ## Сгенерировать HTTP-сервер/DTO из api/openapi.yaml
 	$(OAPI) -config api/oapi-codegen.yaml api/openapi.yaml
 
+.PHONY: mocks
+mocks: ## Сгенерировать Uber mockgen-моки
+	$(MOCKGEN) -source=internal/postgres/tx.go -imports=pgx=github.com/jackc/pgx/v5 -destination=internal/postgres/mocks/transaction.go -package=mocks
+	$(MOCKGEN) -destination=internal/postgres/mocks/pgx.go -package=mocks github.com/jackc/pgx/v5 Tx,Row
+	$(MOCKGEN) -source=internal/postgres/sqlc/db.go -imports=pgx=github.com/jackc/pgx/v5,pgconn=github.com/jackc/pgx/v5/pgconn -destination=internal/postgres/mocks/dbtx.go -package=mocks
+
 .PHONY: migrate
 migrate: ## Применить tern-миграции (использует DB_* из .env)
 	$(TERN) migrate --migrations ./migrations --config ./migrations/tern.conf
@@ -45,13 +53,25 @@ build: ## Собрать бинарь
 run: ## Запустить локально
 	go run ./cmd/api
 
-.PHONY: test
-test: ## Тесты
+.PHONY: test-unit
+test-unit: ## Запустить unit-тесты
 	go test ./...
+
+.PHONY: test-integration
+test-integration: ## Запустить Postgres integration-тесты (нужен TEST_DATABASE_URL)
+	go test -tags=integration -count=1 -v ./internal/postgres/...
+
+.PHONY: test
+test: test-unit ## Запустить unit-тесты и integration-тесты при TEST_DATABASE_URL
+	@if [ -n "$(TEST_DATABASE_URL)" ]; then \
+		$(MAKE) test-integration; \
+	else \
+		echo "integration tests skipped: set TEST_DATABASE_URL to run make test-integration"; \
+	fi
 
 .PHONY: lint
 lint: ## golangci-lint (конфиг .golangci.yml)
-	golangci-lint run
+	$(GOLANGCI) run --timeout 5m
 
 .PHONY: tidy
 tidy: ## go mod tidy

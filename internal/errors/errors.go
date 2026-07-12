@@ -1,4 +1,3 @@
-// Package apperr defines transport-agnostic application errors.
 package apperr
 
 import (
@@ -27,8 +26,6 @@ var (
 	ErrInternal       = errors.New(string(CodeInternal))
 )
 
-// Error is a shared application error that can be returned by use cases without
-// importing HTTP or OpenAPI packages.
 type Error struct {
 	Code    Code
 	Message string

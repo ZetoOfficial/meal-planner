@@ -1,174 +1,135 @@
 # Meal Planner
 
-Owner-only HTTP API для планирования домашнего meal-prep на 2-3 дня для двух
-человек. Цель: убрать ежедневное "что готовить", попадать в личные БЖУ и не
-собирать macro-correct junk food за счет nutrition-quality правил.
+Сервис планирования домашнего питания на несколько дней для двух человек. Он должен подбирать порции под цели каждого, учитывать реальные продукты, ограничения и срок хранения еды, а затем сохранять продукты, рецепты и планы для следующих запусков.
 
-## Что делает v1
+## Какую проблему решает проект
 
-- Ведет личную базу продуктов с реальными БЖУ конкретных брендов.
-- Планирует еду под цели по БЖУ, аллергии/исключения, хранение 2-3 дня,
-  оборудование и ротацию.
-- Учитывает quality-слой: клетчатку, натрий/соль, насыщенные жиры, добавленные
-  сахара, food-группы и rolling-7d паттерны.
-- Генерирует список покупок из плана.
-- Отдает аналитику по macro compliance, quality compliance и coverage качества
-  данных.
+Домашнее питание — это не только вопрос «что приготовить». Нужно одновременно решить несколько практических задач:
 
-Бизнесовый контекст и границы скоупа: `docs/DESIGN.md`.
+- уложиться в личные цели по калориям, белкам, жирам и углеводам для каждого человека;
+- не использовать аллергены и продукты из личных исключений;
+- учитывать доступную кухонную технику и срок безопасного хранения;
+- переиспользовать продукты и проверенные рецепты, а не начинать каждый план с нуля;
+- следить не только за цифрами, но и за качеством рациона: клетчаткой, солью, сахаром, насыщенными жирами и разнообразием групп продуктов.
 
-## Статус
+В целевой версии Meal Planner будет собирать эти ограничения в один воспроизводимый план и хранить состояние между запросами.
 
-Уже заложено:
+## Чем это отличается от запроса к ChatGPT или Claude
 
-- OpenAPI контракт: `api/openapi.yaml`.
-- DB contract: `docs/schema.sql` + начальная tern-миграция.
-- Генерация DTO/handlers через `oapi-codegen`.
-- Генерация type-safe DB-кода через `sqlc`.
-- HTTP-сервер на std `net/http`, `/livez` + `/readyz`, graceful shutdown.
-- Postgres pool, config loading, статический `X-API-Token`.
-- Структура domain/usecase/solver/quality/llm под DDD-lite и ports/adapters.
+Обычный чат может предложить меню, но не является источником истины для расчётов и ограничений. Он не обязан помнить точные данные о продуктах, стабильно соблюдать аллергии или одинаково пересчитывать порции.
 
-Пока в основном каркас / следующий слой реализации:
+В целевой версии Meal Planner языковая модель будет генерировать кандидатов новых рецептов, когда в сохранённой библиотеке не хватит подходящих. После этого детерминированный Go-код будет:
 
-- use case orchestration;
-- solver;
-- quality evaluator;
-- реальные HTTP-хендлеры поверх OpenAPI;
-- реальный LLM client вместо stub;
-- полноценные repositories и интеграционные сценарии.
+1. проверять состав и ограничения рецепта;
+2. рассчитывать порции и пищевую ценность;
+3. выбирать допустимый вариант плана;
+4. оценивать качество рациона и объяснять предупреждения.
 
-## Быстрый старт
+PostgreSQL предусмотрен для хранения продуктов, целей, рецептов, планов и истории. Поэтому результат будет зависеть от явных данных и правил, а не от памяти отдельного диалога.
 
-Требования:
+## Текущий статус
 
-- Go `1.26` (см. `go.mod`);
-- Docker + Docker Compose;
-- Make;
-- Postgres локально нужен только для запуска без Docker.
+Сейчас готова инфраструктурная основа этапа M1, а не продукт целиком.
 
-Docker-first запуск:
+Уже есть:
+
+- Go-приложение с конфигурацией, подключением к PostgreSQL и корректным завершением работы;
+- начальная схема базы данных, миграции и сгенерированный типобезопасный код запросов;
+- OpenAPI-контракт и генерация HTTP-типов;
+- основа авторизации будущего API через заголовок `X-API-Token`;
+- Docker Compose для PostgreSQL, миграций и приложения;
+- модульные тесты и основа интеграционных тестов PostgreSQL.
+
+По HTTP доступен только служебный маршрут `GET /livez`. Продуктовые обработчики, планировщик, оценка качества рациона и реальные интеграции с языковыми моделями ещё не реализованы. Пакеты для этих частей задают границы будущей реализации, но пока не содержат готовой бизнес-логики.
+
+## Основные возможности в целевом v1
+
+- личная база продуктов с пищевой ценностью конкретных брендов;
+- профили двух едоков, цели, аллергии и личные исключения;
+- планы на 2–3 дня с отдельными порциями для каждого;
+- учёт хранения, оборудования, повторного использования заготовок и ротации рецептов;
+- проверка качества рациона и понятные предупреждения;
+- список покупок, журнал фактических приёмов пищи и базовая аналитика;
+- пополнение библиотеки рецептами от языковой модели только при необходимости.
+
+Эти возможности описывают целевой продукт и не означают, что все они уже работают.
+
+## Быстрый запуск через Docker Compose
+
+Понадобятся Docker, Docker Compose и Make.
 
 ```bash
 cp .env.example .env
-make generate
 make up
-curl localhost:8080/readyz
 ```
 
-`make up` поднимает Postgres, одноразово прогоняет миграции через сервис
-`migrate`, затем стартует API на `:8080`.
+`make up` собирает приложение, поднимает PostgreSQL, применяет миграции и запускает API на `http://localhost:8080`.
 
-Локальный запуск без Docker:
+Проверить запущенный сервер:
+
+```bash
+curl http://localhost:8080/livez
+```
+
+Остановить стек:
+
+```bash
+make down
+```
+
+## Локальная разработка
+
+Для запуска Go-приложения вне контейнера нужны Go 1.25, Make и доступный PostgreSQL.
 
 ```bash
 cp .env.example .env
-make tidy
+docker compose up -d postgres
 make generate
 make migrate
 make run
 ```
 
-## Конфиг
-
-`.env.example` можно копировать в `.env`. `.env` не коммитится.
-
-| Переменная | Что значит |
-|---|---|
-| `HTTP_ADDR` | Адрес HTTP-сервера, по умолчанию `:8080`. |
-| `API_TOKEN` | Статический owner-only токен для `X-API-Token`. Пустое значение отключает auth. |
-| `DATABASE_URL` | Полный Postgres DSN. Имеет приоритет над `DB_*`. |
-| `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`, `DB_SSLMODE` | Альтернатива `DATABASE_URL`. |
-| `LLM_PROVIDER` | Провайдер LLM, сейчас конфигурируется как `anthropic` / `openai`. |
-| `LLM_MODEL` | Имя модели. |
-| `LLM_API_KEY` | API key провайдера. Сейчас реальный client еще не подключен. |
-
-## API
-
-- Контракт: `api/openapi.yaml`.
-- Base URL для локального запуска: `http://localhost:8080`.
-- Probes без авторизации: `GET /livez` and `GET /readyz`.
-- Остальной API защищается заголовком `X-API-Token`, если `API_TOKEN` не пустой.
-
-Проверка healthcheck:
+Основные команды:
 
 ```bash
-curl localhost:8080/livez
-curl localhost:8080/readyz
+make help              # показать все цели
+make generate          # сгенерировать код из SQL и OpenAPI
+make build             # собрать bin/server
+make run               # запустить cmd/api
+make migrate           # применить миграции
+make migrate-status    # показать статус миграций
+make test-unit         # запустить модульные тесты
+make test-integration  # запустить тесты с PostgreSQL
+make test              # модульные и, при настройке, интеграционные тесты
+make lint              # запустить golangci-lint
+make tidy              # привести go.mod и go.sum в соответствие с кодом
 ```
 
-Пример запроса к защищенному API после подключения хендлеров:
+`make test-integration` требует `TEST_DATABASE_URL` с отдельной тестовой базой. Настройки и примеры значений находятся в `.env.example`.
 
-```bash
-curl -H "X-API-Token: $API_TOKEN" localhost:8080/...
-```
+## Целевая архитектура в двух словах
 
-## Команды
+Проект — модульный монолит: одно Go-приложение, разделённое на модули по предметным областям, и одна база данных PostgreSQL.
 
-```bash
-make generate                 # sqlc + oapi-codegen
-make migrate                  # применить tern-миграции
-make migrate-status           # статус миграций
-make new-migration name=add_x # создать новую миграцию
-make build                    # собрать bin/server
-make run                      # запустить ./cmd/api
-make test                     # go test ./...
-make lint                     # golangci-lint run
-make up                       # docker compose up --build
-make down                     # docker compose down
-```
+- Внутри будут находиться правила продуктов, едоков, рецептов и планов, детерминированный подбор плана и проверка качества рациона.
+- Снаружи будут находиться HTTP, OpenAPI, PostgreSQL, сгенерированный SQL-код и провайдеры языковых моделей.
+- Внешние детали будут зависеть от внутренних правил, но внутренние правила не будут зависеть от HTTP, базы данных или SDK провайдера.
+- Языковая модель будет предлагать только кандидаты рецептов. Go будет проверять их и принимать итоговое решение.
 
-Кодогенерация использует версии инструментов из `Makefile`.
+Так бизнес-правила можно будет тестировать без сети, базы данных и внешней модели.
 
-## Архитектурные правила
+## Карта документации
 
-- HTTP, OpenAPI, Postgres, sqlc и LLM providers - адаптеры.
-- Solver, quality rules, plan generation, recipe slots и macro logic - core.
-- Core packages не импортируют HTTP handlers, OpenAPI DTO, sqlc rows, Postgres
-  repositories или provider SDKs.
-- LLM только генерирует recipe candidates. Go валидирует их, solver решает
-  использовать ли их, quality evaluator объясняет результат.
-- Интерфейсы лежат на стороне потребителя, обычно в `usecase/*/ports.go`.
-- `docs/schema.sql` и `api/openapi.yaml` - source of truth. Не добавлять поля
-  и endpoints мимо них.
-- v1 scope - HTTP API only. Telegram bot, Mini App, voice, vision/barcode,
-  FatSecret sync, inventory, RAG, agents и fine-tuning - v2+ / out of scope.
+- [docs/DESIGN.md](docs/DESIGN.md) — проблема, продуктовые решения и границы MVP.
+- [docs/SPEC.md](docs/SPEC.md) — подробное ожидаемое поведение v1.
+- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — модули, зависимости и поток данных.
+- [docs/schema.sql](docs/schema.sql) — контракт схемы PostgreSQL.
+- [api/openapi.yaml](api/openapi.yaml) — контракт будущего HTTP API.
+- [docs/deep-research-report.md](docs/deep-research-report.md) — обоснование правил качества рациона.
+- [docs/github-roadmap.md](docs/github-roadmap.md) — этапы и задачи реализации.
 
-## Структура
+## Границы проекта
 
-```text
-cmd/api/              entrypoint HTTP API
-internal/app/         config + composition root
-internal/api/http/    net/http adapter, auth, /livez, /readyz
-internal/api/openapi/ generated oapi-codegen code
-internal/domain/      чистые доменные типы и правила
-internal/usecase/     application scenarios + consumer-side ports
-internal/solver/      deterministic planner
-internal/quality/     quality rules, rolling-7d, coverage, explanations
-internal/llm/         LLM interface, stub, recipe generation prompts
-internal/postgres/    Postgres adapter, sqlc, repositories
-internal/clock/       time abstraction
-internal/errors/      application/domain errors
-migrations/           tern migrations
-docs/                 design/spec/schema/architecture docs
-api/                  OpenAPI contract + codegen config
-```
+Это личный проект для одного домохозяйства из двух человек, а не многопользовательский сервис. В v1 предусмотрен только HTTP API со статическим токеном `X-API-Token`.
 
-## Документы
-
-- `docs/DESIGN.md` - бизнесовая задача, ограничения, MVP/v2 границы.
-- `docs/SPEC.md` - продуктовая/поведенческая спецификация.
-- `docs/ARCHITECTURE.md` - модульная архитектура и dependency rule.
-- `docs/schema.sql` - DB contract для Postgres/sqlc.
-- `docs/deep-research-report.md` - обоснование nutrition-quality слоя.
-- `api/openapi.yaml` - HTTP contract.
-
-## Рабочие заметки
-
-- Схема для sqlc - `docs/schema.sql`; миграция `migrations/001_init.sql` ее
-  зеркалит. При изменении схемы нужно обновлять contract и добавлять новую
-  tern-миграцию.
-- Сгенерированный OpenAPI код лежит в `internal/api/openapi/generated.go`.
-- Сгенерированный sqlc код лежит в `internal/postgres/sqlc/`.
-- `LLM` сейчас stub. Реальная интеграция должна идти через тонкий HTTP adapter,
-  с timeout/retry/cache/logging, а не через solver/domain.
+Telegram-бот, мини-приложение Telegram, голосовой и визуальный ввод, сканирование штрихкодов, учёт запасов, автономные агенты и другие внешние интеграции не входят в v1.

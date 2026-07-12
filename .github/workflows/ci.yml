@@ -23,7 +23,7 @@ jobs:
           cache: true
 
       - name: Run golangci-lint
-        run: go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.12.2 run --timeout 5m
+        run: make lint
 
   test:
     name: Build and test
