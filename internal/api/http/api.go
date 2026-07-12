@@ -11,8 +11,6 @@ import (
 	usecaseeater "github.com/ZetoOfficial/meal-planner/internal/usecase/eater"
 )
 
-// CatalogUseCases is the HTTP adapter's consumer-side view of catalog operations.
-// Keeping this interface here makes the adapter independently testable.
 type CatalogUseCases interface {
 	CreateProduct(context.Context, usecasecatalog.CreateProductCommand) (catalogdom.Product, error)
 	ListProducts(context.Context, string) ([]catalogdom.Product, error)
@@ -22,7 +20,6 @@ type CatalogUseCases interface {
 	ListRoleTags(context.Context) ([]catalogdom.RoleTag, error)
 }
 
-// EaterUseCases is the HTTP adapter's consumer-side view of eater operations.
 type EaterUseCases interface {
 	CreateEater(context.Context, usecaseeater.CreateEaterCommand) (eaterdom.Eater, error)
 	ListEaters(context.Context) ([]eaterdom.Eater, error)

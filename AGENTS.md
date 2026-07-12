@@ -22,6 +22,7 @@ Core rules:
 - Put interfaces on the consumer side, usually in `usecase/*/ports.go`.
 - Do not invent fields or endpoints. `docs/schema.sql` and `api/openapi.yaml` are the source of truth.
 - Keep v1 scope: HTTP API only. Telegram bot, Mini App, voice, vision/barcode, FatSecret sync, inventory, RAG, agents and fine-tuning are v2+ or explicitly out of scope.
+- Comments must justify a non-obvious invariant or decision. Do not add AI-style narration, restate code, or comment routine control flow.
 
 Git conventions:
 

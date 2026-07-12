@@ -271,7 +271,7 @@ func (*relatedWriteFailureRepository) Create(ctx context.Context, product catalo
 	if !ok {
 		return catalogdom.Product{}, errors.New("missing transaction context")
 	}
-	transaction.pending = append(transaction.pending, product) // Simulates the product row written before a related row fails.
+	transaction.pending = append(transaction.pending, product)
 	return catalogdom.Product{}, apperr.Conflict("role assignment failed")
 }
 

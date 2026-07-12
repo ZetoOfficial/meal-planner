@@ -243,7 +243,7 @@ type rollbackEaterRepository struct {
 }
 
 func (r *rollbackEaterRepository) Update(_ context.Context, profile eaterdom.Eater, _ eaterdom.MacroGoal) (eaterdom.Eater, error) {
-	r.profile = profile // Mirrors the profile/allergen writes occurring before the unique goal-date failure.
+	r.profile = profile
 	return eaterdom.Eater{}, apperr.Conflict("macro goal already exists")
 }
 
