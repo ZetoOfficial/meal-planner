@@ -10,15 +10,26 @@ import (
 
 type Querier interface {
 	CreateProduct(ctx context.Context, arg CreateProductParams) (Product, error)
-	DeleteProduct(ctx context.Context, id int64) error
+	CreateProductAllergen(ctx context.Context, arg CreateProductAllergenParams) error
+	CreateProductRole(ctx context.Context, arg CreateProductRoleParams) error
+	DeleteProduct(ctx context.Context, id int64) (int64, error)
+	DeleteProductAllergens(ctx context.Context, productID int64) error
+	DeleteProductRoles(ctx context.Context, productID int64) error
 	GetCurrentMacroGoal(ctx context.Context, eaterID int64) (EaterMacroGoal, error)
 	GetEater(ctx context.Context, id int64) (Eater, error)
 	GetProduct(ctx context.Context, id int64) (Product, error)
+	GetProductFoodClassification(ctx context.Context, productID int64) (ProductFoodClassification, error)
+	GetRoleTagByCode(ctx context.Context, code string) (RoleTag, error)
 	ListActiveFixedMeals(ctx context.Context, eaterID int64) ([]FixedMeal, error)
 	ListEaters(ctx context.Context) ([]Eater, error)
 	ListMacroGoals(ctx context.Context, eaterID int64) ([]EaterMacroGoal, error)
+	ListProductAllergens(ctx context.Context, productID int64) ([]string, error)
+	ListProductRoleTags(ctx context.Context, productID int64) ([]RoleTag, error)
 	ListProducts(ctx context.Context) ([]Product, error)
-	ListProductsByRole(ctx context.Context, code string) ([]Product, error)
+	ListProductsByRole(ctx context.Context, roleCode string) ([]Product, error)
+	ListRoleTags(ctx context.Context) ([]RoleTag, error)
+	UpdateProduct(ctx context.Context, arg UpdateProductParams) (Product, error)
+	UpsertProductFoodClassification(ctx context.Context, arg UpsertProductFoodClassificationParams) (ProductFoodClassification, error)
 }
 
 var _ Querier = (*Queries)(nil)

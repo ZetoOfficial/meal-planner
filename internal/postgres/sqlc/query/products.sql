@@ -55,7 +55,35 @@ INSERT INTO product (
 RETURNING *;
 
 -- name: GetProduct :one
-SELECT *
+SELECT
+    id,
+    brand,
+    name,
+    protein_per_100g,
+    fat_per_100g,
+    carb_per_100g,
+    kcal_per_100g,
+    price_per_100g,
+    default_unit,
+    purchasable,
+    notes,
+    saturated_fat_per_100g,
+    trans_fat_per_100g,
+    industrial_trans_fat_per_100g,
+    fiber_per_100g,
+    sodium_mg_per_100g,
+    salt_g_per_100g,
+    total_sugars_per_100g,
+    added_sugars_per_100g,
+    free_sugars_per_100g,
+    contains_partially_hydrogenated_oils,
+    nutrition_data_quality,
+    nutrition_coverage_score,
+    source_kind,
+    source_note,
+    last_verified_at,
+    created_at,
+    updated_at
 FROM product
 WHERE id = sqlc.arg(id);
 
