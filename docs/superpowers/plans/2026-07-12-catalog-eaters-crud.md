@@ -17,16 +17,10 @@
 **Files:**
 - Create: `migrations/002_seed_role_tags.sql`
 - Modify: `internal/postgres/sqlc/query/products.sql`
-- Generated: `internal/postgres/sqlc/products.sql.go`, `internal/postgres/sqlc/models.go`, `internal/postgres/sqlc/querier.go`
-- Create: `internal/postgres/repositories/catalog.go`
-- Test: `internal/postgres/catalog_integration_test.go`
 
 - [ ] Seed role tags in parent-before-child order using `INSERT ... ON CONFLICT (code) DO UPDATE`, with parent lookup by code. Include root kinds and MVP slot descendants: `protein`, `protein:lean`, `protein:lean:breast`, `carb`, `carb:grain`, `veg`, `veg:green`, `sauce`, `sauce:fat`, `fat`, and `other`.
 - [ ] Add sqlc queries for a complete product aggregate: scalar create/get/list/update/delete; role lookup/list; product role list/delete/insert; product allergen list/delete/insert; and food-classification get/upsert. Query return rows must include all `product` columns, never encode absent quality data as zero.
-- [ ] Regenerate with `make sqlc`; never edit `*.sql.go`, `models.go`, or `querier.go` manually.
-- [ ] Implement `repositories.Catalog` against `Repositories.Queries(ctx)` with mapping helpers that use `pgtype.Numeric` and nullable pgtype fields. `Create` and `Update` must write the product, classification, roles and allergens in the caller transaction; update replaces collection values rather than appending duplicates.
-- [ ] Write one integration round-trip that creates a product with roles, allergens, nullable nutrition facts and classification, reloads it, replaces the aggregate, then proves stale role/allergen values are gone and an omitted nutrition value remains `NULL`.
-- [ ] Run: `go test -tags=integration -count=1 ./internal/postgres/...` with Go 1.25 and `TEST_DATABASE_URL`; expected: focused catalog test passes.
+- [ ] Do not regenerate or edit sqlc output in this task: the following task introduces the domain aggregate that repository mappers require. Commit the migration and query source together so code generation has one coherent input.
 - [ ] Commit: `feat(catalog): add product persistence and role taxonomy`.
 
 ### Task 2: Implement catalog domain rules and use cases
@@ -38,14 +32,19 @@
 - Modify: `internal/domain/catalog/allergen.go`
 - Modify: `internal/usecase/catalog/ports.go`
 - Modify: `internal/usecase/catalog/service.go`
+- Generated: `internal/postgres/sqlc/products.sql.go`, `internal/postgres/sqlc/models.go`, `internal/postgres/sqlc/querier.go`
+- Create: `internal/postgres/repositories/catalog.go`
 - Test: `internal/usecase/catalog/service_test.go`
+- Test: `internal/postgres/catalog_integration_test.go`
 
 - [ ] Model a complete `catalog.Product` aggregate: identifiers, macros, optional price/unit/purchasable, nutrition facts, nutrition-data provenance, food classification, allergen labels and role tags. Keep optional quality values as pointer/nullable domain values and derive coverage from the populated hot-path nutrition fields.
 - [ ] Add consumer-side repository commands for list/get/create/update/delete products and list/lookup role tags; map `pgx.ErrNoRows`, unique violations and FK failures in the adapter to application not-found/conflict errors.
+- [ ] Regenerate with `make sqlc`; never edit `*.sql.go`, `models.go`, or `querier.go` manually. Implement `repositories.Catalog` against `Repositories.Queries(ctx)` with pgtype/null mapping. `Create` and `Update` write the product, classification, roles and allergens in the caller transaction; update replaces collection values rather than appending duplicates.
 - [ ] Add commands and service methods: `CreateProduct`, `ListProducts(roleCode)`, `GetProduct`, `UpdateProduct`, `DeleteProduct`, and `ListRoleTags`.
 - [ ] Validate only M2 invariants: trimmed nonblank brand/name, nonnegative numeric inputs, at least one role, `0..1` classification ratios, known role codes, and a role code prefix matching its persisted role kind. Return `apperr.Validation`, `apperr.NotFound`, or `apperr.Conflict`, never HTTP errors.
 - [ ] Write focused unit tests for rejected macro/quality values, a role-kind mismatch, and server-derived coverage; do not create redundant tests for plain repository pass-throughs.
-- [ ] Run: `go test ./internal/domain/catalog ./internal/usecase/catalog` with Go 1.25; expected: all catalog tests pass.
+- [ ] Add one Postgres integration round trip that creates a product with roles, allergens, nullable nutrition facts and classification, reloads it, replaces the aggregate, then proves stale role/allergen values are gone and an omitted nutrition value remains `NULL`.
+- [ ] Run: `go test ./internal/domain/catalog ./internal/usecase/catalog` and `go test -tags=integration -count=1 ./internal/postgres/...` with Go 1.25; expected: focused catalog tests pass.
 - [ ] Commit: `feat(catalog): add product use cases`.
 
 ### Task 3: Add eater persistence, domain rules, and use cases
