@@ -45,7 +45,7 @@ func TestOpenAPIRouteRequiresTokenWhenConfigured(t *testing.T) {
 	}
 }
 
-func TestAPIRouteIsNotRegisteredWithValidToken(t *testing.T) {
+func TestM2RouteWithoutComposedUseCaseIsNotImplemented(t *testing.T) {
 	handler := New(Deps{APIToken: "secret"})
 
 	req := httptest.NewRequest(http.MethodGet, "/eaters", http.NoBody)
@@ -54,21 +54,21 @@ func TestAPIRouteIsNotRegisteredWithValidToken(t *testing.T) {
 
 	handler.ServeHTTP(rec, req)
 
-	if rec.Code != http.StatusNotFound {
-		t.Fatalf("GET /eaters status = %d, want %d", rec.Code, http.StatusNotFound)
+	if rec.Code != http.StatusNotImplemented {
+		t.Fatalf("GET /eaters status = %d, want %d", rec.Code, http.StatusNotImplemented)
 	}
 }
 
-func TestUnregisteredAPIRouteReturnsNotFoundWithValidToken(t *testing.T) {
+func TestFutureAPIRouteReturnsStructuredNotImplementedWithValidToken(t *testing.T) {
 	handler := New(Deps{APIToken: "secret"})
 
-	req := httptest.NewRequest(http.MethodGet, "/analytics/macros", http.NoBody)
+	req := httptest.NewRequest(http.MethodGet, "/analytics/macros?eaterId=1&from=2026-01-01&to=2026-01-02", http.NoBody)
 	req.Header.Set("X-API-Token", "secret")
 	rec := httptest.NewRecorder()
 
 	handler.ServeHTTP(rec, req)
 
-	if rec.Code != http.StatusNotFound {
-		t.Fatalf("GET /analytics/macros status = %d, want %d", rec.Code, http.StatusNotFound)
+	if rec.Code != http.StatusNotImplemented {
+		t.Fatalf("GET /analytics/macros status = %d, want %d", rec.Code, http.StatusNotImplemented)
 	}
 }

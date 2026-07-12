@@ -14,6 +14,9 @@ import (
 	httpapi "github.com/ZetoOfficial/meal-planner/internal/api/http"
 	"github.com/ZetoOfficial/meal-planner/internal/app"
 	"github.com/ZetoOfficial/meal-planner/internal/postgres"
+	"github.com/ZetoOfficial/meal-planner/internal/postgres/repositories"
+	usecasecatalog "github.com/ZetoOfficial/meal-planner/internal/usecase/catalog"
+	usecaseeater "github.com/ZetoOfficial/meal-planner/internal/usecase/eater"
 )
 
 const readHeaderTimeout = 10 * time.Second
@@ -45,8 +48,12 @@ func run(log *slog.Logger) error {
 		return fmt.Errorf("connect postgres: %w", err)
 	}
 
+	repos := repositories.New(pool)
+	tx := postgres.NewTxManager(pool)
 	handler := httpapi.New(httpapi.Deps{
 		APIToken: cfg.APIToken,
+		Catalog:  usecasecatalog.NewService(repositories.NewCatalog(repos), tx),
+		Eater:    usecaseeater.NewService(repositories.NewEater(repos), tx),
 	})
 
 	srv := &http.Server{
