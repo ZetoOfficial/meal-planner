@@ -7,7 +7,257 @@ package sqlc
 
 import (
 	"context"
+
+	"github.com/jackc/pgx/v5/pgtype"
 )
+
+const createEater = `-- name: CreateEater :one
+INSERT INTO eater (name, sex)
+VALUES ($1, $2)
+RETURNING id, name, sex, created_at, updated_at
+`
+
+type CreateEaterParams struct {
+	Name string `json:"name"`
+	Sex  Sex    `json:"sex"`
+}
+
+func (q *Queries) CreateEater(ctx context.Context, arg CreateEaterParams) (Eater, error) {
+	row := q.db.QueryRow(ctx, createEater, arg.Name, arg.Sex)
+	var i Eater
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Sex,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const createEaterAllergen = `-- name: CreateEaterAllergen :exec
+INSERT INTO eater_allergen (eater_id, allergen)
+VALUES ($1, $2)
+`
+
+type CreateEaterAllergenParams struct {
+	EaterID  int64  `json:"eater_id"`
+	Allergen string `json:"allergen"`
+}
+
+func (q *Queries) CreateEaterAllergen(ctx context.Context, arg CreateEaterAllergenParams) error {
+	_, err := q.db.Exec(ctx, createEaterAllergen, arg.EaterID, arg.Allergen)
+	return err
+}
+
+const createEaterExclusion = `-- name: CreateEaterExclusion :one
+INSERT INTO eater_exclusion (eater_id, target_kind, target_value, severity, note)
+VALUES ($1, $2, $3, $4, $5)
+RETURNING id, eater_id, target_kind, target_value, severity, note, created_at
+`
+
+type CreateEaterExclusionParams struct {
+	EaterID     int64             `json:"eater_id"`
+	TargetKind  ExclusionTarget   `json:"target_kind"`
+	TargetValue string            `json:"target_value"`
+	Severity    ExclusionSeverity `json:"severity"`
+	Note        *string           `json:"note"`
+}
+
+func (q *Queries) CreateEaterExclusion(ctx context.Context, arg CreateEaterExclusionParams) (EaterExclusion, error) {
+	row := q.db.QueryRow(ctx, createEaterExclusion,
+		arg.EaterID,
+		arg.TargetKind,
+		arg.TargetValue,
+		arg.Severity,
+		arg.Note,
+	)
+	var i EaterExclusion
+	err := row.Scan(
+		&i.ID,
+		&i.EaterID,
+		&i.TargetKind,
+		&i.TargetValue,
+		&i.Severity,
+		&i.Note,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const createFixedMeal = `-- name: CreateFixedMeal :one
+INSERT INTO fixed_meal (
+    eater_id, meal_type, label, protein_g, fat_g, carb_g, kcal,
+    saturated_fat_g, trans_fat_g, fiber_g, sodium_mg, added_sugars_g,
+    free_sugars_g, processed_meat_g, red_meat_g, whole_grain_g_equiv,
+    fruit_veg_g, include_in_analytics, include_in_warnings, active
+)
+VALUES (
+    $1, $2, $3, $4, $5, $6, $7,
+    $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20
+)
+RETURNING id, eater_id, meal_type, label, protein_g, fat_g, carb_g, kcal, saturated_fat_g, trans_fat_g, fiber_g, sodium_mg, added_sugars_g, free_sugars_g, processed_meat_g, red_meat_g, whole_grain_g_equiv, fruit_veg_g, include_in_analytics, include_in_warnings, active
+`
+
+type CreateFixedMealParams struct {
+	EaterID            int64          `json:"eater_id"`
+	MealType           MealType       `json:"meal_type"`
+	Label              string         `json:"label"`
+	ProteinG           pgtype.Numeric `json:"protein_g"`
+	FatG               pgtype.Numeric `json:"fat_g"`
+	CarbG              pgtype.Numeric `json:"carb_g"`
+	Kcal               int32          `json:"kcal"`
+	SaturatedFatG      pgtype.Numeric `json:"saturated_fat_g"`
+	TransFatG          pgtype.Numeric `json:"trans_fat_g"`
+	FiberG             pgtype.Numeric `json:"fiber_g"`
+	SodiumMg           pgtype.Numeric `json:"sodium_mg"`
+	AddedSugarsG       pgtype.Numeric `json:"added_sugars_g"`
+	FreeSugarsG        pgtype.Numeric `json:"free_sugars_g"`
+	ProcessedMeatG     pgtype.Numeric `json:"processed_meat_g"`
+	RedMeatG           pgtype.Numeric `json:"red_meat_g"`
+	WholeGrainGEquiv   pgtype.Numeric `json:"whole_grain_g_equiv"`
+	FruitVegG          pgtype.Numeric `json:"fruit_veg_g"`
+	IncludeInAnalytics bool           `json:"include_in_analytics"`
+	IncludeInWarnings  bool           `json:"include_in_warnings"`
+	Active             bool           `json:"active"`
+}
+
+func (q *Queries) CreateFixedMeal(ctx context.Context, arg CreateFixedMealParams) (FixedMeal, error) {
+	row := q.db.QueryRow(ctx, createFixedMeal,
+		arg.EaterID,
+		arg.MealType,
+		arg.Label,
+		arg.ProteinG,
+		arg.FatG,
+		arg.CarbG,
+		arg.Kcal,
+		arg.SaturatedFatG,
+		arg.TransFatG,
+		arg.FiberG,
+		arg.SodiumMg,
+		arg.AddedSugarsG,
+		arg.FreeSugarsG,
+		arg.ProcessedMeatG,
+		arg.RedMeatG,
+		arg.WholeGrainGEquiv,
+		arg.FruitVegG,
+		arg.IncludeInAnalytics,
+		arg.IncludeInWarnings,
+		arg.Active,
+	)
+	var i FixedMeal
+	err := row.Scan(
+		&i.ID,
+		&i.EaterID,
+		&i.MealType,
+		&i.Label,
+		&i.ProteinG,
+		&i.FatG,
+		&i.CarbG,
+		&i.Kcal,
+		&i.SaturatedFatG,
+		&i.TransFatG,
+		&i.FiberG,
+		&i.SodiumMg,
+		&i.AddedSugarsG,
+		&i.FreeSugarsG,
+		&i.ProcessedMeatG,
+		&i.RedMeatG,
+		&i.WholeGrainGEquiv,
+		&i.FruitVegG,
+		&i.IncludeInAnalytics,
+		&i.IncludeInWarnings,
+		&i.Active,
+	)
+	return i, err
+}
+
+const createMacroGoal = `-- name: CreateMacroGoal :one
+INSERT INTO eater_macro_goal (
+    eater_id, effective_from,
+    protein_min_g, protein_max_g, fat_min_g, fat_max_g,
+    carb_min_g, carb_max_g, kcal_min, kcal_max, note
+)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+RETURNING id, eater_id, effective_from, protein_min_g, protein_max_g, fat_min_g, fat_max_g, carb_min_g, carb_max_g, kcal_min, kcal_max, note, created_at
+`
+
+type CreateMacroGoalParams struct {
+	EaterID       int64          `json:"eater_id"`
+	EffectiveFrom pgtype.Date    `json:"effective_from"`
+	ProteinMinG   pgtype.Numeric `json:"protein_min_g"`
+	ProteinMaxG   pgtype.Numeric `json:"protein_max_g"`
+	FatMinG       pgtype.Numeric `json:"fat_min_g"`
+	FatMaxG       pgtype.Numeric `json:"fat_max_g"`
+	CarbMinG      pgtype.Numeric `json:"carb_min_g"`
+	CarbMaxG      pgtype.Numeric `json:"carb_max_g"`
+	KcalMin       int32          `json:"kcal_min"`
+	KcalMax       int32          `json:"kcal_max"`
+	Note          *string        `json:"note"`
+}
+
+func (q *Queries) CreateMacroGoal(ctx context.Context, arg CreateMacroGoalParams) (EaterMacroGoal, error) {
+	row := q.db.QueryRow(ctx, createMacroGoal,
+		arg.EaterID,
+		arg.EffectiveFrom,
+		arg.ProteinMinG,
+		arg.ProteinMaxG,
+		arg.FatMinG,
+		arg.FatMaxG,
+		arg.CarbMinG,
+		arg.CarbMaxG,
+		arg.KcalMin,
+		arg.KcalMax,
+		arg.Note,
+	)
+	var i EaterMacroGoal
+	err := row.Scan(
+		&i.ID,
+		&i.EaterID,
+		&i.EffectiveFrom,
+		&i.ProteinMinG,
+		&i.ProteinMaxG,
+		&i.FatMinG,
+		&i.FatMaxG,
+		&i.CarbMinG,
+		&i.CarbMaxG,
+		&i.KcalMin,
+		&i.KcalMax,
+		&i.Note,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const deleteEaterAllergens = `-- name: DeleteEaterAllergens :exec
+DELETE FROM eater_allergen WHERE eater_id = $1
+`
+
+func (q *Queries) DeleteEaterAllergens(ctx context.Context, eaterID int64) error {
+	_, err := q.db.Exec(ctx, deleteEaterAllergens, eaterID)
+	return err
+}
+
+const deleteEaterExclusion = `-- name: DeleteEaterExclusion :one
+DELETE FROM eater_exclusion
+WHERE id = $1
+RETURNING id, eater_id, target_kind, target_value, severity, note, created_at
+`
+
+func (q *Queries) DeleteEaterExclusion(ctx context.Context, id int64) (EaterExclusion, error) {
+	row := q.db.QueryRow(ctx, deleteEaterExclusion, id)
+	var i EaterExclusion
+	err := row.Scan(
+		&i.ID,
+		&i.EaterID,
+		&i.TargetKind,
+		&i.TargetValue,
+		&i.Severity,
+		&i.Note,
+		&i.CreatedAt,
+	)
+	return i, err
+}
 
 const getCurrentMacroGoal = `-- name: GetCurrentMacroGoal :one
 SELECT id, eater_id, effective_from, protein_min_g, protein_max_g, fat_min_g, fat_max_g, carb_min_g, carb_max_g, kcal_min, kcal_max, note, created_at FROM eater_macro_goal
@@ -102,6 +352,66 @@ func (q *Queries) ListActiveFixedMeals(ctx context.Context, eaterID int64) ([]Fi
 	return items, nil
 }
 
+const listEaterAllergens = `-- name: ListEaterAllergens :many
+SELECT allergen FROM eater_allergen
+WHERE eater_id = $1
+ORDER BY allergen
+`
+
+func (q *Queries) ListEaterAllergens(ctx context.Context, eaterID int64) ([]string, error) {
+	rows, err := q.db.Query(ctx, listEaterAllergens, eaterID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []string{}
+	for rows.Next() {
+		var allergen string
+		if err := rows.Scan(&allergen); err != nil {
+			return nil, err
+		}
+		items = append(items, allergen)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listEaterExclusions = `-- name: ListEaterExclusions :many
+SELECT id, eater_id, target_kind, target_value, severity, note, created_at FROM eater_exclusion
+WHERE eater_id = $1
+ORDER BY id
+`
+
+func (q *Queries) ListEaterExclusions(ctx context.Context, eaterID int64) ([]EaterExclusion, error) {
+	rows, err := q.db.Query(ctx, listEaterExclusions, eaterID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []EaterExclusion{}
+	for rows.Next() {
+		var i EaterExclusion
+		if err := rows.Scan(
+			&i.ID,
+			&i.EaterID,
+			&i.TargetKind,
+			&i.TargetValue,
+			&i.Severity,
+			&i.Note,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listEaters = `-- name: ListEaters :many
 SELECT id, name, sex, created_at, updated_at FROM eater ORDER BY name
 `
@@ -170,4 +480,52 @@ func (q *Queries) ListMacroGoals(ctx context.Context, eaterID int64) ([]EaterMac
 		return nil, err
 	}
 	return items, nil
+}
+
+const productExists = `-- name: ProductExists :one
+SELECT EXISTS(SELECT 1 FROM product WHERE id = $1)
+`
+
+func (q *Queries) ProductExists(ctx context.Context, id int64) (bool, error) {
+	row := q.db.QueryRow(ctx, productExists, id)
+	var exists bool
+	err := row.Scan(&exists)
+	return exists, err
+}
+
+const roleTagExists = `-- name: RoleTagExists :one
+SELECT EXISTS(SELECT 1 FROM role_tag WHERE code = $1)
+`
+
+func (q *Queries) RoleTagExists(ctx context.Context, code string) (bool, error) {
+	row := q.db.QueryRow(ctx, roleTagExists, code)
+	var exists bool
+	err := row.Scan(&exists)
+	return exists, err
+}
+
+const updateEater = `-- name: UpdateEater :one
+UPDATE eater
+SET name = $2, sex = $3, updated_at = now()
+WHERE id = $1
+RETURNING id, name, sex, created_at, updated_at
+`
+
+type UpdateEaterParams struct {
+	ID   int64  `json:"id"`
+	Name string `json:"name"`
+	Sex  Sex    `json:"sex"`
+}
+
+func (q *Queries) UpdateEater(ctx context.Context, arg UpdateEaterParams) (Eater, error) {
+	row := q.db.QueryRow(ctx, updateEater, arg.ID, arg.Name, arg.Sex)
+	var i Eater
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Sex,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
 }

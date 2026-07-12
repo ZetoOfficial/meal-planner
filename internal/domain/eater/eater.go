@@ -11,7 +11,12 @@ const (
 )
 
 type Eater struct {
-	ID   ID
-	Name string
-	Sex  Sex
+	ID          ID
+	Name        string
+	Sex         Sex
+	Allergens   []Allergen
+	Exclusions  []Exclusion
+	CurrentGoal *MacroGoal
 }
+
+type Allergen string

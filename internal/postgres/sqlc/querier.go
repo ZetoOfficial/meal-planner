@@ -9,9 +9,16 @@ import (
 )
 
 type Querier interface {
+	CreateEater(ctx context.Context, arg CreateEaterParams) (Eater, error)
+	CreateEaterAllergen(ctx context.Context, arg CreateEaterAllergenParams) error
+	CreateEaterExclusion(ctx context.Context, arg CreateEaterExclusionParams) (EaterExclusion, error)
+	CreateFixedMeal(ctx context.Context, arg CreateFixedMealParams) (FixedMeal, error)
+	CreateMacroGoal(ctx context.Context, arg CreateMacroGoalParams) (EaterMacroGoal, error)
 	CreateProduct(ctx context.Context, arg CreateProductParams) (Product, error)
 	CreateProductAllergen(ctx context.Context, arg CreateProductAllergenParams) error
 	CreateProductRole(ctx context.Context, arg CreateProductRoleParams) error
+	DeleteEaterAllergens(ctx context.Context, eaterID int64) error
+	DeleteEaterExclusion(ctx context.Context, id int64) (EaterExclusion, error)
 	DeleteProduct(ctx context.Context, id int64) (int64, error)
 	DeleteProductAllergens(ctx context.Context, productID int64) error
 	DeleteProductRoles(ctx context.Context, productID int64) error
@@ -21,6 +28,8 @@ type Querier interface {
 	GetProductFoodClassification(ctx context.Context, productID int64) (ProductFoodClassification, error)
 	GetRoleTagByCode(ctx context.Context, code string) (RoleTag, error)
 	ListActiveFixedMeals(ctx context.Context, eaterID int64) ([]FixedMeal, error)
+	ListEaterAllergens(ctx context.Context, eaterID int64) ([]string, error)
+	ListEaterExclusions(ctx context.Context, eaterID int64) ([]EaterExclusion, error)
 	ListEaters(ctx context.Context) ([]Eater, error)
 	ListMacroGoals(ctx context.Context, eaterID int64) ([]EaterMacroGoal, error)
 	ListProductAllergens(ctx context.Context, productID int64) ([]string, error)
@@ -28,6 +37,9 @@ type Querier interface {
 	ListProducts(ctx context.Context) ([]Product, error)
 	ListProductsByRole(ctx context.Context, roleCode string) ([]Product, error)
 	ListRoleTags(ctx context.Context) ([]RoleTag, error)
+	ProductExists(ctx context.Context, id int64) (bool, error)
+	RoleTagExists(ctx context.Context, code string) (bool, error)
+	UpdateEater(ctx context.Context, arg UpdateEaterParams) (Eater, error)
 	UpdateProduct(ctx context.Context, arg UpdateProductParams) (Product, error)
 	UpsertProductFoodClassification(ctx context.Context, arg UpsertProductFoodClassificationParams) (ProductFoodClassification, error)
 }
