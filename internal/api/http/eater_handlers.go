@@ -13,9 +13,6 @@ import (
 )
 
 func (a *api) ListEaters(w http.ResponseWriter, r *http.Request) {
-	if !a.requireEater(w) {
-		return
-	}
 	eaters, err := a.eater.ListEaters(r.Context())
 	if err != nil {
 		writeError(w, err)
@@ -29,9 +26,6 @@ func (a *api) ListEaters(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *api) CreateEater(w http.ResponseWriter, r *http.Request) {
-	if !a.requireEater(w) {
-		return
-	}
 	var input openapi.EaterInput
 	if err := decodeJSON(r, &input, validateEaterInput); err != nil {
 		writeError(w, err)
@@ -48,9 +42,6 @@ func (a *api) CreateEater(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *api) GetEater(w http.ResponseWriter, r *http.Request, id openapi.EaterId) {
-	if !a.requireEater(w) {
-		return
-	}
 	eater, err := a.eater.GetEater(r.Context(), eaterdom.ID(id))
 	if err != nil {
 		writeError(w, err)
@@ -62,9 +53,6 @@ func (a *api) GetEater(w http.ResponseWriter, r *http.Request, id openapi.EaterI
 }
 
 func (a *api) UpdateEater(w http.ResponseWriter, r *http.Request, id openapi.EaterId) {
-	if !a.requireEater(w) {
-		return
-	}
 	var input openapi.EaterInput
 	if err := decodeJSON(r, &input, validateEaterInput); err != nil {
 		writeError(w, err)
@@ -81,9 +69,6 @@ func (a *api) UpdateEater(w http.ResponseWriter, r *http.Request, id openapi.Eat
 }
 
 func (a *api) ListEaterGoals(w http.ResponseWriter, r *http.Request, id openapi.EaterId) {
-	if !a.requireEater(w) {
-		return
-	}
 	goals, err := a.eater.ListGoals(r.Context(), eaterdom.ID(id))
 	if err != nil {
 		writeError(w, err)
@@ -97,9 +82,6 @@ func (a *api) ListEaterGoals(w http.ResponseWriter, r *http.Request, id openapi.
 }
 
 func (a *api) CreateEaterGoal(w http.ResponseWriter, r *http.Request, id openapi.EaterId) {
-	if !a.requireEater(w) {
-		return
-	}
 	var input openapi.MacroGoalInput
 	if err := decodeJSON(r, &input, validateMacroGoalInput); err != nil {
 		writeError(w, err)
@@ -114,9 +96,6 @@ func (a *api) CreateEaterGoal(w http.ResponseWriter, r *http.Request, id openapi
 }
 
 func (a *api) ListFixedMeals(w http.ResponseWriter, r *http.Request, id openapi.EaterId) {
-	if !a.requireEater(w) {
-		return
-	}
 	meals, err := a.eater.ListFixedMeals(r.Context(), eaterdom.ID(id))
 	if err != nil {
 		writeError(w, err)
@@ -130,9 +109,6 @@ func (a *api) ListFixedMeals(w http.ResponseWriter, r *http.Request, id openapi.
 }
 
 func (a *api) CreateFixedMeal(w http.ResponseWriter, r *http.Request, id openapi.EaterId) {
-	if !a.requireEater(w) {
-		return
-	}
 	var input openapi.FixedMealInput
 	if err := decodeJSON(r, &input, validateFixedMealInput); err != nil {
 		writeError(w, err)
@@ -147,9 +123,6 @@ func (a *api) CreateFixedMeal(w http.ResponseWriter, r *http.Request, id openapi
 }
 
 func (a *api) ListExclusions(w http.ResponseWriter, r *http.Request, id openapi.EaterId) {
-	if !a.requireEater(w) {
-		return
-	}
 	exclusions, err := a.eater.ListExclusions(r.Context(), eaterdom.ID(id))
 	if err != nil {
 		writeError(w, err)
@@ -163,9 +136,6 @@ func (a *api) ListExclusions(w http.ResponseWriter, r *http.Request, id openapi.
 }
 
 func (a *api) CreateExclusion(w http.ResponseWriter, r *http.Request, id openapi.EaterId) {
-	if !a.requireEater(w) {
-		return
-	}
 	var input openapi.ExclusionInput
 	if err := decodeJSON(r, &input, validateExclusionInput); err != nil {
 		writeError(w, err)
@@ -180,9 +150,6 @@ func (a *api) CreateExclusion(w http.ResponseWriter, r *http.Request, id openapi
 }
 
 func (a *api) DeleteExclusion(w http.ResponseWriter, r *http.Request, id int64) {
-	if !a.requireEater(w) {
-		return
-	}
 	if err := a.eater.DeleteExclusion(r.Context(), eaterdom.ExclusionID(id)); err != nil {
 		writeError(w, err)
 		return

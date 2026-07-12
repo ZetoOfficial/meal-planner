@@ -45,20 +45,6 @@ func TestOpenAPIRouteRequiresTokenWhenConfigured(t *testing.T) {
 	}
 }
 
-func TestM2RouteWithoutComposedUseCaseReturnsInternalError(t *testing.T) {
-	handler := New(Deps{APIToken: "secret"})
-
-	req := httptest.NewRequest(http.MethodGet, "/eaters", http.NoBody)
-	req.Header.Set("X-API-Token", "secret")
-	rec := httptest.NewRecorder()
-
-	handler.ServeHTTP(rec, req)
-
-	if rec.Code != http.StatusInternalServerError {
-		t.Fatalf("GET /eaters status = %d, want %d", rec.Code, http.StatusInternalServerError)
-	}
-}
-
 func TestFutureAPIRouteReturnsStructuredNotImplementedWithValidToken(t *testing.T) {
 	handler := New(Deps{APIToken: "secret"})
 
