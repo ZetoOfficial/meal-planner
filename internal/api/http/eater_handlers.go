@@ -13,8 +13,7 @@ import (
 )
 
 func (a *api) ListEaters(w http.ResponseWriter, r *http.Request) {
-	if a.eater == nil {
-		notImplemented(w)
+	if !a.requireEater(w) {
 		return
 	}
 	eaters, err := a.eater.ListEaters(r.Context())
@@ -30,8 +29,7 @@ func (a *api) ListEaters(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *api) CreateEater(w http.ResponseWriter, r *http.Request) {
-	if a.eater == nil {
-		notImplemented(w)
+	if !a.requireEater(w) {
 		return
 	}
 	var input openapi.EaterInput
@@ -50,8 +48,7 @@ func (a *api) CreateEater(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *api) GetEater(w http.ResponseWriter, r *http.Request, id openapi.EaterId) {
-	if a.eater == nil {
-		notImplemented(w)
+	if !a.requireEater(w) {
 		return
 	}
 	eater, err := a.eater.GetEater(r.Context(), eaterdom.ID(id))
@@ -65,8 +62,7 @@ func (a *api) GetEater(w http.ResponseWriter, r *http.Request, id openapi.EaterI
 }
 
 func (a *api) UpdateEater(w http.ResponseWriter, r *http.Request, id openapi.EaterId) {
-	if a.eater == nil {
-		notImplemented(w)
+	if !a.requireEater(w) {
 		return
 	}
 	var input openapi.EaterInput
@@ -85,8 +81,7 @@ func (a *api) UpdateEater(w http.ResponseWriter, r *http.Request, id openapi.Eat
 }
 
 func (a *api) ListEaterGoals(w http.ResponseWriter, r *http.Request, id openapi.EaterId) {
-	if a.eater == nil {
-		notImplemented(w)
+	if !a.requireEater(w) {
 		return
 	}
 	goals, err := a.eater.ListGoals(r.Context(), eaterdom.ID(id))
@@ -102,8 +97,7 @@ func (a *api) ListEaterGoals(w http.ResponseWriter, r *http.Request, id openapi.
 }
 
 func (a *api) CreateEaterGoal(w http.ResponseWriter, r *http.Request, id openapi.EaterId) {
-	if a.eater == nil {
-		notImplemented(w)
+	if !a.requireEater(w) {
 		return
 	}
 	var input openapi.MacroGoalInput
@@ -120,8 +114,7 @@ func (a *api) CreateEaterGoal(w http.ResponseWriter, r *http.Request, id openapi
 }
 
 func (a *api) ListFixedMeals(w http.ResponseWriter, r *http.Request, id openapi.EaterId) {
-	if a.eater == nil {
-		notImplemented(w)
+	if !a.requireEater(w) {
 		return
 	}
 	meals, err := a.eater.ListFixedMeals(r.Context(), eaterdom.ID(id))
@@ -137,8 +130,7 @@ func (a *api) ListFixedMeals(w http.ResponseWriter, r *http.Request, id openapi.
 }
 
 func (a *api) CreateFixedMeal(w http.ResponseWriter, r *http.Request, id openapi.EaterId) {
-	if a.eater == nil {
-		notImplemented(w)
+	if !a.requireEater(w) {
 		return
 	}
 	var input openapi.FixedMealInput
@@ -155,8 +147,7 @@ func (a *api) CreateFixedMeal(w http.ResponseWriter, r *http.Request, id openapi
 }
 
 func (a *api) ListExclusions(w http.ResponseWriter, r *http.Request, id openapi.EaterId) {
-	if a.eater == nil {
-		notImplemented(w)
+	if !a.requireEater(w) {
 		return
 	}
 	exclusions, err := a.eater.ListExclusions(r.Context(), eaterdom.ID(id))
@@ -172,8 +163,7 @@ func (a *api) ListExclusions(w http.ResponseWriter, r *http.Request, id openapi.
 }
 
 func (a *api) CreateExclusion(w http.ResponseWriter, r *http.Request, id openapi.EaterId) {
-	if a.eater == nil {
-		notImplemented(w)
+	if !a.requireEater(w) {
 		return
 	}
 	var input openapi.ExclusionInput
@@ -190,8 +180,7 @@ func (a *api) CreateExclusion(w http.ResponseWriter, r *http.Request, id openapi
 }
 
 func (a *api) DeleteExclusion(w http.ResponseWriter, r *http.Request, id int64) {
-	if a.eater == nil {
-		notImplemented(w)
+	if !a.requireEater(w) {
 		return
 	}
 	if err := a.eater.DeleteExclusion(r.Context(), eaterdom.ExclusionID(id)); err != nil {

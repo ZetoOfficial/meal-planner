@@ -13,8 +13,7 @@ import (
 )
 
 func (a *api) ListProducts(w http.ResponseWriter, r *http.Request, params openapi.ListProductsParams) {
-	if a.catalog == nil {
-		notImplemented(w)
+	if !a.requireCatalog(w) {
 		return
 	}
 	role := ""
@@ -34,8 +33,7 @@ func (a *api) ListProducts(w http.ResponseWriter, r *http.Request, params openap
 }
 
 func (a *api) CreateProduct(w http.ResponseWriter, r *http.Request) {
-	if a.catalog == nil {
-		notImplemented(w)
+	if !a.requireCatalog(w) {
 		return
 	}
 	var input openapi.ProductInput
@@ -54,8 +52,7 @@ func (a *api) CreateProduct(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *api) GetProduct(w http.ResponseWriter, r *http.Request, id openapi.ProductId) {
-	if a.catalog == nil {
-		notImplemented(w)
+	if !a.requireCatalog(w) {
 		return
 	}
 	product, err := a.catalog.GetProduct(r.Context(), catalogdom.ProductID(id))
@@ -69,8 +66,7 @@ func (a *api) GetProduct(w http.ResponseWriter, r *http.Request, id openapi.Prod
 }
 
 func (a *api) UpdateProduct(w http.ResponseWriter, r *http.Request, id openapi.ProductId) {
-	if a.catalog == nil {
-		notImplemented(w)
+	if !a.requireCatalog(w) {
 		return
 	}
 	var input openapi.ProductInput
@@ -89,8 +85,7 @@ func (a *api) UpdateProduct(w http.ResponseWriter, r *http.Request, id openapi.P
 }
 
 func (a *api) DeleteProduct(w http.ResponseWriter, r *http.Request, id openapi.ProductId) {
-	if a.catalog == nil {
-		notImplemented(w)
+	if !a.requireCatalog(w) {
 		return
 	}
 	if err := a.catalog.DeleteProduct(r.Context(), catalogdom.ProductID(id)); err != nil {
@@ -101,8 +96,7 @@ func (a *api) DeleteProduct(w http.ResponseWriter, r *http.Request, id openapi.P
 }
 
 func (a *api) ListRoleTags(w http.ResponseWriter, r *http.Request) {
-	if a.catalog == nil {
-		notImplemented(w)
+	if !a.requireCatalog(w) {
 		return
 	}
 	tags, err := a.catalog.ListRoleTags(r.Context())

@@ -7,6 +7,7 @@ import (
 	"github.com/ZetoOfficial/meal-planner/internal/api/openapi"
 	catalogdom "github.com/ZetoOfficial/meal-planner/internal/domain/catalog"
 	eaterdom "github.com/ZetoOfficial/meal-planner/internal/domain/eater"
+	apperr "github.com/ZetoOfficial/meal-planner/internal/errors"
 	usecasecatalog "github.com/ZetoOfficial/meal-planner/internal/usecase/catalog"
 	usecaseeater "github.com/ZetoOfficial/meal-planner/internal/usecase/eater"
 )
@@ -43,6 +44,22 @@ var _ openapi.ServerInterface = (*api)(nil)
 
 func newAPI(catalog CatalogUseCases, eater EaterUseCases) *api {
 	return &api{catalog: catalog, eater: eater}
+}
+
+func (a *api) requireCatalog(w http.ResponseWriter) bool {
+	if a.catalog != nil {
+		return true
+	}
+	writeError(w, apperr.New(apperr.CodeInternal, "catalog use cases are not configured"))
+	return false
+}
+
+func (a *api) requireEater(w http.ResponseWriter) bool {
+	if a.eater != nil {
+		return true
+	}
+	writeError(w, apperr.New(apperr.CodeInternal, "eater use cases are not configured"))
+	return false
 }
 
 func notImplemented(w http.ResponseWriter) {

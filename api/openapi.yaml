@@ -38,7 +38,6 @@ paths:
               schema:
                 type: array
                 items: { $ref: '#/components/schemas/Eater' }
-        '501': { $ref: '#/components/responses/NotImplemented' }
     post:
       operationId: createEater
       tags: [eaters]
@@ -56,7 +55,6 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
         '422': { $ref: '#/components/responses/ValidationError' }
-        '501': { $ref: '#/components/responses/NotImplemented' }
 
   /eaters/{eaterId}:
     parameters:
@@ -68,7 +66,6 @@ paths:
       responses:
         '200': { $ref: '#/components/responses/EaterOK' }
         '404': { $ref: '#/components/responses/NotFound' }
-        '501': { $ref: '#/components/responses/NotImplemented' }
     put:
       operationId: updateEater
       tags: [eaters]
@@ -86,7 +83,6 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
-        '501': { $ref: '#/components/responses/NotImplemented' }
 
   /eaters/{eaterId}/goals:
     parameters:
@@ -104,7 +100,6 @@ paths:
                 type: array
                 items: { $ref: '#/components/schemas/MacroGoal' }
         '404': { $ref: '#/components/responses/NotFound' }
-        '501': { $ref: '#/components/responses/NotImplemented' }
     post:
       operationId: createEaterGoal
       tags: [eaters]
@@ -127,7 +122,6 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
         '422': { $ref: '#/components/responses/ValidationError' }
-        '501': { $ref: '#/components/responses/NotImplemented' }
 
   /eaters/{eaterId}/fixed-meals:
     parameters:
@@ -145,7 +139,6 @@ paths:
                 type: array
                 items: { $ref: '#/components/schemas/FixedMeal' }
         '404': { $ref: '#/components/responses/NotFound' }
-        '501': { $ref: '#/components/responses/NotImplemented' }
     post:
       operationId: createFixedMeal
       tags: [eaters]
@@ -168,7 +161,6 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
         '422': { $ref: '#/components/responses/ValidationError' }
-        '501': { $ref: '#/components/responses/NotImplemented' }
 
   /eaters/{eaterId}/exclusions:
     parameters:
@@ -186,7 +178,6 @@ paths:
                 type: array
                 items: { $ref: '#/components/schemas/Exclusion' }
         '404': { $ref: '#/components/responses/NotFound' }
-        '501': { $ref: '#/components/responses/NotImplemented' }
     post:
       operationId: createExclusion
       tags: [eaters]
@@ -209,7 +200,6 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
         '422': { $ref: '#/components/responses/ValidationError' }
-        '501': { $ref: '#/components/responses/NotImplemented' }
 
   /exclusions/{exclusionId}:
     parameters:
@@ -224,7 +214,6 @@ paths:
       responses:
         '204': { description: No Content }
         '404': { $ref: '#/components/responses/NotFound' }
-        '501': { $ref: '#/components/responses/NotImplemented' }
 
   # ---------------------------------------------------------------- products
   /products:
@@ -245,7 +234,6 @@ paths:
               schema:
                 type: array
                 items: { $ref: '#/components/schemas/Product' }
-        '501': { $ref: '#/components/responses/NotImplemented' }
     post:
       operationId: createProduct
       tags: [products]
@@ -263,7 +251,6 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
         '422': { $ref: '#/components/responses/ValidationError' }
-        '501': { $ref: '#/components/responses/NotImplemented' }
 
   /products/{productId}:
     parameters:
@@ -275,7 +262,6 @@ paths:
       responses:
         '200': { $ref: '#/components/responses/ProductOK' }
         '404': { $ref: '#/components/responses/NotFound' }
-        '501': { $ref: '#/components/responses/NotImplemented' }
     put:
       operationId: updateProduct
       tags: [products]
@@ -294,7 +280,6 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
         '422': { $ref: '#/components/responses/ValidationError' }
-        '501': { $ref: '#/components/responses/NotImplemented' }
     delete:
       operationId: deleteProduct
       tags: [products]
@@ -303,7 +288,6 @@ paths:
         '204': { description: No Content }
         '404': { $ref: '#/components/responses/NotFound' }
         '422': { $ref: '#/components/responses/ValidationError' }
-        '501': { $ref: '#/components/responses/NotImplemented' }
 
   /role-tags:
     get:

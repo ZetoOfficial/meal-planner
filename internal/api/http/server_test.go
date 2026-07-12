@@ -45,7 +45,7 @@ func TestOpenAPIRouteRequiresTokenWhenConfigured(t *testing.T) {
 	}
 }
 
-func TestM2RouteWithoutComposedUseCaseIsNotImplemented(t *testing.T) {
+func TestM2RouteWithoutComposedUseCaseReturnsInternalError(t *testing.T) {
 	handler := New(Deps{APIToken: "secret"})
 
 	req := httptest.NewRequest(http.MethodGet, "/eaters", http.NoBody)
@@ -54,8 +54,8 @@ func TestM2RouteWithoutComposedUseCaseIsNotImplemented(t *testing.T) {
 
 	handler.ServeHTTP(rec, req)
 
-	if rec.Code != http.StatusNotImplemented {
-		t.Fatalf("GET /eaters status = %d, want %d", rec.Code, http.StatusNotImplemented)
+	if rec.Code != http.StatusInternalServerError {
+		t.Fatalf("GET /eaters status = %d, want %d", rec.Code, http.StatusInternalServerError)
 	}
 }
 
