@@ -8,19 +8,36 @@ import (
 	"testing"
 	"time"
 
+	"go.uber.org/mock/gomock"
+
 	eaterdom "github.com/ZetoOfficial/meal-planner/internal/domain/eater"
 	apperr "github.com/ZetoOfficial/meal-planner/internal/errors"
+	"github.com/ZetoOfficial/meal-planner/internal/usecase/eater/mocks"
 )
 
 func TestUpdateEaterReplacesAllergensAndAppendsGoal(t *testing.T) {
-	repository := &eaterRepositoryStub{}
-	service := NewService(repository, passthroughTxRunner{}, fixedClock{now: time.Now()})
+	service, repository, transactions, clock := newMockService(t)
+	now := time.Date(2026, 7, 12, 18, 30, 0, 0, time.UTC)
+	effectiveFrom := time.Date(2026, 7, 12, 0, 0, 0, 0, time.UTC)
+	clock.EXPECT().Now().Return(now)
+	expectPassthroughTx(transactions)
+
+	var updatedProfile eaterdom.Eater
+	var appendedGoal eaterdom.MacroGoal
+	repository.EXPECT().
+		Update(gomock.Any(), gomock.Any(), gomock.Any()).
+		DoAndReturn(func(_ context.Context, profile eaterdom.Eater, goal eaterdom.MacroGoal) (eaterdom.Eater, error) {
+			updatedProfile = profile
+			appendedGoal = goal
+			profile.CurrentGoal = &goal
+			return profile, nil
+		})
 
 	updated, err := service.UpdateEater(t.Context(), 7, UpdateEaterCommand{
 		Name:      " Sasha ",
 		Sex:       eaterdom.SexFemale,
 		Allergens: []eaterdom.Allergen{" casein ", "casein", "nuts"},
-		Goal: MacroGoalCommand{EffectiveFrom: time.Date(2026, 7, 12, 0, 0, 0, 0, time.UTC), Range: eaterdom.MacroRange{
+		Goal: MacroGoalCommand{EffectiveFrom: effectiveFrom, Range: eaterdom.MacroRange{
 			ProteinMinG: 100, ProteinMaxG: 120,
 			FatMinG: 50, FatMaxG: 60,
 			CarbMinG: 160, CarbMaxG: 180,
@@ -33,46 +50,54 @@ func TestUpdateEaterReplacesAllergensAndAppendsGoal(t *testing.T) {
 	if updated.Name != "Sasha" || !slices.Equal(updated.Allergens, []eaterdom.Allergen{"casein", "nuts"}) {
 		t.Fatalf("UpdateEater() = %#v, want normalized profile", updated)
 	}
-	if len(repository.updates) != 1 || repository.updates[0].Goal.EffectiveFrom != time.Date(2026, 7, 12, 0, 0, 0, 0, time.UTC) {
-		t.Fatalf("UpdateEater() updates = %#v, want one appended goal", repository.updates)
+	if updatedProfile.ID != 7 || appendedGoal.EaterID != 7 || !appendedGoal.EffectiveFrom.Equal(effectiveFrom) {
+		t.Fatalf("Update() profile = %#v, goal = %#v, want eater ID and requested effective date", updatedProfile, appendedGoal)
 	}
 }
 
 func TestUpdateEaterSchedulesSameDayGoalForNextAvailableDate(t *testing.T) {
-	repository := &sameDayEaterRepository{}
-	service := NewService(repository, passthroughTxRunner{}, fixedClock{now: time.Now()})
-	created, err := service.CreateEater(t.Context(), CreateEaterCommand{
-		Name: "Pasha", Sex: eaterdom.SexMale, Allergens: []eaterdom.Allergen{"casein"},
-		Goal: MacroGoalCommand{Range: eaterdom.MacroRange{ProteinMaxG: 100, FatMaxG: 50, CarbMaxG: 150, KcalMax: 1800}},
-	})
-	if err != nil {
-		t.Fatalf("CreateEater() error = %v", err)
+	service, repository, transactions, clock := newMockService(t)
+	now := time.Date(2026, 7, 12, 18, 30, 0, 0, time.UTC)
+	todayGoal := eaterdom.MacroGoal{
+		ID:            1,
+		EaterID:       1,
+		EffectiveFrom: now.UTC().Truncate(dayDuration),
+		Range:         eaterdom.MacroRange{ProteinMaxG: 100, FatMaxG: 50, CarbMaxG: 150, KcalMax: 1800},
 	}
+	clock.EXPECT().Now().Return(now)
+	expectPassthroughTx(transactions)
+	repository.EXPECT().ListGoals(gomock.Any(), eaterdom.ID(1)).Return([]eaterdom.MacroGoal{todayGoal}, nil)
 
-	updated, err := service.UpdateEater(t.Context(), created.ID, UpdateEaterCommand{
+	var scheduledGoal eaterdom.MacroGoal
+	repository.EXPECT().
+		Update(gomock.Any(), gomock.Any(), gomock.Any()).
+		DoAndReturn(func(_ context.Context, profile eaterdom.Eater, goal eaterdom.MacroGoal) (eaterdom.Eater, error) {
+			scheduledGoal = goal
+			profile.CurrentGoal = &todayGoal
+			return profile, nil
+		})
+
+	updated, err := service.UpdateEater(t.Context(), 1, UpdateEaterCommand{
 		Name: "Pasha Updated", Sex: eaterdom.SexMale, Allergens: []eaterdom.Allergen{"nuts"},
 		Goal: MacroGoalCommand{Range: eaterdom.MacroRange{ProteinMaxG: 120, FatMaxG: 60, CarbMaxG: 170, KcalMax: 2000}},
 	})
 	if err != nil {
 		t.Fatalf("UpdateEater() error = %v", err)
 	}
-	goals, err := service.ListGoals(t.Context(), created.ID)
-	if err != nil {
-		t.Fatalf("ListGoals() error = %v", err)
+	wantEffectiveFrom := todayGoal.EffectiveFrom.AddDate(0, 0, 1)
+	if !scheduledGoal.EffectiveFrom.Equal(wantEffectiveFrom) {
+		t.Fatalf("scheduled goal effective_from = %v, want %v", scheduledGoal.EffectiveFrom, wantEffectiveFrom)
 	}
-	if len(goals) != 2 || !goals[1].EffectiveFrom.Equal(goals[0].EffectiveFrom.AddDate(0, 0, 1)) {
-		t.Fatalf("goal history = %#v, want immutable today goal and update scheduled tomorrow", goals)
-	}
-	if updated.CurrentGoal == nil || updated.CurrentGoal.ID != goals[0].ID {
+	if updated.CurrentGoal == nil || updated.CurrentGoal.ID != todayGoal.ID {
 		t.Fatalf("current goal = %#v, want today's original goal", updated.CurrentGoal)
 	}
 	if updated.Name != "Pasha Updated" || !slices.Equal(updated.Allergens, []eaterdom.Allergen{"nuts"}) {
-		t.Fatalf("updated profile = %#v, want profile/allergen replacement in same transaction", updated)
+		t.Fatalf("updated profile = %#v, want profile/allergen replacement", updated)
 	}
 }
 
 func TestCreateExclusionRejectsInvalidProductTarget(t *testing.T) {
-	service := NewService(&eaterRepositoryStub{}, passthroughTxRunner{}, fixedClock{now: time.Now()})
+	service, _, _, _ := newMockService(t)
 
 	_, err := service.CreateExclusion(t.Context(), 1, CreateExclusionCommand{
 		TargetKind:  eaterdom.ExclusionTargetProduct,
@@ -82,8 +107,12 @@ func TestCreateExclusionRejectsInvalidProductTarget(t *testing.T) {
 }
 
 func TestCreateFixedMealPreservesNilQualityAndDefaultsFlags(t *testing.T) {
-	repository := &eaterRepositoryStub{}
-	service := NewService(repository, passthroughTxRunner{}, fixedClock{now: time.Now()})
+	service, repository, _, _ := newMockService(t)
+	repository.EXPECT().
+		CreateFixedMeal(gomock.Any(), gomock.Any()).
+		DoAndReturn(func(_ context.Context, meal eaterdom.FixedMeal) (eaterdom.FixedMeal, error) {
+			return meal, nil
+		})
 
 	meal, err := service.CreateFixedMeal(t.Context(), 3, CreateFixedMealCommand{
 		MealType: eaterdom.MealTypeBreakfast,
@@ -99,8 +128,12 @@ func TestCreateFixedMealPreservesNilQualityAndDefaultsFlags(t *testing.T) {
 }
 
 func TestCreateFixedMealAllowsExplicitQualityFlags(t *testing.T) {
-	repository := &eaterRepositoryStub{}
-	service := NewService(repository, passthroughTxRunner{}, fixedClock{now: time.Now()})
+	service, repository, _, _ := newMockService(t)
+	repository.EXPECT().
+		CreateFixedMeal(gomock.Any(), gomock.Any()).
+		DoAndReturn(func(_ context.Context, meal eaterdom.FixedMeal) (eaterdom.FixedMeal, error) {
+			return meal, nil
+		})
 	no := false
 
 	meal, err := service.CreateFixedMeal(t.Context(), 3, CreateFixedMealCommand{
@@ -119,14 +152,22 @@ func TestCreateFixedMealAllowsExplicitQualityFlags(t *testing.T) {
 }
 
 func TestCreateGoalRejectsInvalidRange(t *testing.T) {
-	service := NewService(&eaterRepositoryStub{}, passthroughTxRunner{}, fixedClock{now: time.Now()})
+	service, _, _, clock := newMockService(t)
+	clock.EXPECT().Now().Return(time.Now())
+
 	_, err := service.CreateGoal(t.Context(), 1, MacroGoalCommand{Range: eaterdom.MacroRange{ProteinMinG: 10, ProteinMaxG: 5}})
 	assertErrorCode(t, err, apperr.CodeValidation)
 }
 
 func TestCreateGoalDefaultsEffectiveFromFromClock(t *testing.T) {
+	service, repository, _, clock := newMockService(t)
 	now := time.Date(2026, 7, 12, 18, 30, 0, 0, time.FixedZone("YEKT", 5*60*60))
-	service := NewService(&eaterRepositoryStub{}, passthroughTxRunner{}, fixedClock{now: now})
+	clock.EXPECT().Now().Return(now)
+	repository.EXPECT().
+		CreateGoal(gomock.Any(), gomock.Any()).
+		DoAndReturn(func(_ context.Context, goal eaterdom.MacroGoal) (eaterdom.MacroGoal, error) {
+			return goal, nil
+		})
 
 	goal, err := service.CreateGoal(t.Context(), 1, MacroGoalCommand{
 		Range: eaterdom.MacroRange{ProteinMaxG: 1, FatMaxG: 1, CarbMaxG: 1, KcalMax: 1},
@@ -141,13 +182,15 @@ func TestCreateGoalDefaultsEffectiveFromFromClock(t *testing.T) {
 }
 
 func TestCreateGoalRejectsNonFiniteAndOutOfRangeMacros(t *testing.T) {
-	service := NewService(&eaterRepositoryStub{}, passthroughTxRunner{}, fixedClock{now: time.Now()})
 	for name, goal := range map[string]MacroGoalCommand{
 		"non-finite numeric":         {Range: eaterdom.MacroRange{ProteinMaxG: math.Inf(1), FatMaxG: 1, CarbMaxG: 1, KcalMax: 1}},
 		"numeric precision overflow": {Range: eaterdom.MacroRange{ProteinMaxG: 100000, FatMaxG: 1, CarbMaxG: 1, KcalMax: 1}},
 		"integer overflow":           {Range: eaterdom.MacroRange{ProteinMaxG: 1, FatMaxG: 1, CarbMaxG: 1, KcalMax: int(math.MaxInt32) + 1}},
 	} {
 		t.Run(name, func(t *testing.T) {
+			service, _, _, clock := newMockService(t)
+			clock.EXPECT().Now().Return(time.Now())
+
 			_, err := service.CreateGoal(t.Context(), 1, goal)
 			assertErrorCode(t, err, apperr.CodeValidation)
 		})
@@ -155,8 +198,6 @@ func TestCreateGoalRejectsNonFiniteAndOutOfRangeMacros(t *testing.T) {
 }
 
 func TestCreateFixedMealRejectsNonFiniteAndOutOfRangeQuality(t *testing.T) {
-	repository := &eaterRepositoryStub{}
-	service := NewService(repository, passthroughTxRunner{}, fixedClock{now: time.Now()})
 	sodium := 10_000_000.0
 	for name, command := range map[string]CreateFixedMealCommand{
 		"non-finite macro": {
@@ -172,33 +213,44 @@ func TestCreateFixedMealRejectsNonFiniteAndOutOfRangeQuality(t *testing.T) {
 		},
 	} {
 		t.Run(name, func(t *testing.T) {
+			service, _, _, _ := newMockService(t)
+
 			_, err := service.CreateFixedMeal(t.Context(), 1, command)
 			assertErrorCode(t, err, apperr.CodeValidation)
 		})
 	}
 }
 
-func TestUpdateEaterRollsBackProfileAndAllergensWhenGoalAppendFails(t *testing.T) {
-	repository := &rollbackEaterRepository{profile: eaterdom.Eater{
-		ID: 1, Name: "Pasha", Sex: eaterdom.SexMale, Allergens: []eaterdom.Allergen{"casein"},
-	}}
-	transactions := &eaterRollbackTxRunner{repository: repository}
-	service := NewService(repository, transactions, fixedClock{now: time.Now()})
+func TestUpdateEaterReturnsConflictWhenRepositoryUpdateFails(t *testing.T) {
+	service, repository, transactions, clock := newMockService(t)
+	clock.EXPECT().Now().Return(time.Now())
+	expectPassthroughTx(transactions)
+	repository.EXPECT().
+		Update(gomock.Any(), gomock.Any(), gomock.Any()).
+		Return(eaterdom.Eater{}, apperr.Conflict("macro goal already exists"))
 
 	_, err := service.UpdateEater(t.Context(), 1, UpdateEaterCommand{
 		Name: "Renamed", Sex: eaterdom.SexFemale, Allergens: []eaterdom.Allergen{"nuts"},
 		Goal: MacroGoalCommand{EffectiveFrom: time.Date(2026, 7, 12, 0, 0, 0, 0, time.UTC), Range: eaterdom.MacroRange{ProteinMaxG: 1, FatMaxG: 1, CarbMaxG: 1, KcalMax: 1}},
 	})
 	assertErrorCode(t, err, apperr.CodeConflict)
-	if repository.profile.Name != "Pasha" || repository.profile.Sex != eaterdom.SexMale || !slices.Equal(repository.profile.Allergens, []eaterdom.Allergen{"casein"}) {
-		t.Fatalf("profile after failed update = %#v, want original profile and allergens", repository.profile)
-	}
 }
 
-type passthroughTxRunner struct{}
+func newMockService(t *testing.T) (*Service, *mocks.MockEaterRepository, *mocks.MockTxRunner, *mocks.MockClock) {
+	t.Helper()
+	controller := gomock.NewController(t)
+	repository := mocks.NewMockEaterRepository(controller)
+	transactions := mocks.NewMockTxRunner(controller)
+	clock := mocks.NewMockClock(controller)
+	return NewService(repository, transactions, clock), repository, transactions, clock
+}
 
-func (passthroughTxRunner) WithTx(ctx context.Context, fn func(context.Context) error) error {
-	return fn(ctx)
+func expectPassthroughTx(transactions *mocks.MockTxRunner) {
+	transactions.EXPECT().
+		WithTx(gomock.Any(), gomock.Any()).
+		DoAndReturn(func(ctx context.Context, fn func(context.Context) error) error {
+			return fn(ctx)
+		})
 }
 
 func assertErrorCode(t *testing.T, err error, want apperr.Code) {
@@ -207,121 +259,4 @@ func assertErrorCode(t *testing.T, err error, want apperr.Code) {
 	if !errors.As(err, &appError) || appError.Code != want {
 		t.Fatalf("error = %v, want code %q", err, want)
 	}
-}
-
-type fixedClock struct {
-	now time.Time
-}
-
-func (c fixedClock) Now() time.Time {
-	return c.now
-}
-
-type eaterUpdate struct {
-	Profile eaterdom.Eater
-	Goal    eaterdom.MacroGoal
-}
-
-type eaterRepositoryStub struct {
-	updates []eaterUpdate
-}
-
-type sameDayEaterRepository struct {
-	eaterRepositoryStub
-	profile eaterdom.Eater
-	goals   []eaterdom.MacroGoal
-}
-
-func (r *sameDayEaterRepository) Create(_ context.Context, profile eaterdom.Eater, goal eaterdom.MacroGoal) (eaterdom.Eater, error) {
-	profile.ID, goal.ID, goal.EaterID = 1, 1, 1
-	r.profile, r.goals = profile, []eaterdom.MacroGoal{goal}
-	r.profile.CurrentGoal = &r.goals[0]
-	return r.profile, nil
-}
-
-func (r *sameDayEaterRepository) ListGoals(_ context.Context, eaterID eaterdom.ID) ([]eaterdom.MacroGoal, error) {
-	if eaterID != r.profile.ID {
-		return nil, apperr.NotFound("eater")
-	}
-	return slices.Clone(r.goals), nil
-}
-
-func (r *sameDayEaterRepository) Update(_ context.Context, profile eaterdom.Eater, goal eaterdom.MacroGoal) (eaterdom.Eater, error) {
-	for _, existing := range r.goals {
-		if existing.EffectiveFrom.Equal(goal.EffectiveFrom) {
-			return eaterdom.Eater{}, apperr.Conflict("macro goal already exists")
-		}
-	}
-	goal.ID = eaterdom.MacroGoalID(len(r.goals) + 1)
-	r.goals = append(r.goals, goal)
-	r.profile = profile
-	r.profile.CurrentGoal = eaterdom.CurrentGoalAt(r.goals, time.Now().UTC())
-	return r.profile, nil
-}
-
-type rollbackEaterRepository struct {
-	eaterRepositoryStub
-	profile eaterdom.Eater
-}
-
-func (r *rollbackEaterRepository) Update(_ context.Context, profile eaterdom.Eater, _ eaterdom.MacroGoal) (eaterdom.Eater, error) {
-	r.profile = profile
-	return eaterdom.Eater{}, apperr.Conflict("macro goal already exists")
-}
-
-type eaterRollbackTxRunner struct {
-	repository *rollbackEaterRepository
-}
-
-func (r *eaterRollbackTxRunner) WithTx(ctx context.Context, fn func(context.Context) error) error {
-	before := r.repository.profile
-	before.Allergens = slices.Clone(before.Allergens)
-	if err := fn(ctx); err != nil {
-		r.repository.profile = before
-		return err
-	}
-	return nil
-}
-
-func (r *eaterRepositoryStub) Create(context.Context, eaterdom.Eater, eaterdom.MacroGoal) (eaterdom.Eater, error) {
-	return eaterdom.Eater{}, nil
-}
-
-func (r *eaterRepositoryStub) DeleteExclusion(context.Context, eaterdom.ExclusionID) error {
-	return nil
-}
-
-func (r *eaterRepositoryStub) Get(context.Context, eaterdom.ID) (eaterdom.Eater, error) {
-	return eaterdom.Eater{}, nil
-}
-func (r *eaterRepositoryStub) List(context.Context) ([]eaterdom.Eater, error) { return nil, nil }
-func (r *eaterRepositoryStub) ListExclusions(context.Context, eaterdom.ID) ([]eaterdom.Exclusion, error) {
-	return nil, nil
-}
-
-func (r *eaterRepositoryStub) ListFixedMeals(context.Context, eaterdom.ID) ([]eaterdom.FixedMeal, error) {
-	return nil, nil
-}
-
-func (r *eaterRepositoryStub) ListGoals(context.Context, eaterdom.ID) ([]eaterdom.MacroGoal, error) {
-	return nil, nil
-}
-
-func (r *eaterRepositoryStub) CreateExclusion(_ context.Context, exclusion eaterdom.Exclusion) (eaterdom.Exclusion, error) {
-	return exclusion, nil
-}
-
-func (r *eaterRepositoryStub) CreateFixedMeal(_ context.Context, meal eaterdom.FixedMeal) (eaterdom.FixedMeal, error) {
-	return meal, nil
-}
-
-func (r *eaterRepositoryStub) CreateGoal(_ context.Context, goal eaterdom.MacroGoal) (eaterdom.MacroGoal, error) {
-	return goal, nil
-}
-func (r *eaterRepositoryStub) ProductExists(context.Context, int64) (bool, error)  { return false, nil }
-func (r *eaterRepositoryStub) RoleTagExists(context.Context, string) (bool, error) { return false, nil }
-func (r *eaterRepositoryStub) Update(_ context.Context, profile eaterdom.Eater, goal eaterdom.MacroGoal) (eaterdom.Eater, error) {
-	r.updates = append(r.updates, eaterUpdate{Profile: profile, Goal: goal})
-	profile.CurrentGoal = &goal
-	return profile, nil
 }

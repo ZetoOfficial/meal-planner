@@ -29,6 +29,9 @@ oapi: ## Сгенерировать HTTP-сервер/DTO из api/openapi.yaml
 
 .PHONY: mocks
 mocks: ## Сгенерировать Uber mockgen-моки
+	$(MOCKGEN) -source=internal/api/http/api.go -destination=internal/api/http/mocks/usecases.go -package=mocks
+	$(MOCKGEN) -source=internal/usecase/catalog/ports.go -destination=internal/usecase/catalog/mocks/ports.go -package=mocks
+	$(MOCKGEN) -source=internal/usecase/eater/ports.go -destination=internal/usecase/eater/mocks/ports.go -package=mocks
 	$(MOCKGEN) -source=internal/postgres/tx.go -imports=pgx=github.com/jackc/pgx/v5 -destination=internal/postgres/mocks/transaction.go -package=mocks
 	$(MOCKGEN) -destination=internal/postgres/mocks/pgx.go -package=mocks github.com/jackc/pgx/v5 Tx,Row
 	$(MOCKGEN) -source=internal/postgres/sqlc/db.go -imports=pgx=github.com/jackc/pgx/v5,pgconn=github.com/jackc/pgx/v5/pgconn -destination=internal/postgres/mocks/dbtx.go -package=mocks

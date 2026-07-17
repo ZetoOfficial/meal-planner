@@ -7,6 +7,8 @@ import (
 	"errors"
 	"testing"
 
+	"go.uber.org/mock/gomock"
+
 	catalogdom "github.com/ZetoOfficial/meal-planner/internal/domain/catalog"
 	apperr "github.com/ZetoOfficial/meal-planner/internal/errors"
 	postgresdb "github.com/ZetoOfficial/meal-planner/internal/postgres"
@@ -14,6 +16,7 @@ import (
 	"github.com/ZetoOfficial/meal-planner/internal/postgres/sqlc"
 	testpostgres "github.com/ZetoOfficial/meal-planner/internal/testkit/postgres"
 	catalogusecase "github.com/ZetoOfficial/meal-planner/internal/usecase/catalog"
+	catalogmocks "github.com/ZetoOfficial/meal-planner/internal/usecase/catalog/mocks"
 )
 
 func TestCatalogRoundTripReplacesAggregateAndPreservesNullNutrition(t *testing.T) {
@@ -95,7 +98,19 @@ func TestCatalogRoundTripReplacesAggregateAndPreservesNullNutrition(t *testing.T
 func TestCatalogCreateRollsBackWhenRelatedWriteFails(t *testing.T) {
 	database := testpostgres.RequireDatabase(t)
 	repository := repositories.NewCatalog(repositories.New(database.Pool))
-	service := catalogusecase.NewService(invalidRoleIDRepository{Catalog: repository}, postgresdb.NewTxManager(database.Pool))
+	ctrl := gomock.NewController(t)
+	productRepository := catalogmocks.NewMockProductRepository(ctrl)
+	productRepository.EXPECT().
+		GetRoleTag(gomock.Any(), "protein:lean:breast").
+		DoAndReturn(func(ctx context.Context, code string) (catalogdom.RoleTag, error) {
+			role, err := repository.GetRoleTag(ctx, code)
+			role.ID = -1
+			return role, err
+		})
+	productRepository.EXPECT().
+		Create(gomock.Any(), gomock.Any()).
+		DoAndReturn(repository.Create)
+	service := catalogusecase.NewService(productRepository, postgresdb.NewTxManager(database.Pool))
 
 	_, err := service.CreateProduct(context.Background(), catalogusecase.CreateProductCommand{
 		Brand:          "Brand",
@@ -119,17 +134,4 @@ func TestCatalogCreateRollsBackWhenRelatedWriteFails(t *testing.T) {
 	if len(products) != 0 {
 		t.Fatalf("products after failed create = %d, want 0", len(products))
 	}
-}
-
-type invalidRoleIDRepository struct {
-	*repositories.Catalog
-}
-
-func (r invalidRoleIDRepository) GetRoleTag(ctx context.Context, code string) (catalogdom.RoleTag, error) {
-	role, err := r.Catalog.GetRoleTag(ctx, code)
-	if err != nil {
-		return catalogdom.RoleTag{}, err
-	}
-	role.ID = -1
-	return role, nil
 }
