@@ -106,6 +106,30 @@ func (e ExclusionInputTargetKind) Valid() bool {
 	}
 }
 
+// Defines values for FeedbackInputTargetType.
+const (
+	FeedbackInputTargetTypeMeal           FeedbackInputTargetType = "meal"
+	FeedbackInputTargetTypeProduct        FeedbackInputTargetType = "product"
+	FeedbackInputTargetTypeRecipeTemplate FeedbackInputTargetType = "recipe_template"
+	FeedbackInputTargetTypeSlotFill       FeedbackInputTargetType = "slot_fill"
+)
+
+// Valid indicates whether the value is a known member of the FeedbackInputTargetType enum.
+func (e FeedbackInputTargetType) Valid() bool {
+	switch e {
+	case FeedbackInputTargetTypeMeal:
+		return true
+	case FeedbackInputTargetTypeProduct:
+		return true
+	case FeedbackInputTargetTypeRecipeTemplate:
+		return true
+	case FeedbackInputTargetTypeSlotFill:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for FoodClassificationFoodGroup.
 const (
 	FoodClassificationFoodGroupBeverage       FoodClassificationFoodGroup = "beverage"
@@ -199,6 +223,51 @@ func (e FoodClassificationProcessingLevel) Valid() bool {
 	}
 }
 
+// Defines values for MealLogStatus.
+const (
+	MealLogStatusEatenAsPlanned MealLogStatus = "eaten_as_planned"
+	MealLogStatusEatenModified  MealLogStatus = "eaten_modified"
+	MealLogStatusPlanned        MealLogStatus = "planned"
+	MealLogStatusSkipped        MealLogStatus = "skipped"
+)
+
+// Valid indicates whether the value is a known member of the MealLogStatus enum.
+func (e MealLogStatus) Valid() bool {
+	switch e {
+	case MealLogStatusEatenAsPlanned:
+		return true
+	case MealLogStatusEatenModified:
+		return true
+	case MealLogStatusPlanned:
+		return true
+	case MealLogStatusSkipped:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for MealLogInputLogStatus.
+const (
+	MealLogInputLogStatusEatenAsPlanned MealLogInputLogStatus = "eaten_as_planned"
+	MealLogInputLogStatusEatenModified  MealLogInputLogStatus = "eaten_modified"
+	MealLogInputLogStatusSkipped        MealLogInputLogStatus = "skipped"
+)
+
+// Valid indicates whether the value is a known member of the MealLogInputLogStatus enum.
+func (e MealLogInputLogStatus) Valid() bool {
+	switch e {
+	case MealLogInputLogStatusEatenAsPlanned:
+		return true
+	case MealLogInputLogStatusEatenModified:
+		return true
+	case MealLogInputLogStatusSkipped:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for MealType.
 const (
 	Breakfast MealType = "breakfast"
@@ -271,6 +340,87 @@ func (e NutritionDataQualitySourceKind) Valid() bool {
 	}
 }
 
+// Defines values for PlanStatus.
+const (
+	PlanStatusActive   PlanStatus = "active"
+	PlanStatusArchived PlanStatus = "archived"
+	PlanStatusDraft    PlanStatus = "draft"
+)
+
+// Valid indicates whether the value is a known member of the PlanStatus enum.
+func (e PlanStatus) Valid() bool {
+	switch e {
+	case PlanStatusActive:
+		return true
+	case PlanStatusArchived:
+		return true
+	case PlanStatusDraft:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for PlanSummaryStatus.
+const (
+	PlanSummaryStatusActive   PlanSummaryStatus = "active"
+	PlanSummaryStatusArchived PlanSummaryStatus = "archived"
+	PlanSummaryStatusDraft    PlanSummaryStatus = "draft"
+)
+
+// Valid indicates whether the value is a known member of the PlanSummaryStatus enum.
+func (e PlanSummaryStatus) Valid() bool {
+	switch e {
+	case PlanSummaryStatusActive:
+		return true
+	case PlanSummaryStatusArchived:
+		return true
+	case PlanSummaryStatusDraft:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for RecipeStatus.
+const (
+	Draft     RecipeStatus = "draft"
+	Permanent RecipeStatus = "permanent"
+	Rejected  RecipeStatus = "rejected"
+)
+
+// Valid indicates whether the value is a known member of the RecipeStatus enum.
+func (e RecipeStatus) Valid() bool {
+	switch e {
+	case Draft:
+		return true
+	case Permanent:
+		return true
+	case Rejected:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for RecipeTemplateSource.
+const (
+	Llm    RecipeTemplateSource = "llm"
+	Manual RecipeTemplateSource = "manual"
+)
+
+// Valid indicates whether the value is a known member of the RecipeTemplateSource enum.
+func (e RecipeTemplateSource) Valid() bool {
+	switch e {
+	case Llm:
+		return true
+	case Manual:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for RoleKind.
 const (
 	RoleKindCarb    RoleKind = "carb"
@@ -301,6 +451,54 @@ func (e RoleKind) Valid() bool {
 	}
 }
 
+// Defines values for RuleEvaluationEntityType.
+const (
+	RuleEvaluationEntityTypeDay           RuleEvaluationEntityType = "day"
+	RuleEvaluationEntityTypeMeal          RuleEvaluationEntityType = "meal"
+	RuleEvaluationEntityTypePlan          RuleEvaluationEntityType = "plan"
+	RuleEvaluationEntityTypeRollingWindow RuleEvaluationEntityType = "rolling_window"
+)
+
+// Valid indicates whether the value is a known member of the RuleEvaluationEntityType enum.
+func (e RuleEvaluationEntityType) Valid() bool {
+	switch e {
+	case RuleEvaluationEntityTypeDay:
+		return true
+	case RuleEvaluationEntityTypeMeal:
+		return true
+	case RuleEvaluationEntityTypePlan:
+		return true
+	case RuleEvaluationEntityTypeRollingWindow:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for RuleEvaluationStatus.
+const (
+	Pass     RuleEvaluationStatus = "pass"
+	SoftFail RuleEvaluationStatus = "soft_fail"
+	Unknown  RuleEvaluationStatus = "unknown"
+	Warn     RuleEvaluationStatus = "warn"
+)
+
+// Valid indicates whether the value is a known member of the RuleEvaluationStatus enum.
+func (e RuleEvaluationStatus) Valid() bool {
+	switch e {
+	case Pass:
+		return true
+	case SoftFail:
+		return true
+	case Unknown:
+		return true
+	case Warn:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for Sex.
 const (
 	Female      Sex = "female"
@@ -316,6 +514,75 @@ func (e Sex) Valid() bool {
 	case Male:
 		return true
 	case Unspecified:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for StorageProfile.
+const (
+	AssembleFresh StorageProfile = "assemble_fresh"
+	EatSameDay    StorageProfile = "eat_same_day"
+	Keeps3d       StorageProfile = "keeps_3d"
+	Keeps3dReheat StorageProfile = "keeps_3d_reheat"
+)
+
+// Valid indicates whether the value is a known member of the StorageProfile enum.
+func (e StorageProfile) Valid() bool {
+	switch e {
+	case AssembleFresh:
+		return true
+	case EatSameDay:
+		return true
+	case Keeps3d:
+		return true
+	case Keeps3dReheat:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SwapInputLevel.
+const (
+	Fill     SwapInputLevel = "fill"
+	Recipe   SwapInputLevel = "recipe"
+	Rotation SwapInputLevel = "rotation"
+)
+
+// Valid indicates whether the value is a known member of the SwapInputLevel enum.
+func (e SwapInputLevel) Valid() bool {
+	switch e {
+	case Fill:
+		return true
+	case Recipe:
+		return true
+	case Rotation:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SwapPreviewLevel.
+const (
+	FillToFill    SwapPreviewLevel = "fill_to_fill"
+	FullRotation  SwapPreviewLevel = "full_rotation"
+	ProteinChange SwapPreviewLevel = "protein_change"
+	RecipeChange  SwapPreviewLevel = "recipe_change"
+)
+
+// Valid indicates whether the value is a known member of the SwapPreviewLevel enum.
+func (e SwapPreviewLevel) Valid() bool {
+	switch e {
+	case FillToFill:
+		return true
+	case FullRotation:
+		return true
+	case ProteinChange:
+		return true
+	case RecipeChange:
 		return true
 	default:
 		return false
@@ -389,6 +656,30 @@ type ExclusionInputSeverity string
 
 // ExclusionInputTargetKind defines model for ExclusionInput.TargetKind.
 type ExclusionInputTargetKind string
+
+// FeedbackEvent defines model for FeedbackEvent.
+type FeedbackEvent struct {
+	Comment     *string    `json:"comment,omitempty"`
+	CreatedAt   *time.Time `json:"created_at,omitempty"`
+	EaterId     int64      `json:"eater_id"`
+	Id          int64      `json:"id"`
+	Rating      *int       `json:"rating,omitempty"`
+	TargetId    int64      `json:"target_id"`
+	TargetType  string     `json:"target_type"`
+	WeightDelta *float32   `json:"weight_delta,omitempty"`
+}
+
+// FeedbackInput defines model for FeedbackInput.
+type FeedbackInput struct {
+	Comment    *string                 `json:"comment,omitempty"`
+	EaterId    int64                   `json:"eater_id"`
+	Rating     *int                    `json:"rating,omitempty"`
+	TargetId   int64                   `json:"target_id"`
+	TargetType FeedbackInputTargetType `json:"target_type"`
+}
+
+// FeedbackInputTargetType defines model for FeedbackInput.TargetType.
+type FeedbackInputTargetType string
 
 // FixedMeal defines model for FixedMeal.
 type FixedMeal struct {
@@ -490,6 +781,16 @@ type MacroRange struct {
 	ProteinMinG float32 `json:"protein_min_g"`
 }
 
+// MacroSummary defines model for MacroSummary.
+type MacroSummary struct {
+	AvgActual  *Macros            `json:"avg_actual,omitempty"`
+	AvgPlanned Macros             `json:"avg_planned"`
+	Days       *int               `json:"days,omitempty"`
+	EaterId    int64              `json:"eater_id"`
+	From       openapi_types.Date `json:"from"`
+	To         openapi_types.Date `json:"to"`
+}
+
 // Macros defines model for Macros.
 type Macros struct {
 	CarbG    float32 `json:"carb_g"`
@@ -497,6 +798,37 @@ type Macros struct {
 	Kcal     int     `json:"kcal"`
 	ProteinG float32 `json:"protein_g"`
 }
+
+// Meal defines model for Meal.
+type Meal struct {
+	Actual       *Macros            `json:"actual,omitempty"`
+	CookedBy     *int64             `json:"cooked_by,omitempty"`
+	EaterId      int64              `json:"eater_id"`
+	FixedMealId  *int64             `json:"fixed_meal_id,omitempty"`
+	Id           int64              `json:"id"`
+	LogStatus    MealLogStatus      `json:"log_status"`
+	LoggedBy     *int64             `json:"logged_by,omitempty"`
+	MealDate     openapi_types.Date `json:"meal_date"`
+	MealType     MealType           `json:"meal_type"`
+	PlanId       int64              `json:"plan_id"`
+	PlanRecipeId *int64             `json:"plan_recipe_id,omitempty"`
+	Planned      Macros             `json:"planned"`
+}
+
+// MealLogStatus defines model for Meal.LogStatus.
+type MealLogStatus string
+
+// MealLogInput В MVP вручную вводятся только actual-МАКРОСЫ. Actual quality-нутриенты вручную НЕ вводятся: при eaten_modified без structured replacement quality-метрики приёма становятся 'unknown' (FR-6), а не фикция.
+type MealLogInput struct {
+	// Actual actual-макросы; заполняется только при отклонении (FR-6)
+	Actual    *Macros               `json:"actual,omitempty"`
+	CookedBy  *int64                `json:"cooked_by,omitempty"`
+	LogStatus MealLogInputLogStatus `json:"log_status"`
+	LoggedBy  int64                 `json:"logged_by"`
+}
+
+// MealLogInputLogStatus defines model for MealLogInput.LogStatus.
+type MealLogInputLogStatus string
 
 // MealType defines model for MealType.
 type MealType string
@@ -532,6 +864,90 @@ type NutritionFacts struct {
 
 	// TransFatPer100g транс-жиры ВСЕГО (может включать природные) → только warn
 	TransFatPer100g *float32 `json:"trans_fat_per_100g,omitempty"`
+}
+
+// NutritionQualitySummary Сводка качества для дня/плана + rolling-проекции недели
+type NutritionQualitySummary struct {
+	AddedSugarsG            *float32          `json:"added_sugars_g,omitempty"`
+	DataCoverageScore       *float32          `json:"data_coverage_score,omitempty"`
+	FiberG                  *float32          `json:"fiber_g,omitempty"`
+	FruitVegG               *float32          `json:"fruit_veg_g,omitempty"`
+	LegumeG                 *float32          `json:"legume_g,omitempty"`
+	ProcessedMeatGRolling7d *float32          `json:"processed_meat_g_rolling_7d,omitempty"`
+	QualityScore            *float32          `json:"quality_score,omitempty"`
+	RedMeatGRolling7d       *float32          `json:"red_meat_g_rolling_7d,omitempty"`
+	RuleEvaluations         *[]RuleEvaluation `json:"rule_evaluations,omitempty"`
+	SaturatedFatG           *float32          `json:"saturated_fat_g,omitempty"`
+	SodiumMg                *float32          `json:"sodium_mg,omitempty"`
+	UpfKcalShareEst         *float32          `json:"upf_kcal_share_est,omitempty"`
+	WarningsCount           *int              `json:"warnings_count,omitempty"`
+	WholeGrainGEquiv        *float32          `json:"whole_grain_g_equiv,omitempty"`
+}
+
+// Plan defines model for Plan.
+type Plan struct {
+	CookDate         *openapi_types.Date `json:"cook_date,omitempty"`
+	Days             int                 `json:"days"`
+	Id               int64               `json:"id"`
+	Label            *string             `json:"label,omitempty"`
+	Meals            *[]Meal             `json:"meals,omitempty"`
+	NoveltyLevel     *int                `json:"novelty_level,omitempty"`
+	PrepDependencies *[]PrepDependency   `json:"prep_dependencies,omitempty"`
+
+	// QualitySummary Оценка качества плана (FR-3): план не блокируется за quality-fail
+	QualitySummary *NutritionQualitySummary `json:"quality_summary,omitempty"`
+	Recipes        []PlanRecipe             `json:"recipes"`
+
+	// ShoppingListStale true если после свопа изменился состав продуктов (FR-5)
+	ShoppingListStale *bool              `json:"shopping_list_stale,omitempty"`
+	StartDate         openapi_types.Date `json:"start_date"`
+	Status            PlanStatus         `json:"status"`
+}
+
+// PlanStatus defines model for Plan.Status.
+type PlanStatus string
+
+// PlanGenerateInput defines model for PlanGenerateInput.
+type PlanGenerateInput struct {
+	CookDate *openapi_types.Date `json:"cook_date,omitempty"`
+	Days     *int                `json:"days,omitempty"`
+	EaterIds []int64             `json:"eater_ids"`
+	Label    *string             `json:"label,omitempty"`
+
+	// NoveltyLevel dial новизны (DESIGN §7); маппится в temperature LLM
+	NoveltyLevel *int               `json:"novelty_level,omitempty"`
+	StartDate    openapi_types.Date `json:"start_date"`
+}
+
+// PlanRecipe defines model for PlanRecipe.
+type PlanRecipe struct {
+	BatchQty   *float32   `json:"batch_qty,omitempty"`
+	Fills      []SlotFill `json:"fills"`
+	Id         int64      `json:"id"`
+	Label      *string    `json:"label,omitempty"`
+	TemplateId int64      `json:"template_id"`
+}
+
+// PlanSummary defines model for PlanSummary.
+type PlanSummary struct {
+	Days                 int                `json:"days"`
+	Id                   int64              `json:"id"`
+	Label                *string            `json:"label,omitempty"`
+	QualityScore         *float32           `json:"quality_score,omitempty"`
+	QualityWarningsCount *int               `json:"quality_warnings_count,omitempty"`
+	ShoppingListStale    *bool              `json:"shopping_list_stale,omitempty"`
+	StartDate            openapi_types.Date `json:"start_date"`
+	Status               PlanSummaryStatus  `json:"status"`
+}
+
+// PlanSummaryStatus defines model for PlanSummary.Status.
+type PlanSummaryStatus string
+
+// PrepDependency defines model for PrepDependency.
+type PrepDependency struct {
+	DependentRecipeId int64   `json:"dependent_recipe_id"`
+	Note              *string `json:"note,omitempty"`
+	SourceRecipeId    int64   `json:"source_recipe_id"`
 }
 
 // Product defines model for Product.
@@ -589,6 +1005,48 @@ type QualityProfile struct {
 	GuidelineSetCode *string             `json:"guideline_set_code,omitempty"`
 }
 
+// RecipeStatus defines model for RecipeStatus.
+type RecipeStatus string
+
+// RecipeTemplate defines model for RecipeTemplate.
+type RecipeTemplate struct {
+	CookedCount   *int                  `json:"cooked_count,omitempty"`
+	CookingMethod *string               `json:"cooking_method,omitempty"`
+	Cuisine       *string               `json:"cuisine,omitempty"`
+	Equipment     *[]string             `json:"equipment,omitempty"`
+	Id            int64                 `json:"id"`
+	Instructions  *string               `json:"instructions,omitempty"`
+	Name          string                `json:"name"`
+	Slots         []Slot                `json:"slots"`
+	Source        *RecipeTemplateSource `json:"source,omitempty"`
+	Status        RecipeStatus          `json:"status"`
+	Storage       StorageProfile        `json:"storage"`
+	StorageNotes  *string               `json:"storage_notes,omitempty"`
+	Weight        *float32              `json:"weight,omitempty"`
+}
+
+// RecipeTemplateSource defines model for RecipeTemplate.Source.
+type RecipeTemplateSource string
+
+// RecipeTemplateInput defines model for RecipeTemplateInput.
+type RecipeTemplateInput struct {
+	CookingMethod *string   `json:"cooking_method,omitempty"`
+	Cuisine       *string   `json:"cuisine,omitempty"`
+	Equipment     *[]string `json:"equipment,omitempty"`
+	Instructions  *string   `json:"instructions,omitempty"`
+	Name          string    `json:"name"`
+	Slots         []struct {
+		Label    string  `json:"label"`
+		Optional *bool   `json:"optional,omitempty"`
+		Position int     `json:"position"`
+		Qty      float32 `json:"qty"`
+		RoleTag  string  `json:"role_tag"`
+		Unit     *string `json:"unit,omitempty"`
+	} `json:"slots"`
+	Storage      StorageProfile `json:"storage"`
+	StorageNotes *string        `json:"storage_notes,omitempty"`
+}
+
 // RoleKind defines model for RoleKind.
 type RoleKind string
 
@@ -601,8 +1059,155 @@ type RoleTag struct {
 	ParentId *int64   `json:"parent_id,omitempty"`
 }
 
+// RuleEvaluation Результат одного quality-правила (explainability, FR-3/FR-8). План на двоих, поэтому оценка адресна: кому (eater_id), за что (date / окно), в каких единицах.
+type RuleEvaluation struct {
+	ActualValue *float32 `json:"actual_value,omitempty"`
+
+	// CoverageScore доверие к оценке; низкий coverage → status=unknown (unknown ≠ pass)
+	CoverageScore *float32 `json:"coverage_score,omitempty"`
+
+	// Date для entity_type=day/meal
+	Date        *openapi_types.Date       `json:"date,omitempty"`
+	EaterId     *int64                    `json:"eater_id,omitempty"`
+	EntityType  *RuleEvaluationEntityType `json:"entity_type,omitempty"`
+	Message     *string                   `json:"message,omitempty"`
+	RuleCode    string                    `json:"rule_code"`
+	Status      RuleEvaluationStatus      `json:"status"`
+	TargetValue *float32                  `json:"target_value,omitempty"`
+	Unit        *string                   `json:"unit,omitempty"`
+	WindowEnd   *openapi_types.Date       `json:"window_end,omitempty"`
+	WindowStart *openapi_types.Date       `json:"window_start,omitempty"`
+}
+
+// RuleEvaluationEntityType defines model for RuleEvaluation.EntityType.
+type RuleEvaluationEntityType string
+
+// RuleEvaluationStatus defines model for RuleEvaluation.Status.
+type RuleEvaluationStatus string
+
 // Sex Только для sex-specific дефолта клетчатки (25 ж / 35 м)
 type Sex string
+
+// ShoppingItem defines model for ShoppingItem.
+type ShoppingItem struct {
+	Checked     bool     `json:"checked"`
+	EstCost     *float32 `json:"est_cost,omitempty"`
+	Id          int64    `json:"id"`
+	ProductId   int64    `json:"product_id"`
+	ProductName *string  `json:"product_name,omitempty"`
+	TotalQtyG   float32  `json:"total_qty_g"`
+	Unit        string   `json:"unit"`
+}
+
+// ShoppingList defines model for ShoppingList.
+type ShoppingList struct {
+	EstTotal *float32       `json:"est_total,omitempty"`
+	Id       int64          `json:"id"`
+	Items    []ShoppingItem `json:"items"`
+	PlanId   int64          `json:"plan_id"`
+}
+
+// Slot defines model for Slot.
+type Slot struct {
+	Id       *int64  `json:"id,omitempty"`
+	Label    string  `json:"label"`
+	Optional *bool   `json:"optional,omitempty"`
+	Position int     `json:"position"`
+	Qty      float32 `json:"qty"`
+
+	// RoleTag код роли, который ловит слот
+	RoleTag string `json:"role_tag"`
+	Unit    string `json:"unit"`
+}
+
+// SlotFill defines model for SlotFill.
+type SlotFill struct {
+	Id        *int64  `json:"id,omitempty"`
+	Macros    *Macros `json:"macros,omitempty"`
+	ProductId int64   `json:"product_id"`
+	QtyG      float32 `json:"qty_g"`
+	SlotId    int64   `json:"slot_id"`
+}
+
+// SolverError defines model for SolverError.
+type SolverError struct {
+	Error   string `json:"error"`
+	Message string `json:"message"`
+
+	// UnmetConstraints какого класса/тега не хватило для попадания в БЖУ
+	UnmetConstraints *[]UnmetConstraint `json:"unmet_constraints,omitempty"`
+}
+
+// StorageProfile defines model for StorageProfile.
+type StorageProfile string
+
+// SwapInput Своп одного из четырёх уровней. Для fill-уровня указывается slot_fill_id + новый product_id; для уровня блюда — plan_recipe_id + новый template_id.
+type SwapInput struct {
+	// Level fill = смена продукта в слоте; recipe = смена шаблона; rotation = весь план
+	Level         SwapInputLevel `json:"level"`
+	NewProductId  *int64         `json:"new_product_id,omitempty"`
+	NewTemplateId *int64         `json:"new_template_id,omitempty"`
+	PlanRecipeId  *int64         `json:"plan_recipe_id,omitempty"`
+	SlotFillId    *int64         `json:"slot_fill_id,omitempty"`
+}
+
+// SwapInputLevel fill = смена продукта в слоте; recipe = смена шаблона; rotation = весь план
+type SwapInputLevel string
+
+// SwapPreview Blast radius до подтверждения (FR-4)
+type SwapPreview struct {
+	AffectedMeals *[]int64 `json:"affected_meals,omitempty"`
+
+	// InvalidatedRecipes блюда, которые станут невалидны по prep-графу
+	InvalidatedRecipes *[]struct {
+		PlanRecipeId *int64  `json:"plan_recipe_id,omitempty"`
+		Reason       *string `json:"reason,omitempty"`
+	} `json:"invalidated_recipes,omitempty"`
+	Level SwapPreviewLevel `json:"level"`
+
+	// MacroDiff изменение БЖУ дня (новое минус старое)
+	MacroDiff *struct {
+		ByEater *[]struct {
+			Date    *openapi_types.Date `json:"date,omitempty"`
+			Delta   *Macros             `json:"delta,omitempty"`
+			EaterId *int64              `json:"eater_id,omitempty"`
+		} `json:"by_eater,omitempty"`
+	} `json:"macro_diff,omitempty"`
+
+	// QualityDiff Изменение качества (FR-4): нутриенты, food-group объёмы, coverage
+	QualityDiff *struct {
+		AddedSugarsG            *float32          `json:"added_sugars_g,omitempty"`
+		ChangedRules            *[]RuleEvaluation `json:"changed_rules,omitempty"`
+		CoverageScore           *float32          `json:"coverage_score,omitempty"`
+		FiberG                  *float32          `json:"fiber_g,omitempty"`
+		FruitVegG               *float32          `json:"fruit_veg_g,omitempty"`
+		ProcessedMeatGRolling7d *float32          `json:"processed_meat_g_rolling_7d,omitempty"`
+		RedMeatGRolling7d       *float32          `json:"red_meat_g_rolling_7d,omitempty"`
+		SaturatedFatG           *float32          `json:"saturated_fat_g,omitempty"`
+		SodiumMg                *float32          `json:"sodium_mg,omitempty"`
+	} `json:"quality_diff,omitempty"`
+	ShoppingDelta *struct {
+		Added   *[]int64 `json:"added,omitempty"`
+		Removed *[]int64 `json:"removed,omitempty"`
+	} `json:"shopping_delta,omitempty"`
+	Summary string `json:"summary"`
+}
+
+// SwapPreviewLevel defines model for SwapPreview.Level.
+type SwapPreviewLevel string
+
+// TopRecipe defines model for TopRecipe.
+type TopRecipe struct {
+	CookedCount int    `json:"cooked_count"`
+	Name        string `json:"name"`
+	RecipeId    int64  `json:"recipe_id"`
+}
+
+// UnmetConstraint defines model for UnmetConstraint.
+type UnmetConstraint struct {
+	Reason  string `json:"reason"`
+	RoleTag string `json:"role_tag"`
+}
 
 // EaterId defines model for EaterId.
 type EaterId = int64
@@ -625,8 +1230,17 @@ type NotFound = Error
 // NotImplemented defines model for NotImplemented.
 type NotImplemented = Error
 
+// PlanOK defines model for PlanOK.
+type PlanOK = Plan
+
 // ProductOK defines model for ProductOK.
 type ProductOK = Product
+
+// RecipeOK defines model for RecipeOK.
+type RecipeOK = RecipeTemplate
+
+// ShoppingOK defines model for ShoppingOK.
+type ShoppingOK = ShoppingList
 
 // ValidationError defines model for ValidationError.
 type ValidationError = Error
@@ -1375,7 +1989,13 @@ type NotFoundJSONResponse Error
 
 type NotImplementedJSONResponse Error
 
+type PlanOKJSONResponse Plan
+
 type ProductOKJSONResponse Product
+
+type RecipeOKJSONResponse RecipeTemplate
+
+type ShoppingOKJSONResponse ShoppingList
 
 type ValidationErrorJSONResponse Error
 
@@ -2694,84 +3314,128 @@ func (sh *strictHandler) ListRoleTags(w http.ResponseWriter, r *http.Request) {
 // const string: with thousands of chunks the chained `+` fold is several
 // times slower for the Go compiler than parsing a slice literal.
 var swaggerSpec = []string{
-	"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",
+	"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",
+	"797a/d8AAAD//w==",
 }
 
 // decodeSpec returns the embedded OpenAPI spec as raw JSON bytes,
