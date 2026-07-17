@@ -28,9 +28,7 @@ func TestCreateProductRejectsNegativeNutritionValue(t *testing.T) {
 		},
 	})
 
-	if !errors.Is(err, apperr.ErrValidation) {
-		t.Fatalf("CreateProduct() error = %v, want validation error", err)
-	}
+	assertErrorCode(t, err, apperr.CodeValidation)
 	if repository.created {
 		t.Fatal("CreateProduct() persisted an invalid product")
 	}
@@ -51,9 +49,7 @@ func TestCreateProductRejectsNegativeRequiredMacro(t *testing.T) {
 		Roles:          []string{"protein:lean"},
 	})
 
-	if !errors.Is(err, apperr.ErrValidation) {
-		t.Fatalf("CreateProduct() error = %v, want validation error", err)
-	}
+	assertErrorCode(t, err, apperr.CodeValidation)
 	if repository.created {
 		t.Fatal("CreateProduct() persisted an invalid product")
 	}
@@ -76,9 +72,7 @@ func TestCreateProductRejectsInvalidEnum(t *testing.T) {
 		},
 	})
 
-	if !errors.Is(err, apperr.ErrValidation) {
-		t.Fatalf("CreateProduct() error = %v, want validation error", err)
-	}
+	assertErrorCode(t, err, apperr.CodeValidation)
 	if repository.created {
 		t.Fatal("CreateProduct() persisted an invalid enum")
 	}
@@ -119,9 +113,7 @@ func TestCreateProductRejectsNonFiniteAndOutOfRangeNumericValues(t *testing.T) {
 			command.Roles = []string{"protein:lean"}
 
 			_, err := service.CreateProduct(t.Context(), command)
-			if !errors.Is(err, apperr.ErrValidation) {
-				t.Fatalf("CreateProduct() error = %v, want validation error", err)
-			}
+			assertErrorCode(t, err, apperr.CodeValidation)
 			if repository.created {
 				t.Fatal("CreateProduct() persisted an unrepresentable numeric value")
 			}
@@ -176,9 +168,7 @@ func TestCreateProductRejectsRoleWithMismatchedKindPrefix(t *testing.T) {
 		Roles: []string{"carb:grain"},
 	})
 
-	if !errors.Is(err, apperr.ErrValidation) {
-		t.Fatalf("CreateProduct() error = %v, want validation error", err)
-	}
+	assertErrorCode(t, err, apperr.CodeValidation)
 	if repository.created {
 		t.Fatal("CreateProduct() persisted a product with an invalid role tag")
 	}
@@ -226,9 +216,7 @@ func TestCreateProductRollsBackWhenRelatedWriteFails(t *testing.T) {
 		Name:  "Product",
 		Roles: []string{"protein:lean"},
 	})
-	if !errors.Is(err, apperr.ErrConflict) {
-		t.Fatalf("CreateProduct() error = %v, want conflict", err)
-	}
+	assertErrorCode(t, err, apperr.CodeConflict)
 	if len(transactions.committed) != 0 {
 		t.Fatalf("committed products = %#v, want no partial product after rollback", transactions.committed)
 	}
@@ -256,6 +244,14 @@ func (r *rollbackTxRunner) WithTx(ctx context.Context, fn func(context.Context) 
 	}
 	r.committed = append(r.committed, transaction.pending...)
 	return nil
+}
+
+func assertErrorCode(t *testing.T, err error, want apperr.Code) {
+	t.Helper()
+	var appError *apperr.Error
+	if !errors.As(err, &appError) || appError.Code != want {
+		t.Fatalf("error = %v, want code %q", err, want)
+	}
 }
 
 type catalogTransactionKey struct{}

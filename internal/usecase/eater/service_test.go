@@ -78,9 +78,7 @@ func TestCreateExclusionRejectsInvalidProductTarget(t *testing.T) {
 		TargetKind:  eaterdom.ExclusionTargetProduct,
 		TargetValue: "not-an-id",
 	})
-	if !errors.Is(err, apperr.ErrValidation) {
-		t.Fatalf("CreateExclusion() error = %v, want validation", err)
-	}
+	assertErrorCode(t, err, apperr.CodeValidation)
 }
 
 func TestCreateFixedMealPreservesNilQualityAndDefaultsFlags(t *testing.T) {
@@ -123,9 +121,7 @@ func TestCreateFixedMealAllowsExplicitQualityFlags(t *testing.T) {
 func TestCreateGoalRejectsInvalidRange(t *testing.T) {
 	service := NewService(&eaterRepositoryStub{}, passthroughTxRunner{}, fixedClock{now: time.Now()})
 	_, err := service.CreateGoal(t.Context(), 1, MacroGoalCommand{Range: eaterdom.MacroRange{ProteinMinG: 10, ProteinMaxG: 5}})
-	if !errors.Is(err, apperr.ErrValidation) {
-		t.Fatalf("CreateGoal() error = %v, want validation", err)
-	}
+	assertErrorCode(t, err, apperr.CodeValidation)
 }
 
 func TestCreateGoalDefaultsEffectiveFromFromClock(t *testing.T) {
@@ -153,9 +149,7 @@ func TestCreateGoalRejectsNonFiniteAndOutOfRangeMacros(t *testing.T) {
 	} {
 		t.Run(name, func(t *testing.T) {
 			_, err := service.CreateGoal(t.Context(), 1, goal)
-			if !errors.Is(err, apperr.ErrValidation) {
-				t.Fatalf("CreateGoal() error = %v, want validation", err)
-			}
+			assertErrorCode(t, err, apperr.CodeValidation)
 		})
 	}
 }
@@ -179,9 +173,7 @@ func TestCreateFixedMealRejectsNonFiniteAndOutOfRangeQuality(t *testing.T) {
 	} {
 		t.Run(name, func(t *testing.T) {
 			_, err := service.CreateFixedMeal(t.Context(), 1, command)
-			if !errors.Is(err, apperr.ErrValidation) {
-				t.Fatalf("CreateFixedMeal() error = %v, want validation", err)
-			}
+			assertErrorCode(t, err, apperr.CodeValidation)
 		})
 	}
 }
@@ -197,9 +189,7 @@ func TestUpdateEaterRollsBackProfileAndAllergensWhenGoalAppendFails(t *testing.T
 		Name: "Renamed", Sex: eaterdom.SexFemale, Allergens: []eaterdom.Allergen{"nuts"},
 		Goal: MacroGoalCommand{EffectiveFrom: time.Date(2026, 7, 12, 0, 0, 0, 0, time.UTC), Range: eaterdom.MacroRange{ProteinMaxG: 1, FatMaxG: 1, CarbMaxG: 1, KcalMax: 1}},
 	})
-	if !errors.Is(err, apperr.ErrConflict) {
-		t.Fatalf("UpdateEater() error = %v, want conflict", err)
-	}
+	assertErrorCode(t, err, apperr.CodeConflict)
 	if repository.profile.Name != "Pasha" || repository.profile.Sex != eaterdom.SexMale || !slices.Equal(repository.profile.Allergens, []eaterdom.Allergen{"casein"}) {
 		t.Fatalf("profile after failed update = %#v, want original profile and allergens", repository.profile)
 	}
@@ -209,6 +199,14 @@ type passthroughTxRunner struct{}
 
 func (passthroughTxRunner) WithTx(ctx context.Context, fn func(context.Context) error) error {
 	return fn(ctx)
+}
+
+func assertErrorCode(t *testing.T, err error, want apperr.Code) {
+	t.Helper()
+	var appError *apperr.Error
+	if !errors.As(err, &appError) || appError.Code != want {
+		t.Fatalf("error = %v, want code %q", err, want)
+	}
 }
 
 type fixedClock struct {

@@ -1,185 +1,101 @@
 package httpapi
 
 import (
-	"encoding/json"
-	"net/http"
+	"context"
 
 	"github.com/ZetoOfficial/meal-planner/internal/api/openapi"
 	eaterdom "github.com/ZetoOfficial/meal-planner/internal/domain/eater"
-	apperr "github.com/ZetoOfficial/meal-planner/internal/errors"
 )
 
-func (a *api) ListEaters(w http.ResponseWriter, r *http.Request) {
-	eaters, err := a.eater.ListEaters(r.Context())
+func (a *api) ListEaters(ctx context.Context, _ openapi.ListEatersRequestObject) (openapi.ListEatersResponseObject, error) {
+	eaters, err := a.eater.ListEaters(ctx)
 	if err != nil {
-		writeError(w, err)
-		return
+		return nil, err
 	}
-	result := make([]openapi.Eater, 0, len(eaters))
-	for i := range eaters {
-		result = append(result, eaterResponse(eaters[i]))
-	}
-	writeOpenAPIResponse(w, openapi.ListEaters200JSONResponse(result).VisitListEatersResponse)
+	return openapi.ListEaters200JSONResponse(eatersResponse(eaters)), nil
 }
 
-func (a *api) CreateEater(w http.ResponseWriter, r *http.Request) {
-	var input openapi.EaterInput
-	if err := decodeJSON(r, &input, validateEaterInput); err != nil {
-		writeError(w, err)
-		return
-	}
-	eater, err := a.eater.CreateEater(r.Context(), eaterCommand(input))
+func (a *api) CreateEater(ctx context.Context, request openapi.CreateEaterRequestObject) (openapi.CreateEaterResponseObject, error) {
+	eater, err := a.eater.CreateEater(ctx, eaterCommand(*request.Body))
 	if err != nil {
-		writeError(w, err)
-		return
+		return nil, err
 	}
-	writeOpenAPIResponse(w, openapi.CreateEater201JSONResponse{
+	return openapi.CreateEater201JSONResponse{
 		EaterOKJSONResponse: openapi.EaterOKJSONResponse(eaterResponse(eater)),
-	}.VisitCreateEaterResponse)
+	}, nil
 }
 
-func (a *api) GetEater(w http.ResponseWriter, r *http.Request, id openapi.EaterId) {
-	eater, err := a.eater.GetEater(r.Context(), eaterdom.ID(id))
+func (a *api) GetEater(ctx context.Context, request openapi.GetEaterRequestObject) (openapi.GetEaterResponseObject, error) {
+	eater, err := a.eater.GetEater(ctx, eaterdom.ID(request.EaterId))
 	if err != nil {
-		writeError(w, err)
-		return
+		return nil, err
 	}
-	writeOpenAPIResponse(w, openapi.GetEater200JSONResponse{
+	return openapi.GetEater200JSONResponse{
 		EaterOKJSONResponse: openapi.EaterOKJSONResponse(eaterResponse(eater)),
-	}.VisitGetEaterResponse)
+	}, nil
 }
 
-func (a *api) UpdateEater(w http.ResponseWriter, r *http.Request, id openapi.EaterId) {
-	var input openapi.EaterInput
-	if err := decodeJSON(r, &input, validateEaterInput); err != nil {
-		writeError(w, err)
-		return
-	}
-	eater, err := a.eater.UpdateEater(r.Context(), eaterdom.ID(id), eaterCommand(input))
+func (a *api) UpdateEater(ctx context.Context, request openapi.UpdateEaterRequestObject) (openapi.UpdateEaterResponseObject, error) {
+	eater, err := a.eater.UpdateEater(ctx, eaterdom.ID(request.EaterId), eaterCommand(*request.Body))
 	if err != nil {
-		writeError(w, err)
-		return
+		return nil, err
 	}
-	writeOpenAPIResponse(w, openapi.UpdateEater200JSONResponse{
+	return openapi.UpdateEater200JSONResponse{
 		EaterOKJSONResponse: openapi.EaterOKJSONResponse(eaterResponse(eater)),
-	}.VisitUpdateEaterResponse)
+	}, nil
 }
 
-func (a *api) ListEaterGoals(w http.ResponseWriter, r *http.Request, id openapi.EaterId) {
-	goals, err := a.eater.ListGoals(r.Context(), eaterdom.ID(id))
+func (a *api) ListEaterGoals(ctx context.Context, request openapi.ListEaterGoalsRequestObject) (openapi.ListEaterGoalsResponseObject, error) {
+	goals, err := a.eater.ListGoals(ctx, eaterdom.ID(request.EaterId))
 	if err != nil {
-		writeError(w, err)
-		return
+		return nil, err
 	}
-	result := make([]openapi.MacroGoal, 0, len(goals))
-	for i := range goals {
-		result = append(result, macroGoalResponse(goals[i]))
-	}
-	writeOpenAPIResponse(w, openapi.ListEaterGoals200JSONResponse(result).VisitListEaterGoalsResponse)
+	return openapi.ListEaterGoals200JSONResponse(macroGoalsResponse(goals)), nil
 }
 
-func (a *api) CreateEaterGoal(w http.ResponseWriter, r *http.Request, id openapi.EaterId) {
-	var input openapi.MacroGoalInput
-	if err := decodeJSON(r, &input, validateMacroGoalInput); err != nil {
-		writeError(w, err)
-		return
-	}
-	goal, err := a.eater.CreateGoal(r.Context(), eaterdom.ID(id), macroGoalCommand(input))
+func (a *api) CreateEaterGoal(ctx context.Context, request openapi.CreateEaterGoalRequestObject) (openapi.CreateEaterGoalResponseObject, error) {
+	goal, err := a.eater.CreateGoal(ctx, eaterdom.ID(request.EaterId), macroGoalCommand(*request.Body))
 	if err != nil {
-		writeError(w, err)
-		return
+		return nil, err
 	}
-	writeOpenAPIResponse(w, openapi.CreateEaterGoal201JSONResponse(macroGoalResponse(goal)).VisitCreateEaterGoalResponse)
+	return openapi.CreateEaterGoal201JSONResponse(macroGoalResponse(goal)), nil
 }
 
-func (a *api) ListFixedMeals(w http.ResponseWriter, r *http.Request, id openapi.EaterId) {
-	meals, err := a.eater.ListFixedMeals(r.Context(), eaterdom.ID(id))
+func (a *api) ListFixedMeals(ctx context.Context, request openapi.ListFixedMealsRequestObject) (openapi.ListFixedMealsResponseObject, error) {
+	meals, err := a.eater.ListFixedMeals(ctx, eaterdom.ID(request.EaterId))
 	if err != nil {
-		writeError(w, err)
-		return
+		return nil, err
 	}
-	result := make([]openapi.FixedMeal, 0, len(meals))
-	for i := range meals {
-		result = append(result, fixedMealResponse(meals[i]))
-	}
-	writeOpenAPIResponse(w, openapi.ListFixedMeals200JSONResponse(result).VisitListFixedMealsResponse)
+	return openapi.ListFixedMeals200JSONResponse(fixedMealsResponse(meals)), nil
 }
 
-func (a *api) CreateFixedMeal(w http.ResponseWriter, r *http.Request, id openapi.EaterId) {
-	var input openapi.FixedMealInput
-	if err := decodeJSON(r, &input, validateFixedMealInput); err != nil {
-		writeError(w, err)
-		return
-	}
-	meal, err := a.eater.CreateFixedMeal(r.Context(), eaterdom.ID(id), fixedMealCommand(input))
+func (a *api) CreateFixedMeal(ctx context.Context, request openapi.CreateFixedMealRequestObject) (openapi.CreateFixedMealResponseObject, error) {
+	meal, err := a.eater.CreateFixedMeal(ctx, eaterdom.ID(request.EaterId), fixedMealCommand(*request.Body))
 	if err != nil {
-		writeError(w, err)
-		return
+		return nil, err
 	}
-	writeOpenAPIResponse(w, openapi.CreateFixedMeal201JSONResponse(fixedMealResponse(meal)).VisitCreateFixedMealResponse)
+	return openapi.CreateFixedMeal201JSONResponse(fixedMealResponse(meal)), nil
 }
 
-func (a *api) ListExclusions(w http.ResponseWriter, r *http.Request, id openapi.EaterId) {
-	exclusions, err := a.eater.ListExclusions(r.Context(), eaterdom.ID(id))
+func (a *api) ListExclusions(ctx context.Context, request openapi.ListExclusionsRequestObject) (openapi.ListExclusionsResponseObject, error) {
+	exclusions, err := a.eater.ListExclusions(ctx, eaterdom.ID(request.EaterId))
 	if err != nil {
-		writeError(w, err)
-		return
+		return nil, err
 	}
-	result := make([]openapi.Exclusion, 0, len(exclusions))
-	for i := range exclusions {
-		result = append(result, exclusionResponse(exclusions[i]))
-	}
-	writeOpenAPIResponse(w, openapi.ListExclusions200JSONResponse(result).VisitListExclusionsResponse)
+	return openapi.ListExclusions200JSONResponse(exclusionsResponse(exclusions)), nil
 }
 
-func (a *api) CreateExclusion(w http.ResponseWriter, r *http.Request, id openapi.EaterId) {
-	var input openapi.ExclusionInput
-	if err := decodeJSON(r, &input, validateExclusionInput); err != nil {
-		writeError(w, err)
-		return
-	}
-	exclusion, err := a.eater.CreateExclusion(r.Context(), eaterdom.ID(id), exclusionCommand(input))
+func (a *api) CreateExclusion(ctx context.Context, request openapi.CreateExclusionRequestObject) (openapi.CreateExclusionResponseObject, error) {
+	exclusion, err := a.eater.CreateExclusion(ctx, eaterdom.ID(request.EaterId), exclusionCommand(*request.Body))
 	if err != nil {
-		writeError(w, err)
-		return
+		return nil, err
 	}
-	writeOpenAPIResponse(w, openapi.CreateExclusion201JSONResponse(exclusionResponse(exclusion)).VisitCreateExclusionResponse)
+	return openapi.CreateExclusion201JSONResponse(exclusionResponse(exclusion)), nil
 }
 
-func (a *api) DeleteExclusion(w http.ResponseWriter, r *http.Request, id int64) {
-	if err := a.eater.DeleteExclusion(r.Context(), eaterdom.ExclusionID(id)); err != nil {
-		writeError(w, err)
-		return
+func (a *api) DeleteExclusion(ctx context.Context, request openapi.DeleteExclusionRequestObject) (openapi.DeleteExclusionResponseObject, error) {
+	if err := a.eater.DeleteExclusion(ctx, eaterdom.ExclusionID(request.ExclusionId)); err != nil {
+		return nil, err
 	}
-	writeOpenAPIResponse(w, openapi.DeleteExclusion204Response{}.VisitDeleteExclusionResponse)
-}
-
-func validateEaterInput(object map[string]json.RawMessage) error {
-	if err := requireJSONFields(object, "name", "goal"); err != nil {
-		return err
-	}
-	return validateNestedObject(object, "goal", requireMacroRange)
-}
-
-func validateMacroGoalInput(object map[string]json.RawMessage) error {
-	return requireMacroRange(object)
-}
-
-func validateFixedMealInput(object map[string]json.RawMessage) error {
-	if err := requireJSONFields(object, "meal_type", "label", "macros"); err != nil {
-		return err
-	}
-	return validateNestedObject(object, "macros", requireMacros)
-}
-
-func validateExclusionInput(object map[string]json.RawMessage) error {
-	return requireJSONFields(object, "target_kind", "target_value")
-}
-
-func validateNestedObject(object map[string]json.RawMessage, field string, validate jsonObjectValidator) error {
-	var nested map[string]json.RawMessage
-	if err := json.Unmarshal(object[field], &nested); err != nil || nested == nil {
-		return apperr.Validation("required JSON field must be an object", field)
-	}
-	return validate(nested)
+	return openapi.DeleteExclusion204Response{}, nil
 }

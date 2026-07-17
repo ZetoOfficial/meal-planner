@@ -410,7 +410,8 @@ func sourceKindFromRow(value *sqlc.SourceKind) *catalogdom.SourceKind {
 }
 
 func mapCatalogError(err error, resource string) error {
-	if err == nil || errors.Is(err, apperr.ErrValidation) || errors.Is(err, apperr.ErrNotFound) || errors.Is(err, apperr.ErrConflict) {
+	var appError *apperr.Error
+	if err == nil || errors.As(err, &appError) {
 		return err
 	}
 	if errors.Is(err, pgx.ErrNoRows) {

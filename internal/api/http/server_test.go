@@ -44,3 +44,19 @@ func TestOpenAPIRouteRequiresTokenWhenConfigured(t *testing.T) {
 		t.Fatalf("GET /eaters status = %d, want %d", rec.Code, http.StatusUnauthorized)
 	}
 }
+
+func TestOpenAPIRouteRejectsUnsupportedMethod(t *testing.T) {
+	handler := New(Deps{})
+
+	req := httptest.NewRequest(http.MethodPatch, "/products/42", http.NoBody)
+	rec := httptest.NewRecorder()
+
+	handler.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusMethodNotAllowed {
+		t.Fatalf("PATCH /products/42 status = %d, want %d", rec.Code, http.StatusMethodNotAllowed)
+	}
+	if rec.Header().Get("Allow") == "" {
+		t.Fatal("PATCH /products/42 response has no Allow header")
+	}
+}

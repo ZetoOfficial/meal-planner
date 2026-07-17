@@ -107,7 +107,8 @@ func TestCatalogCreateRollsBackWhenRelatedWriteFails(t *testing.T) {
 		Roles:          []string{"protein:lean:breast"},
 		Allergens:      []catalogdom.Allergen{"nuts", "casein"},
 	})
-	if !errors.Is(err, apperr.ErrNotFound) {
+	var appError *apperr.Error
+	if !errors.As(err, &appError) || appError.Code != apperr.CodeNotFound {
 		t.Fatalf("CreateProduct() error = %v, want not found from related role write", err)
 	}
 

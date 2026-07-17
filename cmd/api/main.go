@@ -55,6 +55,7 @@ func run(log *slog.Logger) error {
 		APIToken: cfg.APIToken,
 		Catalog:  usecasecatalog.NewService(repositories.NewCatalog(repos), tx),
 		Eater:    usecaseeater.NewService(repositories.NewEater(repos), tx, clock.System{}),
+		Logger:   log,
 	})
 
 	srv := &http.Server{

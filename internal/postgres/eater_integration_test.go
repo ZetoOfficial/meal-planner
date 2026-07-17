@@ -98,7 +98,8 @@ func TestEaterUpdateRollsBackProfileAndAllergensWhenGoalDateConflicts(t *testing
 		Name: "Renamed", Sex: eaterdom.SexFemale, Allergens: []eaterdom.Allergen{"nuts"},
 		Goal: eaterusecase.MacroGoalCommand{EffectiveFrom: date, Range: eaterdom.MacroRange{ProteinMaxG: 1, FatMaxG: 1, CarbMaxG: 1, KcalMax: 1}},
 	})
-	if !errors.Is(err, apperr.ErrConflict) {
+	var appError *apperr.Error
+	if !errors.As(err, &appError) || appError.Code != apperr.CodeConflict {
 		t.Fatalf("update eater: %v, want conflict", err)
 	}
 	profile, err := service.GetEater(ctx, created.ID)

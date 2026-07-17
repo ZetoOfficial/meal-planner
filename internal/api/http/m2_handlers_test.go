@@ -209,11 +209,12 @@ func TestM2HandlersRejectMissingRequiredJSONFields(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			req := httptest.NewRequest(http.MethodPost, test.path, strings.NewReader(test.body))
 			req.Header.Set("X-API-Token", "secret")
+			req.Header.Set("Content-Type", "application/json")
 			rec := httptest.NewRecorder()
 			handler.ServeHTTP(rec, req)
 
-			if rec.Code != http.StatusUnprocessableEntity {
-				t.Fatalf("status = %d, want %d: %s", rec.Code, http.StatusUnprocessableEntity, rec.Body.String())
+			if rec.Code != http.StatusBadRequest {
+				t.Fatalf("status = %d, want %d: %s", rec.Code, http.StatusBadRequest, rec.Body.String())
 			}
 			var response struct {
 				Error string `json:"error"`

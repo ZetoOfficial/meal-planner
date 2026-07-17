@@ -99,6 +99,14 @@ func productResponse(product catalogdom.Product) openapi.Product {
 	}
 }
 
+func productsResponse(products []catalogdom.Product) []openapi.Product {
+	result := make([]openapi.Product, len(products))
+	for i := range products {
+		result[i] = productResponse(products[i])
+	}
+	return result
+}
+
 func nutritionFactsResponse(value catalogdom.NutritionFacts) *openapi.NutritionFacts {
 	return &openapi.NutritionFacts{
 		SaturatedFatPer100g: float32Pointer(value.SaturatedFatPer100G), TransFatPer100g: float32Pointer(value.TransFatPer100G),
@@ -135,6 +143,14 @@ func roleTagResponse(value catalogdom.RoleTag) openapi.RoleTag {
 	return openapi.RoleTag{
 		Id: value.ID, Code: value.Code, Kind: openapi.RoleKind(value.Kind), Label: value.Label, ParentId: value.ParentID,
 	}
+}
+
+func roleTagsResponse(tags []catalogdom.RoleTag) []openapi.RoleTag {
+	result := make([]openapi.RoleTag, len(tags))
+	for i := range tags {
+		result[i] = roleTagResponse(tags[i])
+	}
+	return result
 }
 
 func eaterCommand(input openapi.EaterInput) usecaseeater.CreateEaterCommand {
@@ -218,12 +234,28 @@ func eaterResponse(value eaterdom.Eater) openapi.Eater {
 	return result
 }
 
+func eatersResponse(eaters []eaterdom.Eater) []openapi.Eater {
+	result := make([]openapi.Eater, len(eaters))
+	for i := range eaters {
+		result[i] = eaterResponse(eaters[i])
+	}
+	return result
+}
+
 func macroGoalResponse(value eaterdom.MacroGoal) openapi.MacroGoal {
 	return openapi.MacroGoal{
 		Id: int64(value.ID), EffectiveFrom: openapitypes.Date{Time: value.EffectiveFrom}, Note: value.Note,
 		ProteinMinG: float32(value.Range.ProteinMinG), ProteinMaxG: float32(value.Range.ProteinMaxG), FatMinG: float32(value.Range.FatMinG), FatMaxG: float32(value.Range.FatMaxG),
 		CarbMinG: float32(value.Range.CarbMinG), CarbMaxG: float32(value.Range.CarbMaxG), KcalMin: value.Range.KcalMin, KcalMax: value.Range.KcalMax,
 	}
+}
+
+func macroGoalsResponse(goals []eaterdom.MacroGoal) []openapi.MacroGoal {
+	result := make([]openapi.MacroGoal, len(goals))
+	for i := range goals {
+		result[i] = macroGoalResponse(goals[i])
+	}
+	return result
 }
 
 func fixedMealResponse(value eaterdom.FixedMeal) openapi.FixedMeal {
@@ -233,6 +265,14 @@ func fixedMealResponse(value eaterdom.FixedMeal) openapi.FixedMeal {
 		Macros:  openapi.Macros{ProteinG: float32(value.Macros.ProteinG), FatG: float32(value.Macros.FatG), CarbG: float32(value.Macros.CarbG), Kcal: value.Macros.Kcal},
 		Quality: fixedMealQualityResponse(value.Quality), Active: &active,
 	}
+}
+
+func fixedMealsResponse(meals []eaterdom.FixedMeal) []openapi.FixedMeal {
+	result := make([]openapi.FixedMeal, len(meals))
+	for i := range meals {
+		result[i] = fixedMealResponse(meals[i])
+	}
+	return result
 }
 
 func fixedMealQualityResponse(value eaterdom.FixedMealQuality) *openapi.FixedMealQuality {
@@ -246,6 +286,14 @@ func fixedMealQualityResponse(value eaterdom.FixedMealQuality) *openapi.FixedMea
 
 func exclusionResponse(value eaterdom.Exclusion) openapi.Exclusion {
 	return openapi.Exclusion{Id: int64(value.ID), TargetKind: openapi.ExclusionTargetKind(value.TargetKind), TargetValue: value.TargetValue, Severity: openapi.ExclusionSeverity(value.Severity), Note: value.Note}
+}
+
+func exclusionsResponse(exclusions []eaterdom.Exclusion) []openapi.Exclusion {
+	result := make([]openapi.Exclusion, len(exclusions))
+	for i := range exclusions {
+		result[i] = exclusionResponse(exclusions[i])
+	}
+	return result
 }
 
 func float64Pointer(value *float32) *float64 {
