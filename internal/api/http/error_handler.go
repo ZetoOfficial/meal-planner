@@ -10,18 +10,16 @@ import (
 	apperr "github.com/ZetoOfficial/meal-planner/internal/errors"
 )
 
-type errorHandler struct {
-	log *slog.Logger
-}
+type errorHandler struct{}
 
-func (h errorHandler) request(w http.ResponseWriter, r *http.Request, err error, status int) {
+func (errorHandler) request(w http.ResponseWriter, r *http.Request, err error, status int) {
 	response := openapi.Error{
 		Error:   string(apperr.CodeValidation),
 		Message: "invalid request",
 		Details: &[]string{err.Error()},
 	}
 	if status >= http.StatusInternalServerError {
-		h.log.ErrorContext(r.Context(), "request validation failed", slog.Any("error", err))
+		slog.ErrorContext(r.Context(), "request validation failed", slog.Any("error", err))
 		status = http.StatusInternalServerError
 		response = openapi.Error{
 			Error:   string(apperr.CodeInternal),
@@ -32,11 +30,11 @@ func (h errorHandler) request(w http.ResponseWriter, r *http.Request, err error,
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	if encodeErr := json.NewEncoder(w).Encode(response); encodeErr != nil {
-		h.log.ErrorContext(r.Context(), "write error response", slog.Any("error", encodeErr))
+		slog.ErrorContext(r.Context(), "write error response", slog.Any("error", encodeErr))
 	}
 }
 
-func (h errorHandler) application(w http.ResponseWriter, r *http.Request, err error) {
+func (errorHandler) application(w http.ResponseWriter, r *http.Request, err error) {
 	status := http.StatusInternalServerError
 	response := openapi.Error{
 		Error:   string(apperr.CodeInternal),
@@ -71,11 +69,11 @@ func (h errorHandler) application(w http.ResponseWriter, r *http.Request, err er
 	}
 
 	if status >= http.StatusInternalServerError {
-		h.log.ErrorContext(r.Context(), "request failed", slog.Any("error", err))
+		slog.ErrorContext(r.Context(), "request failed", slog.Any("error", err))
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	if encodeErr := json.NewEncoder(w).Encode(response); encodeErr != nil {
-		h.log.ErrorContext(r.Context(), "write error response", slog.Any("error", encodeErr))
+		slog.ErrorContext(r.Context(), "write error response", slog.Any("error", encodeErr))
 	}
 }

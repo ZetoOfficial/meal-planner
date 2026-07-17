@@ -23,15 +23,15 @@ import (
 const readHeaderTimeout = 10 * time.Second
 
 func main() {
-	log := slog.New(slog.NewJSONHandler(os.Stdout, nil))
+	slog.SetDefault(slog.New(slog.NewJSONHandler(os.Stdout, nil)))
 
-	if err := run(log); err != nil {
-		log.Error("fatal", slog.Any("error", err))
+	if err := run(); err != nil {
+		slog.Error("fatal", slog.Any("error", err))
 		os.Exit(1)
 	}
 }
 
-func run(log *slog.Logger) error {
+func run() error {
 	cfg, err := app.Load()
 	if err != nil {
 		return err
@@ -55,7 +55,6 @@ func run(log *slog.Logger) error {
 		APIToken: cfg.APIToken,
 		Catalog:  usecasecatalog.NewService(repositories.NewCatalog(repos), tx),
 		Eater:    usecaseeater.NewService(repositories.NewEater(repos), tx, clock.System{}),
-		Logger:   log,
 	})
 
 	srv := &http.Server{
@@ -65,15 +64,15 @@ func run(log *slog.Logger) error {
 	}
 
 	go func() {
-		log.Info("http listening", slog.String("addr", cfg.HTTPAddr))
+		slog.Info("http listening", slog.String("addr", cfg.HTTPAddr))
 		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			log.Error("server error", slog.Any("error", err))
+			slog.Error("server error", slog.Any("error", err))
 			stop()
 		}
 	}()
 
 	<-ctx.Done()
-	log.Info("shutting down")
+	slog.Info("shutting down")
 
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), cfg.ShutdownWait)
 	defer cancel()

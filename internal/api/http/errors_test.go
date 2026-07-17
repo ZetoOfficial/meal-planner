@@ -4,8 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
-	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -15,7 +13,7 @@ import (
 )
 
 func TestErrorHandlerMapsApplicationErrors(t *testing.T) {
-	handler := errorHandler{log: slog.New(slog.NewTextHandler(io.Discard, nil))}
+	handler := errorHandler{}
 	tests := []struct {
 		name   string
 		err    error
@@ -53,7 +51,7 @@ func TestErrorHandlerMapsApplicationErrors(t *testing.T) {
 func TestErrorHandlerDoesNotExposeUnknownErrors(t *testing.T) {
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodGet, "/", http.NoBody)
-	handler := errorHandler{log: slog.New(slog.NewTextHandler(io.Discard, nil))}
+	handler := errorHandler{}
 
 	handler.application(rec, req, errors.New("database password leaked"))
 

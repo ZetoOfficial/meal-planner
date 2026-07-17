@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log/slog"
 	"net/http"
 
 	"github.com/getkin/kin-openapi/routers"
@@ -18,7 +17,6 @@ type Deps struct {
 	APIToken string
 	Catalog  CatalogUseCases
 	Eater    EaterUseCases
-	Logger   *slog.Logger
 }
 
 func New(d Deps) http.Handler {
@@ -29,11 +27,7 @@ func New(d Deps) http.Handler {
 		_, _ = w.Write([]byte(`{"status":"ok"}`))
 	})
 
-	log := d.Logger
-	if log == nil {
-		log = slog.Default()
-	}
-	httpErrors := errorHandler{log: log}
+	httpErrors := errorHandler{}
 	swagger, err := openapi.GetSpec()
 	if err != nil {
 		panic(fmt.Errorf("load OpenAPI spec: %w", err))
