@@ -18,11 +18,6 @@ func writeError(w http.ResponseWriter, err error) {
 }
 
 func mapError(err error) (status int, body any) {
-	var impossible *apperr.ImpossiblePlanError
-	if errors.As(err, &impossible) {
-		return http.StatusUnprocessableEntity, solverError(impossible)
-	}
-
 	var app *apperr.Error
 	if errors.As(err, &app) {
 		return statusForCode(app.Code), openapi.Error{
@@ -62,24 +57,4 @@ func optionalDetails(details []string) *[]string {
 		return nil
 	}
 	return &details
-}
-
-func solverError(err *apperr.ImpossiblePlanError) openapi.SolverError {
-	body := openapi.SolverError{
-		Error:   string(apperr.CodeImpossiblePlan),
-		Message: err.Error(),
-	}
-	if len(err.UnmetConstraints) == 0 {
-		return body
-	}
-
-	constraints := make([]openapi.UnmetConstraint, 0, len(err.UnmetConstraints))
-	for _, constraint := range err.UnmetConstraints {
-		constraints = append(constraints, openapi.UnmetConstraint{
-			Reason:  constraint.Reason,
-			RoleTag: constraint.RoleTag,
-		})
-	}
-	body.UnmetConstraints = &constraints
-	return body
 }

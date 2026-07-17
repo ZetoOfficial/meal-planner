@@ -8,7 +8,7 @@ generate:
   models: true            # DTO из schemas
   embedded-spec: true     # встроить спеку для self-serve / валидации
 output-options:
-  skip-prune: true
+  skip-prune: false
   include-tags:
     - eaters
     - products

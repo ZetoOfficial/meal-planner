@@ -74,40 +74,6 @@ func TestWriteErrorMapsApplicationErrorClasses(t *testing.T) {
 	}
 }
 
-func TestWriteErrorMapsImpossiblePlanDiagnostics(t *testing.T) {
-	rec := httptest.NewRecorder()
-
-	writeError(rec, apperr.ImpossiblePlan(
-		"plan cannot satisfy macro constraints",
-		apperr.UnmetConstraint{RoleTag: "protein:lean", Reason: "not enough usable products"},
-	))
-
-	if rec.Code != http.StatusUnprocessableEntity {
-		t.Fatalf("status = %d, want %d", rec.Code, http.StatusUnprocessableEntity)
-	}
-
-	var body struct {
-		Error            string `json:"error"`
-		Message          string `json:"message"`
-		UnmetConstraints []struct {
-			RoleTag string `json:"role_tag"`
-			Reason  string `json:"reason"`
-		} `json:"unmet_constraints"`
-	}
-	if err := json.NewDecoder(rec.Body).Decode(&body); err != nil {
-		t.Fatalf("decode response body: %v", err)
-	}
-	if body.Error != string(apperr.CodeImpossiblePlan) {
-		t.Fatalf("error = %q, want %q", body.Error, apperr.CodeImpossiblePlan)
-	}
-	if len(body.UnmetConstraints) != 1 {
-		t.Fatalf("unmet constraints count = %d, want 1", len(body.UnmetConstraints))
-	}
-	if body.UnmetConstraints[0].RoleTag != "protein:lean" {
-		t.Fatalf("role_tag = %q, want %q", body.UnmetConstraints[0].RoleTag, "protein:lean")
-	}
-}
-
 func TestWriteErrorMapsWrappedApplicationErrors(t *testing.T) {
 	rec := httptest.NewRecorder()
 
