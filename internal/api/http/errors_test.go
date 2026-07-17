@@ -12,8 +12,7 @@ import (
 	apperr "github.com/ZetoOfficial/meal-planner/internal/errors"
 )
 
-func TestErrorHandlerMapsApplicationErrors(t *testing.T) {
-	handler := errorHandler{}
+func TestApplicationErrorMapsErrors(t *testing.T) {
 	tests := []struct {
 		name   string
 		err    error
@@ -32,7 +31,7 @@ func TestErrorHandlerMapsApplicationErrors(t *testing.T) {
 			rec := httptest.NewRecorder()
 			req := httptest.NewRequest(http.MethodGet, "/", http.NoBody)
 
-			handler.application(rec, req, test.err)
+			applicationError(rec, req, test.err)
 
 			if rec.Code != test.status {
 				t.Fatalf("status = %d, want %d", rec.Code, test.status)
@@ -48,12 +47,11 @@ func TestErrorHandlerMapsApplicationErrors(t *testing.T) {
 	}
 }
 
-func TestErrorHandlerDoesNotExposeUnknownErrors(t *testing.T) {
+func TestApplicationErrorDoesNotExposeUnknownErrors(t *testing.T) {
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodGet, "/", http.NoBody)
-	handler := errorHandler{}
 
-	handler.application(rec, req, errors.New("database password leaked"))
+	applicationError(rec, req, errors.New("database password leaked"))
 
 	if rec.Code != http.StatusInternalServerError {
 		t.Fatalf("status = %d, want %d", rec.Code, http.StatusInternalServerError)

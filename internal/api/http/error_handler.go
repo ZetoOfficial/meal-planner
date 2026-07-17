@@ -10,9 +10,7 @@ import (
 	apperr "github.com/ZetoOfficial/meal-planner/internal/errors"
 )
 
-type errorHandler struct{}
-
-func (errorHandler) request(w http.ResponseWriter, r *http.Request, err error, status int) {
+func requestError(w http.ResponseWriter, r *http.Request, err error, status int) {
 	response := openapi.Error{
 		Error:   string(apperr.CodeValidation),
 		Message: "invalid request",
@@ -34,7 +32,7 @@ func (errorHandler) request(w http.ResponseWriter, r *http.Request, err error, s
 	}
 }
 
-func (errorHandler) application(w http.ResponseWriter, r *http.Request, err error) {
+func applicationError(w http.ResponseWriter, r *http.Request, err error) {
 	status := http.StatusInternalServerError
 	response := openapi.Error{
 		Error:   string(apperr.CodeInternal),

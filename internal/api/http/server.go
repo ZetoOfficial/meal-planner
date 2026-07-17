@@ -27,7 +27,6 @@ func New(d Deps) http.Handler {
 		_, _ = w.Write([]byte(`{"status":"ok"}`))
 	})
 
-	httpErrors := errorHandler{}
 	swagger, err := openapi.GetSpec()
 	if err != nil {
 		panic(fmt.Errorf("load OpenAPI spec: %w", err))
@@ -37,16 +36,16 @@ func New(d Deps) http.Handler {
 
 	strict := openapi.NewStrictHandlerWithOptions(newAPI(d.Catalog, d.Eater), nil, openapi.StrictHTTPServerOptions{
 		RequestErrorHandlerFunc: func(w http.ResponseWriter, r *http.Request, err error) {
-			httpErrors.request(w, r, err, http.StatusBadRequest)
+			requestError(w, r, err, http.StatusBadRequest)
 		},
-		ResponseErrorHandlerFunc: httpErrors.application,
+		ResponseErrorHandlerFunc: applicationError,
 	})
 
 	apiMux := http.NewServeMux()
 	openapi.HandlerWithOptions(strict, openapi.StdHTTPServerOptions{
 		BaseRouter: apiMux,
 		ErrorHandlerFunc: func(w http.ResponseWriter, r *http.Request, err error) {
-			httpErrors.request(w, r, err, http.StatusBadRequest)
+			requestError(w, r, err, http.StatusBadRequest)
 		},
 	})
 
@@ -56,13 +55,13 @@ func New(d Deps) http.Handler {
 				apiMux.ServeHTTP(w, r)
 				return
 			}
-			httpErrors.request(w, r, err, opts.StatusCode)
+			requestError(w, r, err, opts.StatusCode)
 		},
 	})(apiMux)
 
 	mux.Handle("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if d.APIToken != "" && r.Header.Get("X-API-Token") != d.APIToken {
-			httpErrors.application(w, r, apperr.Unauthorized("missing or invalid X-API-Token"))
+			applicationError(w, r, apperr.Unauthorized("missing or invalid X-API-Token"))
 			return
 		}
 		validated.ServeHTTP(w, r)
