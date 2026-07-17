@@ -1,5 +1,7 @@
 package postgres
 
+//go:generate go tool mockgen -source=$GOFILE -imports=pgx=github.com/jackc/pgx/v5 -destination=mocks/transaction.go -package=mocks
+
 import (
 	"context"
 	"errors"

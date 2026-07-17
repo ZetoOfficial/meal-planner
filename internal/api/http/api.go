@@ -1,5 +1,7 @@
 package httpapi
 
+//go:generate go tool mockgen -source=$GOFILE -destination=mocks/usecases.go -package=mocks
+
 import (
 	"context"
 
