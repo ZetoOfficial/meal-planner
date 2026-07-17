@@ -9,3 +9,6 @@ generate:
   embedded-spec: true     # встроить спеку для self-serve / валидации
 output-options:
   skip-prune: false
+  include-tags:
+    - eaters
+    - products
