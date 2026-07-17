@@ -22,13 +22,14 @@ const (
 type Service struct {
 	eaters       EaterRepository
 	transactions TxRunner
+	clock        Clock
 }
 
-func NewService(eaters EaterRepository, transactions TxRunner) *Service {
+func NewService(eaters EaterRepository, transactions TxRunner, clock Clock) *Service {
 	if transactions == nil {
 		panic("eater transaction runner is required")
 	}
-	return &Service{eaters: eaters, transactions: transactions}
+	return &Service{eaters: eaters, transactions: transactions, clock: clock}
 }
 
 type MacroGoalCommand struct {
@@ -47,7 +48,7 @@ type CreateEaterCommand struct {
 type UpdateEaterCommand = CreateEaterCommand
 
 func (s *Service) CreateEater(ctx context.Context, command CreateEaterCommand) (eaterdom.Eater, error) {
-	profile, goal, err := profileFromCommand(command)
+	profile, goal, err := profileFromCommand(command, s.clock.Now())
 	if err != nil {
 		return eaterdom.Eater{}, err
 	}
@@ -78,7 +79,7 @@ func (s *Service) UpdateEater(ctx context.Context, id eaterdom.ID, command Updat
 		return eaterdom.Eater{}, err
 	}
 	goalEffectiveFromDefaulted := command.Goal.EffectiveFrom.IsZero()
-	profile, goal, err := profileFromCommand(command)
+	profile, goal, err := profileFromCommand(command, s.clock.Now())
 	if err != nil {
 		return eaterdom.Eater{}, err
 	}
@@ -132,7 +133,7 @@ func (s *Service) CreateGoal(ctx context.Context, eaterID eaterdom.ID, command M
 	if err := validateEaterID(eaterID); err != nil {
 		return eaterdom.MacroGoal{}, err
 	}
-	goal, err := goalFromCommand(eaterID, command)
+	goal, err := goalFromCommand(eaterID, command, s.clock.Now())
 	if err != nil {
 		return eaterdom.MacroGoal{}, err
 	}
@@ -204,7 +205,7 @@ func (s *Service) DeleteExclusion(ctx context.Context, id eaterdom.ExclusionID) 
 	return s.eaters.DeleteExclusion(ctx, id)
 }
 
-func profileFromCommand(command CreateEaterCommand) (eaterdom.Eater, eaterdom.MacroGoal, error) {
+func profileFromCommand(command CreateEaterCommand, now time.Time) (eaterdom.Eater, eaterdom.MacroGoal, error) {
 	profile := eaterdom.Eater{Name: strings.TrimSpace(command.Name), Sex: command.Sex}
 	if profile.Name == "" {
 		return eaterdom.Eater{}, eaterdom.MacroGoal{}, apperr.Validation("eater name must not be blank")
@@ -220,17 +221,17 @@ func profileFromCommand(command CreateEaterCommand) (eaterdom.Eater, eaterdom.Ma
 		return eaterdom.Eater{}, eaterdom.MacroGoal{}, err
 	}
 	profile.Allergens = allergens
-	goal, err := goalFromCommand(0, command.Goal)
+	goal, err := goalFromCommand(0, command.Goal, now)
 	if err != nil {
 		return eaterdom.Eater{}, eaterdom.MacroGoal{}, err
 	}
 	return profile, goal, nil
 }
 
-func goalFromCommand(eaterID eaterdom.ID, command MacroGoalCommand) (eaterdom.MacroGoal, error) {
+func goalFromCommand(eaterID eaterdom.ID, command MacroGoalCommand, now time.Time) (eaterdom.MacroGoal, error) {
 	goal := eaterdom.MacroGoal{EaterID: eaterID, EffectiveFrom: command.EffectiveFrom, Range: command.Range, Note: command.Note}
 	if goal.EffectiveFrom.IsZero() {
-		goal.EffectiveFrom = time.Now().UTC().Truncate(dayDuration)
+		goal.EffectiveFrom = now.UTC().Truncate(dayDuration)
 	}
 	if err := validateMacroRange(goal.Range); err != nil {
 		return eaterdom.MacroGoal{}, err

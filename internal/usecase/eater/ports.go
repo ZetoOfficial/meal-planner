@@ -2,9 +2,14 @@ package eater
 
 import (
 	"context"
+	"time"
 
 	eaterdom "github.com/ZetoOfficial/meal-planner/internal/domain/eater"
 )
+
+type Clock interface {
+	Now() time.Time
+}
 
 type TxRunner interface {
 	WithTx(ctx context.Context, fn func(context.Context) error) error

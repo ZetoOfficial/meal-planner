@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ZetoOfficial/meal-planner/internal/clock"
 	catalogdom "github.com/ZetoOfficial/meal-planner/internal/domain/catalog"
 	eaterdom "github.com/ZetoOfficial/meal-planner/internal/domain/eater"
 	apperr "github.com/ZetoOfficial/meal-planner/internal/errors"
@@ -21,7 +22,7 @@ import (
 func TestEaterRoundTripProfileGoalFixedMealAndExclusion(t *testing.T) {
 	database := testpostgres.RequireDatabase(t)
 	repository := repositories.NewEater(repositories.New(database.Pool))
-	service := eaterusecase.NewService(repository, postgresdb.NewTxManager(database.Pool))
+	service := eaterusecase.NewService(repository, postgresdb.NewTxManager(database.Pool), clock.System{})
 	ctx := context.Background()
 
 	created, err := service.CreateEater(ctx, eaterusecase.CreateEaterCommand{
@@ -82,7 +83,7 @@ func TestEaterRoundTripProfileGoalFixedMealAndExclusion(t *testing.T) {
 
 func TestEaterUpdateRollsBackProfileAndAllergensWhenGoalDateConflicts(t *testing.T) {
 	database := testpostgres.RequireDatabase(t)
-	service := eaterusecase.NewService(repositories.NewEater(repositories.New(database.Pool)), postgresdb.NewTxManager(database.Pool))
+	service := eaterusecase.NewService(repositories.NewEater(repositories.New(database.Pool)), postgresdb.NewTxManager(database.Pool), clock.System{})
 	ctx := context.Background()
 	date := time.Date(2026, 7, 1, 0, 0, 0, 0, time.UTC)
 	created, err := service.CreateEater(ctx, eaterusecase.CreateEaterCommand{

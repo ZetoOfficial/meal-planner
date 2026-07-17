@@ -14,7 +14,7 @@ import (
 
 func TestUpdateEaterReplacesAllergensAndAppendsGoal(t *testing.T) {
 	repository := &eaterRepositoryStub{}
-	service := NewService(repository, passthroughTxRunner{})
+	service := NewService(repository, passthroughTxRunner{}, fixedClock{now: time.Now()})
 
 	updated, err := service.UpdateEater(t.Context(), 7, UpdateEaterCommand{
 		Name:      " Sasha ",
@@ -40,7 +40,7 @@ func TestUpdateEaterReplacesAllergensAndAppendsGoal(t *testing.T) {
 
 func TestUpdateEaterSchedulesSameDayGoalForNextAvailableDate(t *testing.T) {
 	repository := &sameDayEaterRepository{}
-	service := NewService(repository, passthroughTxRunner{})
+	service := NewService(repository, passthroughTxRunner{}, fixedClock{now: time.Now()})
 	created, err := service.CreateEater(t.Context(), CreateEaterCommand{
 		Name: "Pasha", Sex: eaterdom.SexMale, Allergens: []eaterdom.Allergen{"casein"},
 		Goal: MacroGoalCommand{Range: eaterdom.MacroRange{ProteinMaxG: 100, FatMaxG: 50, CarbMaxG: 150, KcalMax: 1800}},
@@ -72,7 +72,7 @@ func TestUpdateEaterSchedulesSameDayGoalForNextAvailableDate(t *testing.T) {
 }
 
 func TestCreateExclusionRejectsInvalidProductTarget(t *testing.T) {
-	service := NewService(&eaterRepositoryStub{}, passthroughTxRunner{})
+	service := NewService(&eaterRepositoryStub{}, passthroughTxRunner{}, fixedClock{now: time.Now()})
 
 	_, err := service.CreateExclusion(t.Context(), 1, CreateExclusionCommand{
 		TargetKind:  eaterdom.ExclusionTargetProduct,
@@ -85,7 +85,7 @@ func TestCreateExclusionRejectsInvalidProductTarget(t *testing.T) {
 
 func TestCreateFixedMealPreservesNilQualityAndDefaultsFlags(t *testing.T) {
 	repository := &eaterRepositoryStub{}
-	service := NewService(repository, passthroughTxRunner{})
+	service := NewService(repository, passthroughTxRunner{}, fixedClock{now: time.Now()})
 
 	meal, err := service.CreateFixedMeal(t.Context(), 3, CreateFixedMealCommand{
 		MealType: eaterdom.MealTypeBreakfast,
@@ -102,7 +102,7 @@ func TestCreateFixedMealPreservesNilQualityAndDefaultsFlags(t *testing.T) {
 
 func TestCreateFixedMealAllowsExplicitQualityFlags(t *testing.T) {
 	repository := &eaterRepositoryStub{}
-	service := NewService(repository, passthroughTxRunner{})
+	service := NewService(repository, passthroughTxRunner{}, fixedClock{now: time.Now()})
 	no := false
 
 	meal, err := service.CreateFixedMeal(t.Context(), 3, CreateFixedMealCommand{
@@ -121,15 +121,31 @@ func TestCreateFixedMealAllowsExplicitQualityFlags(t *testing.T) {
 }
 
 func TestCreateGoalRejectsInvalidRange(t *testing.T) {
-	service := NewService(&eaterRepositoryStub{}, passthroughTxRunner{})
+	service := NewService(&eaterRepositoryStub{}, passthroughTxRunner{}, fixedClock{now: time.Now()})
 	_, err := service.CreateGoal(t.Context(), 1, MacroGoalCommand{Range: eaterdom.MacroRange{ProteinMinG: 10, ProteinMaxG: 5}})
 	if !errors.Is(err, apperr.ErrValidation) {
 		t.Fatalf("CreateGoal() error = %v, want validation", err)
 	}
 }
 
+func TestCreateGoalDefaultsEffectiveFromFromClock(t *testing.T) {
+	now := time.Date(2026, 7, 12, 18, 30, 0, 0, time.FixedZone("YEKT", 5*60*60))
+	service := NewService(&eaterRepositoryStub{}, passthroughTxRunner{}, fixedClock{now: now})
+
+	goal, err := service.CreateGoal(t.Context(), 1, MacroGoalCommand{
+		Range: eaterdom.MacroRange{ProteinMaxG: 1, FatMaxG: 1, CarbMaxG: 1, KcalMax: 1},
+	})
+	if err != nil {
+		t.Fatalf("CreateGoal() error = %v", err)
+	}
+	want := now.UTC().Truncate(dayDuration)
+	if !goal.EffectiveFrom.Equal(want) {
+		t.Fatalf("CreateGoal() effective_from = %v, want %v", goal.EffectiveFrom, want)
+	}
+}
+
 func TestCreateGoalRejectsNonFiniteAndOutOfRangeMacros(t *testing.T) {
-	service := NewService(&eaterRepositoryStub{}, passthroughTxRunner{})
+	service := NewService(&eaterRepositoryStub{}, passthroughTxRunner{}, fixedClock{now: time.Now()})
 	for name, goal := range map[string]MacroGoalCommand{
 		"non-finite numeric":         {Range: eaterdom.MacroRange{ProteinMaxG: math.Inf(1), FatMaxG: 1, CarbMaxG: 1, KcalMax: 1}},
 		"numeric precision overflow": {Range: eaterdom.MacroRange{ProteinMaxG: 100000, FatMaxG: 1, CarbMaxG: 1, KcalMax: 1}},
@@ -146,7 +162,7 @@ func TestCreateGoalRejectsNonFiniteAndOutOfRangeMacros(t *testing.T) {
 
 func TestCreateFixedMealRejectsNonFiniteAndOutOfRangeQuality(t *testing.T) {
 	repository := &eaterRepositoryStub{}
-	service := NewService(repository, passthroughTxRunner{})
+	service := NewService(repository, passthroughTxRunner{}, fixedClock{now: time.Now()})
 	sodium := 10_000_000.0
 	for name, command := range map[string]CreateFixedMealCommand{
 		"non-finite macro": {
@@ -175,7 +191,7 @@ func TestUpdateEaterRollsBackProfileAndAllergensWhenGoalAppendFails(t *testing.T
 		ID: 1, Name: "Pasha", Sex: eaterdom.SexMale, Allergens: []eaterdom.Allergen{"casein"},
 	}}
 	transactions := &eaterRollbackTxRunner{repository: repository}
-	service := NewService(repository, transactions)
+	service := NewService(repository, transactions, fixedClock{now: time.Now()})
 
 	_, err := service.UpdateEater(t.Context(), 1, UpdateEaterCommand{
 		Name: "Renamed", Sex: eaterdom.SexFemale, Allergens: []eaterdom.Allergen{"nuts"},
@@ -193,6 +209,14 @@ type passthroughTxRunner struct{}
 
 func (passthroughTxRunner) WithTx(ctx context.Context, fn func(context.Context) error) error {
 	return fn(ctx)
+}
+
+type fixedClock struct {
+	now time.Time
+}
+
+func (c fixedClock) Now() time.Time {
+	return c.now
 }
 
 type eaterUpdate struct {

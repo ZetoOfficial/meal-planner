@@ -13,6 +13,7 @@ import (
 
 	httpapi "github.com/ZetoOfficial/meal-planner/internal/api/http"
 	"github.com/ZetoOfficial/meal-planner/internal/app"
+	"github.com/ZetoOfficial/meal-planner/internal/clock"
 	"github.com/ZetoOfficial/meal-planner/internal/postgres"
 	"github.com/ZetoOfficial/meal-planner/internal/postgres/repositories"
 	usecasecatalog "github.com/ZetoOfficial/meal-planner/internal/usecase/catalog"
@@ -53,7 +54,7 @@ func run(log *slog.Logger) error {
 	handler := httpapi.New(httpapi.Deps{
 		APIToken: cfg.APIToken,
 		Catalog:  usecasecatalog.NewService(repositories.NewCatalog(repos), tx),
-		Eater:    usecaseeater.NewService(repositories.NewEater(repos), tx),
+		Eater:    usecaseeater.NewService(repositories.NewEater(repos), tx, clock.System{}),
 	})
 
 	srv := &http.Server{
