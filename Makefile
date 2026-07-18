@@ -3,7 +3,6 @@
 # Версии кодген-инструментов (воспроизводимая сборка).
 SQLC        := go run github.com/sqlc-dev/sqlc/cmd/sqlc@v1.31.1
 OAPI        := go run github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@v2.7.1
-MOCKGEN     := go run go.uber.org/mock/mockgen@v0.6.0
 GOLANGCI    := go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.12.2
 # tern: закрепи конкретную версию после `go list -m -versions github.com/jackc/tern/v2`
 TERN        := go run github.com/jackc/tern/v2@latest
@@ -18,6 +17,7 @@ help: ## Список целей
 
 .PHONY: generate
 generate: sqlc oapi ## Прогнать всю кодогенерацию
+	$(MAKE) mocks
 
 .PHONY: sqlc
 sqlc: ## Сгенерировать type-safe DB-код (схема docs/schema.sql + запросы internal/postgres/sqlc/query)
@@ -28,10 +28,8 @@ oapi: ## Сгенерировать HTTP-сервер/DTO из api/openapi.yaml
 	$(OAPI) -config api/oapi-codegen.yaml api/openapi.yaml
 
 .PHONY: mocks
-mocks: ## Сгенерировать Uber mockgen-моки
-	$(MOCKGEN) -source=internal/postgres/tx.go -imports=pgx=github.com/jackc/pgx/v5 -destination=internal/postgres/mocks/transaction.go -package=mocks
-	$(MOCKGEN) -destination=internal/postgres/mocks/pgx.go -package=mocks github.com/jackc/pgx/v5 Tx,Row
-	$(MOCKGEN) -source=internal/postgres/sqlc/db.go -imports=pgx=github.com/jackc/pgx/v5,pgconn=github.com/jackc/pgx/v5/pgconn -destination=internal/postgres/mocks/dbtx.go -package=mocks
+mocks: ## Сгенерировать GoMock-моки из go:generate-директив
+	go generate ./...
 
 .PHONY: migrate
 migrate: ## Применить tern-миграции (использует DB_* из .env)

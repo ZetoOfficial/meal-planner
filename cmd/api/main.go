@@ -13,21 +13,26 @@ import (
 
 	httpapi "github.com/ZetoOfficial/meal-planner/internal/api/http"
 	"github.com/ZetoOfficial/meal-planner/internal/app"
+	"github.com/ZetoOfficial/meal-planner/internal/clock"
 	"github.com/ZetoOfficial/meal-planner/internal/postgres"
+	catalogrepo "github.com/ZetoOfficial/meal-planner/internal/postgres/catalog"
+	eaterrepo "github.com/ZetoOfficial/meal-planner/internal/postgres/eater"
+	usecasecatalog "github.com/ZetoOfficial/meal-planner/internal/usecase/catalog"
+	usecaseeater "github.com/ZetoOfficial/meal-planner/internal/usecase/eater"
 )
 
 const readHeaderTimeout = 10 * time.Second
 
 func main() {
-	log := slog.New(slog.NewJSONHandler(os.Stdout, nil))
+	slog.SetDefault(slog.New(slog.NewJSONHandler(os.Stdout, nil)))
 
-	if err := run(log); err != nil {
-		log.Error("fatal", slog.Any("error", err))
+	if err := run(); err != nil {
+		slog.Error("fatal", slog.Any("error", err))
 		os.Exit(1)
 	}
 }
 
-func run(log *slog.Logger) error {
+func run() error {
 	cfg, err := app.Load()
 	if err != nil {
 		return err
@@ -45,8 +50,12 @@ func run(log *slog.Logger) error {
 		return fmt.Errorf("connect postgres: %w", err)
 	}
 
+	store := postgres.NewStore(pool)
+	tx := postgres.NewTxManager(pool)
 	handler := httpapi.New(httpapi.Deps{
 		APIToken: cfg.APIToken,
+		Catalog:  usecasecatalog.NewService(catalogrepo.New(store), tx),
+		Eater:    usecaseeater.NewService(eaterrepo.New(store), tx, clock.System{}),
 	})
 
 	srv := &http.Server{
@@ -56,15 +65,15 @@ func run(log *slog.Logger) error {
 	}
 
 	go func() {
-		log.Info("http listening", slog.String("addr", cfg.HTTPAddr))
+		slog.Info("http listening", slog.String("addr", cfg.HTTPAddr))
 		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			log.Error("server error", slog.Any("error", err))
+			slog.Error("server error", slog.Any("error", err))
 			stop()
 		}
 	}()
 
 	<-ctx.Done()
-	log.Info("shutting down")
+	slog.Info("shutting down")
 
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), cfg.ShutdownWait)
 	defer cancel()

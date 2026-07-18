@@ -106,30 +106,6 @@ func (e ExclusionInputTargetKind) Valid() bool {
 	}
 }
 
-// Defines values for FeedbackInputTargetType.
-const (
-	FeedbackInputTargetTypeMeal           FeedbackInputTargetType = "meal"
-	FeedbackInputTargetTypeProduct        FeedbackInputTargetType = "product"
-	FeedbackInputTargetTypeRecipeTemplate FeedbackInputTargetType = "recipe_template"
-	FeedbackInputTargetTypeSlotFill       FeedbackInputTargetType = "slot_fill"
-)
-
-// Valid indicates whether the value is a known member of the FeedbackInputTargetType enum.
-func (e FeedbackInputTargetType) Valid() bool {
-	switch e {
-	case FeedbackInputTargetTypeMeal:
-		return true
-	case FeedbackInputTargetTypeProduct:
-		return true
-	case FeedbackInputTargetTypeRecipeTemplate:
-		return true
-	case FeedbackInputTargetTypeSlotFill:
-		return true
-	default:
-		return false
-	}
-}
-
 // Defines values for FoodClassificationFoodGroup.
 const (
 	FoodClassificationFoodGroupBeverage       FoodClassificationFoodGroup = "beverage"
@@ -223,51 +199,6 @@ func (e FoodClassificationProcessingLevel) Valid() bool {
 	}
 }
 
-// Defines values for MealLogStatus.
-const (
-	MealLogStatusEatenAsPlanned MealLogStatus = "eaten_as_planned"
-	MealLogStatusEatenModified  MealLogStatus = "eaten_modified"
-	MealLogStatusPlanned        MealLogStatus = "planned"
-	MealLogStatusSkipped        MealLogStatus = "skipped"
-)
-
-// Valid indicates whether the value is a known member of the MealLogStatus enum.
-func (e MealLogStatus) Valid() bool {
-	switch e {
-	case MealLogStatusEatenAsPlanned:
-		return true
-	case MealLogStatusEatenModified:
-		return true
-	case MealLogStatusPlanned:
-		return true
-	case MealLogStatusSkipped:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for MealLogInputLogStatus.
-const (
-	MealLogInputLogStatusEatenAsPlanned MealLogInputLogStatus = "eaten_as_planned"
-	MealLogInputLogStatusEatenModified  MealLogInputLogStatus = "eaten_modified"
-	MealLogInputLogStatusSkipped        MealLogInputLogStatus = "skipped"
-)
-
-// Valid indicates whether the value is a known member of the MealLogInputLogStatus enum.
-func (e MealLogInputLogStatus) Valid() bool {
-	switch e {
-	case MealLogInputLogStatusEatenAsPlanned:
-		return true
-	case MealLogInputLogStatusEatenModified:
-		return true
-	case MealLogInputLogStatusSkipped:
-		return true
-	default:
-		return false
-	}
-}
-
 // Defines values for MealType.
 const (
 	Breakfast MealType = "breakfast"
@@ -340,87 +271,6 @@ func (e NutritionDataQualitySourceKind) Valid() bool {
 	}
 }
 
-// Defines values for PlanStatus.
-const (
-	PlanStatusActive   PlanStatus = "active"
-	PlanStatusArchived PlanStatus = "archived"
-	PlanStatusDraft    PlanStatus = "draft"
-)
-
-// Valid indicates whether the value is a known member of the PlanStatus enum.
-func (e PlanStatus) Valid() bool {
-	switch e {
-	case PlanStatusActive:
-		return true
-	case PlanStatusArchived:
-		return true
-	case PlanStatusDraft:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for PlanSummaryStatus.
-const (
-	PlanSummaryStatusActive   PlanSummaryStatus = "active"
-	PlanSummaryStatusArchived PlanSummaryStatus = "archived"
-	PlanSummaryStatusDraft    PlanSummaryStatus = "draft"
-)
-
-// Valid indicates whether the value is a known member of the PlanSummaryStatus enum.
-func (e PlanSummaryStatus) Valid() bool {
-	switch e {
-	case PlanSummaryStatusActive:
-		return true
-	case PlanSummaryStatusArchived:
-		return true
-	case PlanSummaryStatusDraft:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for RecipeStatus.
-const (
-	Draft     RecipeStatus = "draft"
-	Permanent RecipeStatus = "permanent"
-	Rejected  RecipeStatus = "rejected"
-)
-
-// Valid indicates whether the value is a known member of the RecipeStatus enum.
-func (e RecipeStatus) Valid() bool {
-	switch e {
-	case Draft:
-		return true
-	case Permanent:
-		return true
-	case Rejected:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for RecipeTemplateSource.
-const (
-	Llm    RecipeTemplateSource = "llm"
-	Manual RecipeTemplateSource = "manual"
-)
-
-// Valid indicates whether the value is a known member of the RecipeTemplateSource enum.
-func (e RecipeTemplateSource) Valid() bool {
-	switch e {
-	case Llm:
-		return true
-	case Manual:
-		return true
-	default:
-		return false
-	}
-}
-
 // Defines values for RoleKind.
 const (
 	RoleKindCarb    RoleKind = "carb"
@@ -451,54 +301,6 @@ func (e RoleKind) Valid() bool {
 	}
 }
 
-// Defines values for RuleEvaluationEntityType.
-const (
-	RuleEvaluationEntityTypeDay           RuleEvaluationEntityType = "day"
-	RuleEvaluationEntityTypeMeal          RuleEvaluationEntityType = "meal"
-	RuleEvaluationEntityTypePlan          RuleEvaluationEntityType = "plan"
-	RuleEvaluationEntityTypeRollingWindow RuleEvaluationEntityType = "rolling_window"
-)
-
-// Valid indicates whether the value is a known member of the RuleEvaluationEntityType enum.
-func (e RuleEvaluationEntityType) Valid() bool {
-	switch e {
-	case RuleEvaluationEntityTypeDay:
-		return true
-	case RuleEvaluationEntityTypeMeal:
-		return true
-	case RuleEvaluationEntityTypePlan:
-		return true
-	case RuleEvaluationEntityTypeRollingWindow:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for RuleEvaluationStatus.
-const (
-	Pass     RuleEvaluationStatus = "pass"
-	SoftFail RuleEvaluationStatus = "soft_fail"
-	Unknown  RuleEvaluationStatus = "unknown"
-	Warn     RuleEvaluationStatus = "warn"
-)
-
-// Valid indicates whether the value is a known member of the RuleEvaluationStatus enum.
-func (e RuleEvaluationStatus) Valid() bool {
-	switch e {
-	case Pass:
-		return true
-	case SoftFail:
-		return true
-	case Unknown:
-		return true
-	case Warn:
-		return true
-	default:
-		return false
-	}
-}
-
 // Defines values for Sex.
 const (
 	Female      Sex = "female"
@@ -514,114 +316,6 @@ func (e Sex) Valid() bool {
 	case Male:
 		return true
 	case Unspecified:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for StorageProfile.
-const (
-	AssembleFresh StorageProfile = "assemble_fresh"
-	EatSameDay    StorageProfile = "eat_same_day"
-	Keeps3d       StorageProfile = "keeps_3d"
-	Keeps3dReheat StorageProfile = "keeps_3d_reheat"
-)
-
-// Valid indicates whether the value is a known member of the StorageProfile enum.
-func (e StorageProfile) Valid() bool {
-	switch e {
-	case AssembleFresh:
-		return true
-	case EatSameDay:
-		return true
-	case Keeps3d:
-		return true
-	case Keeps3dReheat:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for SwapInputLevel.
-const (
-	SwapInputLevelFill     SwapInputLevel = "fill"
-	SwapInputLevelRecipe   SwapInputLevel = "recipe"
-	SwapInputLevelRotation SwapInputLevel = "rotation"
-)
-
-// Valid indicates whether the value is a known member of the SwapInputLevel enum.
-func (e SwapInputLevel) Valid() bool {
-	switch e {
-	case SwapInputLevelFill:
-		return true
-	case SwapInputLevelRecipe:
-		return true
-	case SwapInputLevelRotation:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for SwapPreviewLevel.
-const (
-	FillToFill    SwapPreviewLevel = "fill_to_fill"
-	FullRotation  SwapPreviewLevel = "full_rotation"
-	ProteinChange SwapPreviewLevel = "protein_change"
-	RecipeChange  SwapPreviewLevel = "recipe_change"
-)
-
-// Valid indicates whether the value is a known member of the SwapPreviewLevel enum.
-func (e SwapPreviewLevel) Valid() bool {
-	switch e {
-	case FillToFill:
-		return true
-	case FullRotation:
-		return true
-	case ProteinChange:
-		return true
-	case RecipeChange:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for GetNutritionQualityAnalyticsParamsBasis.
-const (
-	Actual  GetNutritionQualityAnalyticsParamsBasis = "actual"
-	Planned GetNutritionQualityAnalyticsParamsBasis = "planned"
-)
-
-// Valid indicates whether the value is a known member of the GetNutritionQualityAnalyticsParamsBasis enum.
-func (e GetNutritionQualityAnalyticsParamsBasis) Valid() bool {
-	switch e {
-	case Actual:
-		return true
-	case Planned:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for ApplySwapJSONBodyLevel.
-const (
-	ApplySwapJSONBodyLevelFill     ApplySwapJSONBodyLevel = "fill"
-	ApplySwapJSONBodyLevelRecipe   ApplySwapJSONBodyLevel = "recipe"
-	ApplySwapJSONBodyLevelRotation ApplySwapJSONBodyLevel = "rotation"
-)
-
-// Valid indicates whether the value is a known member of the ApplySwapJSONBodyLevel enum.
-func (e ApplySwapJSONBodyLevel) Valid() bool {
-	switch e {
-	case ApplySwapJSONBodyLevelFill:
-		return true
-	case ApplySwapJSONBodyLevelRecipe:
-		return true
-	case ApplySwapJSONBodyLevelRotation:
 		return true
 	default:
 		return false
@@ -695,30 +389,6 @@ type ExclusionInputSeverity string
 
 // ExclusionInputTargetKind defines model for ExclusionInput.TargetKind.
 type ExclusionInputTargetKind string
-
-// FeedbackEvent defines model for FeedbackEvent.
-type FeedbackEvent struct {
-	Comment     *string    `json:"comment,omitempty"`
-	CreatedAt   *time.Time `json:"created_at,omitempty"`
-	EaterId     int64      `json:"eater_id"`
-	Id          int64      `json:"id"`
-	Rating      *int       `json:"rating,omitempty"`
-	TargetId    int64      `json:"target_id"`
-	TargetType  string     `json:"target_type"`
-	WeightDelta *float32   `json:"weight_delta,omitempty"`
-}
-
-// FeedbackInput defines model for FeedbackInput.
-type FeedbackInput struct {
-	Comment    *string                 `json:"comment,omitempty"`
-	EaterId    int64                   `json:"eater_id"`
-	Rating     *int                    `json:"rating,omitempty"`
-	TargetId   int64                   `json:"target_id"`
-	TargetType FeedbackInputTargetType `json:"target_type"`
-}
-
-// FeedbackInputTargetType defines model for FeedbackInput.TargetType.
-type FeedbackInputTargetType string
 
 // FixedMeal defines model for FixedMeal.
 type FixedMeal struct {
@@ -820,16 +490,6 @@ type MacroRange struct {
 	ProteinMinG float32 `json:"protein_min_g"`
 }
 
-// MacroSummary defines model for MacroSummary.
-type MacroSummary struct {
-	AvgActual  *Macros            `json:"avg_actual,omitempty"`
-	AvgPlanned Macros             `json:"avg_planned"`
-	Days       *int               `json:"days,omitempty"`
-	EaterId    int64              `json:"eater_id"`
-	From       openapi_types.Date `json:"from"`
-	To         openapi_types.Date `json:"to"`
-}
-
 // Macros defines model for Macros.
 type Macros struct {
 	CarbG    float32 `json:"carb_g"`
@@ -837,37 +497,6 @@ type Macros struct {
 	Kcal     int     `json:"kcal"`
 	ProteinG float32 `json:"protein_g"`
 }
-
-// Meal defines model for Meal.
-type Meal struct {
-	Actual       *Macros            `json:"actual,omitempty"`
-	CookedBy     *int64             `json:"cooked_by,omitempty"`
-	EaterId      int64              `json:"eater_id"`
-	FixedMealId  *int64             `json:"fixed_meal_id,omitempty"`
-	Id           int64              `json:"id"`
-	LogStatus    MealLogStatus      `json:"log_status"`
-	LoggedBy     *int64             `json:"logged_by,omitempty"`
-	MealDate     openapi_types.Date `json:"meal_date"`
-	MealType     MealType           `json:"meal_type"`
-	PlanId       int64              `json:"plan_id"`
-	PlanRecipeId *int64             `json:"plan_recipe_id,omitempty"`
-	Planned      Macros             `json:"planned"`
-}
-
-// MealLogStatus defines model for Meal.LogStatus.
-type MealLogStatus string
-
-// MealLogInput В MVP вручную вводятся только actual-МАКРОСЫ. Actual quality-нутриенты вручную НЕ вводятся: при eaten_modified без structured replacement quality-метрики приёма становятся 'unknown' (FR-6), а не фикция.
-type MealLogInput struct {
-	// Actual actual-макросы; заполняется только при отклонении (FR-6)
-	Actual    *Macros               `json:"actual,omitempty"`
-	CookedBy  *int64                `json:"cooked_by,omitempty"`
-	LogStatus MealLogInputLogStatus `json:"log_status"`
-	LoggedBy  int64                 `json:"logged_by"`
-}
-
-// MealLogInputLogStatus defines model for MealLogInput.LogStatus.
-type MealLogInputLogStatus string
 
 // MealType defines model for MealType.
 type MealType string
@@ -903,90 +532,6 @@ type NutritionFacts struct {
 
 	// TransFatPer100g транс-жиры ВСЕГО (может включать природные) → только warn
 	TransFatPer100g *float32 `json:"trans_fat_per_100g,omitempty"`
-}
-
-// NutritionQualitySummary Сводка качества для дня/плана + rolling-проекции недели
-type NutritionQualitySummary struct {
-	AddedSugarsG            *float32          `json:"added_sugars_g,omitempty"`
-	DataCoverageScore       *float32          `json:"data_coverage_score,omitempty"`
-	FiberG                  *float32          `json:"fiber_g,omitempty"`
-	FruitVegG               *float32          `json:"fruit_veg_g,omitempty"`
-	LegumeG                 *float32          `json:"legume_g,omitempty"`
-	ProcessedMeatGRolling7d *float32          `json:"processed_meat_g_rolling_7d,omitempty"`
-	QualityScore            *float32          `json:"quality_score,omitempty"`
-	RedMeatGRolling7d       *float32          `json:"red_meat_g_rolling_7d,omitempty"`
-	RuleEvaluations         *[]RuleEvaluation `json:"rule_evaluations,omitempty"`
-	SaturatedFatG           *float32          `json:"saturated_fat_g,omitempty"`
-	SodiumMg                *float32          `json:"sodium_mg,omitempty"`
-	UpfKcalShareEst         *float32          `json:"upf_kcal_share_est,omitempty"`
-	WarningsCount           *int              `json:"warnings_count,omitempty"`
-	WholeGrainGEquiv        *float32          `json:"whole_grain_g_equiv,omitempty"`
-}
-
-// Plan defines model for Plan.
-type Plan struct {
-	CookDate         *openapi_types.Date `json:"cook_date,omitempty"`
-	Days             int                 `json:"days"`
-	Id               int64               `json:"id"`
-	Label            *string             `json:"label,omitempty"`
-	Meals            *[]Meal             `json:"meals,omitempty"`
-	NoveltyLevel     *int                `json:"novelty_level,omitempty"`
-	PrepDependencies *[]PrepDependency   `json:"prep_dependencies,omitempty"`
-
-	// QualitySummary Оценка качества плана (FR-3): план не блокируется за quality-fail
-	QualitySummary *NutritionQualitySummary `json:"quality_summary,omitempty"`
-	Recipes        []PlanRecipe             `json:"recipes"`
-
-	// ShoppingListStale true если после свопа изменился состав продуктов (FR-5)
-	ShoppingListStale *bool              `json:"shopping_list_stale,omitempty"`
-	StartDate         openapi_types.Date `json:"start_date"`
-	Status            PlanStatus         `json:"status"`
-}
-
-// PlanStatus defines model for Plan.Status.
-type PlanStatus string
-
-// PlanGenerateInput defines model for PlanGenerateInput.
-type PlanGenerateInput struct {
-	CookDate *openapi_types.Date `json:"cook_date,omitempty"`
-	Days     *int                `json:"days,omitempty"`
-	EaterIds []int64             `json:"eater_ids"`
-	Label    *string             `json:"label,omitempty"`
-
-	// NoveltyLevel dial новизны (DESIGN §7); маппится в temperature LLM
-	NoveltyLevel *int               `json:"novelty_level,omitempty"`
-	StartDate    openapi_types.Date `json:"start_date"`
-}
-
-// PlanRecipe defines model for PlanRecipe.
-type PlanRecipe struct {
-	BatchQty   *float32   `json:"batch_qty,omitempty"`
-	Fills      []SlotFill `json:"fills"`
-	Id         int64      `json:"id"`
-	Label      *string    `json:"label,omitempty"`
-	TemplateId int64      `json:"template_id"`
-}
-
-// PlanSummary defines model for PlanSummary.
-type PlanSummary struct {
-	Days                 int                `json:"days"`
-	Id                   int64              `json:"id"`
-	Label                *string            `json:"label,omitempty"`
-	QualityScore         *float32           `json:"quality_score,omitempty"`
-	QualityWarningsCount *int               `json:"quality_warnings_count,omitempty"`
-	ShoppingListStale    *bool              `json:"shopping_list_stale,omitempty"`
-	StartDate            openapi_types.Date `json:"start_date"`
-	Status               PlanSummaryStatus  `json:"status"`
-}
-
-// PlanSummaryStatus defines model for PlanSummary.Status.
-type PlanSummaryStatus string
-
-// PrepDependency defines model for PrepDependency.
-type PrepDependency struct {
-	DependentRecipeId int64   `json:"dependent_recipe_id"`
-	Note              *string `json:"note,omitempty"`
-	SourceRecipeId    int64   `json:"source_recipe_id"`
 }
 
 // Product defines model for Product.
@@ -1044,48 +589,6 @@ type QualityProfile struct {
 	GuidelineSetCode *string             `json:"guideline_set_code,omitempty"`
 }
 
-// RecipeStatus defines model for RecipeStatus.
-type RecipeStatus string
-
-// RecipeTemplate defines model for RecipeTemplate.
-type RecipeTemplate struct {
-	CookedCount   *int                  `json:"cooked_count,omitempty"`
-	CookingMethod *string               `json:"cooking_method,omitempty"`
-	Cuisine       *string               `json:"cuisine,omitempty"`
-	Equipment     *[]string             `json:"equipment,omitempty"`
-	Id            int64                 `json:"id"`
-	Instructions  *string               `json:"instructions,omitempty"`
-	Name          string                `json:"name"`
-	Slots         []Slot                `json:"slots"`
-	Source        *RecipeTemplateSource `json:"source,omitempty"`
-	Status        RecipeStatus          `json:"status"`
-	Storage       StorageProfile        `json:"storage"`
-	StorageNotes  *string               `json:"storage_notes,omitempty"`
-	Weight        *float32              `json:"weight,omitempty"`
-}
-
-// RecipeTemplateSource defines model for RecipeTemplate.Source.
-type RecipeTemplateSource string
-
-// RecipeTemplateInput defines model for RecipeTemplateInput.
-type RecipeTemplateInput struct {
-	CookingMethod *string   `json:"cooking_method,omitempty"`
-	Cuisine       *string   `json:"cuisine,omitempty"`
-	Equipment     *[]string `json:"equipment,omitempty"`
-	Instructions  *string   `json:"instructions,omitempty"`
-	Name          string    `json:"name"`
-	Slots         []struct {
-		Label    string  `json:"label"`
-		Optional *bool   `json:"optional,omitempty"`
-		Position int     `json:"position"`
-		Qty      float32 `json:"qty"`
-		RoleTag  string  `json:"role_tag"`
-		Unit     *string `json:"unit,omitempty"`
-	} `json:"slots"`
-	Storage      StorageProfile `json:"storage"`
-	StorageNotes *string        `json:"storage_notes,omitempty"`
-}
-
 // RoleKind defines model for RoleKind.
 type RoleKind string
 
@@ -1098,155 +601,8 @@ type RoleTag struct {
 	ParentId *int64   `json:"parent_id,omitempty"`
 }
 
-// RuleEvaluation Результат одного quality-правила (explainability, FR-3/FR-8). План на двоих, поэтому оценка адресна: кому (eater_id), за что (date / окно), в каких единицах.
-type RuleEvaluation struct {
-	ActualValue *float32 `json:"actual_value,omitempty"`
-
-	// CoverageScore доверие к оценке; низкий coverage → status=unknown (unknown ≠ pass)
-	CoverageScore *float32 `json:"coverage_score,omitempty"`
-
-	// Date для entity_type=day/meal
-	Date        *openapi_types.Date       `json:"date,omitempty"`
-	EaterId     *int64                    `json:"eater_id,omitempty"`
-	EntityType  *RuleEvaluationEntityType `json:"entity_type,omitempty"`
-	Message     *string                   `json:"message,omitempty"`
-	RuleCode    string                    `json:"rule_code"`
-	Status      RuleEvaluationStatus      `json:"status"`
-	TargetValue *float32                  `json:"target_value,omitempty"`
-	Unit        *string                   `json:"unit,omitempty"`
-	WindowEnd   *openapi_types.Date       `json:"window_end,omitempty"`
-	WindowStart *openapi_types.Date       `json:"window_start,omitempty"`
-}
-
-// RuleEvaluationEntityType defines model for RuleEvaluation.EntityType.
-type RuleEvaluationEntityType string
-
-// RuleEvaluationStatus defines model for RuleEvaluation.Status.
-type RuleEvaluationStatus string
-
 // Sex Только для sex-specific дефолта клетчатки (25 ж / 35 м)
 type Sex string
-
-// ShoppingItem defines model for ShoppingItem.
-type ShoppingItem struct {
-	Checked     bool     `json:"checked"`
-	EstCost     *float32 `json:"est_cost,omitempty"`
-	Id          int64    `json:"id"`
-	ProductId   int64    `json:"product_id"`
-	ProductName *string  `json:"product_name,omitempty"`
-	TotalQtyG   float32  `json:"total_qty_g"`
-	Unit        string   `json:"unit"`
-}
-
-// ShoppingList defines model for ShoppingList.
-type ShoppingList struct {
-	EstTotal *float32       `json:"est_total,omitempty"`
-	Id       int64          `json:"id"`
-	Items    []ShoppingItem `json:"items"`
-	PlanId   int64          `json:"plan_id"`
-}
-
-// Slot defines model for Slot.
-type Slot struct {
-	Id       *int64  `json:"id,omitempty"`
-	Label    string  `json:"label"`
-	Optional *bool   `json:"optional,omitempty"`
-	Position int     `json:"position"`
-	Qty      float32 `json:"qty"`
-
-	// RoleTag код роли, который ловит слот
-	RoleTag string `json:"role_tag"`
-	Unit    string `json:"unit"`
-}
-
-// SlotFill defines model for SlotFill.
-type SlotFill struct {
-	Id        *int64  `json:"id,omitempty"`
-	Macros    *Macros `json:"macros,omitempty"`
-	ProductId int64   `json:"product_id"`
-	QtyG      float32 `json:"qty_g"`
-	SlotId    int64   `json:"slot_id"`
-}
-
-// SolverError defines model for SolverError.
-type SolverError struct {
-	Error   string `json:"error"`
-	Message string `json:"message"`
-
-	// UnmetConstraints какого класса/тега не хватило для попадания в БЖУ
-	UnmetConstraints *[]UnmetConstraint `json:"unmet_constraints,omitempty"`
-}
-
-// StorageProfile defines model for StorageProfile.
-type StorageProfile string
-
-// SwapInput Своп одного из четырёх уровней. Для fill-уровня указывается slot_fill_id + новый product_id; для уровня блюда — plan_recipe_id + новый template_id.
-type SwapInput struct {
-	// Level fill = смена продукта в слоте; recipe = смена шаблона; rotation = весь план
-	Level         SwapInputLevel `json:"level"`
-	NewProductId  *int64         `json:"new_product_id,omitempty"`
-	NewTemplateId *int64         `json:"new_template_id,omitempty"`
-	PlanRecipeId  *int64         `json:"plan_recipe_id,omitempty"`
-	SlotFillId    *int64         `json:"slot_fill_id,omitempty"`
-}
-
-// SwapInputLevel fill = смена продукта в слоте; recipe = смена шаблона; rotation = весь план
-type SwapInputLevel string
-
-// SwapPreview Blast radius до подтверждения (FR-4)
-type SwapPreview struct {
-	AffectedMeals *[]int64 `json:"affected_meals,omitempty"`
-
-	// InvalidatedRecipes блюда, которые станут невалидны по prep-графу
-	InvalidatedRecipes *[]struct {
-		PlanRecipeId *int64  `json:"plan_recipe_id,omitempty"`
-		Reason       *string `json:"reason,omitempty"`
-	} `json:"invalidated_recipes,omitempty"`
-	Level SwapPreviewLevel `json:"level"`
-
-	// MacroDiff изменение БЖУ дня (новое минус старое)
-	MacroDiff *struct {
-		ByEater *[]struct {
-			Date    *openapi_types.Date `json:"date,omitempty"`
-			Delta   *Macros             `json:"delta,omitempty"`
-			EaterId *int64              `json:"eater_id,omitempty"`
-		} `json:"by_eater,omitempty"`
-	} `json:"macro_diff,omitempty"`
-
-	// QualityDiff Изменение качества (FR-4): нутриенты, food-group объёмы, coverage
-	QualityDiff *struct {
-		AddedSugarsG            *float32          `json:"added_sugars_g,omitempty"`
-		ChangedRules            *[]RuleEvaluation `json:"changed_rules,omitempty"`
-		CoverageScore           *float32          `json:"coverage_score,omitempty"`
-		FiberG                  *float32          `json:"fiber_g,omitempty"`
-		FruitVegG               *float32          `json:"fruit_veg_g,omitempty"`
-		ProcessedMeatGRolling7d *float32          `json:"processed_meat_g_rolling_7d,omitempty"`
-		RedMeatGRolling7d       *float32          `json:"red_meat_g_rolling_7d,omitempty"`
-		SaturatedFatG           *float32          `json:"saturated_fat_g,omitempty"`
-		SodiumMg                *float32          `json:"sodium_mg,omitempty"`
-	} `json:"quality_diff,omitempty"`
-	ShoppingDelta *struct {
-		Added   *[]int64 `json:"added,omitempty"`
-		Removed *[]int64 `json:"removed,omitempty"`
-	} `json:"shopping_delta,omitempty"`
-	Summary string `json:"summary"`
-}
-
-// SwapPreviewLevel defines model for SwapPreview.Level.
-type SwapPreviewLevel string
-
-// TopRecipe defines model for TopRecipe.
-type TopRecipe struct {
-	CookedCount int    `json:"cooked_count"`
-	Name        string `json:"name"`
-	RecipeId    int64  `json:"recipe_id"`
-}
-
-// UnmetConstraint defines model for UnmetConstraint.
-type UnmetConstraint struct {
-	Reason  string `json:"reason"`
-	RoleTag string `json:"role_tag"`
-}
 
 // EaterId defines model for EaterId.
 type EaterId = int64
@@ -1269,17 +625,8 @@ type NotFound = Error
 // NotImplemented defines model for NotImplemented.
 type NotImplemented = Error
 
-// PlanOK defines model for PlanOK.
-type PlanOK = Plan
-
 // ProductOK defines model for ProductOK.
 type ProductOK = Product
-
-// RecipeOK defines model for RecipeOK.
-type RecipeOK = RecipeTemplate
-
-// ShoppingOK defines model for ShoppingOK.
-type ShoppingOK = ShoppingList
 
 // ValidationError defines model for ValidationError.
 type ValidationError = Error
@@ -1287,64 +634,10 @@ type ValidationError = Error
 // apiTokenContextKey is the context key for apiToken security scheme
 type apiTokenContextKey string
 
-// GetMacroAnalyticsParams defines parameters for GetMacroAnalytics.
-type GetMacroAnalyticsParams struct {
-	EaterId int64              `form:"eaterId" json:"eaterId"`
-	From    openapi_types.Date `form:"from" json:"from"`
-	To      openapi_types.Date `form:"to" json:"to"`
-}
-
-// GetNutritionQualityAnalyticsParams defines parameters for GetNutritionQualityAnalytics.
-type GetNutritionQualityAnalyticsParams struct {
-	EaterId int64                                    `form:"eaterId" json:"eaterId"`
-	From    openapi_types.Date                       `form:"from" json:"from"`
-	To      openapi_types.Date                       `form:"to" json:"to"`
-	Basis   *GetNutritionQualityAnalyticsParamsBasis `form:"basis,omitempty" json:"basis,omitempty"`
-}
-
-// GetNutritionQualityAnalyticsParamsBasis defines parameters for GetNutritionQualityAnalytics.
-type GetNutritionQualityAnalyticsParamsBasis string
-
-// GetTopRecipesParams defines parameters for GetTopRecipes.
-type GetTopRecipesParams struct {
-	Limit *int `form:"limit,omitempty" json:"limit,omitempty"`
-}
-
-// ListPlanMealsParams defines parameters for ListPlanMeals.
-type ListPlanMealsParams struct {
-	EaterId *int64 `form:"eaterId,omitempty" json:"eaterId,omitempty"`
-}
-
-// ApplySwapJSONBody defines parameters for ApplySwap.
-type ApplySwapJSONBody struct {
-	// Confirm Должно быть true; иначе 409
-	Confirm bool `json:"confirm"`
-
-	// Level fill = смена продукта в слоте; recipe = смена шаблона; rotation = весь план
-	Level         ApplySwapJSONBodyLevel `json:"level"`
-	NewProductId  *int64                 `json:"new_product_id,omitempty"`
-	NewTemplateId *int64                 `json:"new_template_id,omitempty"`
-	PlanRecipeId  *int64                 `json:"plan_recipe_id,omitempty"`
-	SlotFillId    *int64                 `json:"slot_fill_id,omitempty"`
-}
-
-// ApplySwapJSONBodyLevel defines parameters for ApplySwap.
-type ApplySwapJSONBodyLevel string
-
 // ListProductsParams defines parameters for ListProducts.
 type ListProductsParams struct {
 	// Role Фильтр по коду роли, напр. protein:lean:breast
 	Role *string `form:"role,omitempty" json:"role,omitempty"`
-}
-
-// ListRecipesParams defines parameters for ListRecipes.
-type ListRecipesParams struct {
-	Status *RecipeStatus `form:"status,omitempty" json:"status,omitempty"`
-}
-
-// UpdateShoppingListItemJSONBody defines parameters for UpdateShoppingListItem.
-type UpdateShoppingListItemJSONBody struct {
-	Checked bool `json:"checked"`
 }
 
 // CreateEaterJSONRequestBody defines body for CreateEater for application/json ContentType.
@@ -1362,44 +655,14 @@ type CreateFixedMealJSONRequestBody = FixedMealInput
 // CreateEaterGoalJSONRequestBody defines body for CreateEaterGoal for application/json ContentType.
 type CreateEaterGoalJSONRequestBody = MacroGoalInput
 
-// CreateFeedbackJSONRequestBody defines body for CreateFeedback for application/json ContentType.
-type CreateFeedbackJSONRequestBody = FeedbackInput
-
-// LogMealJSONRequestBody defines body for LogMeal for application/json ContentType.
-type LogMealJSONRequestBody = MealLogInput
-
-// GeneratePlanJSONRequestBody defines body for GeneratePlan for application/json ContentType.
-type GeneratePlanJSONRequestBody = PlanGenerateInput
-
-// ApplySwapJSONRequestBody defines body for ApplySwap for application/json ContentType.
-type ApplySwapJSONRequestBody ApplySwapJSONBody
-
-// PreviewSwapJSONRequestBody defines body for PreviewSwap for application/json ContentType.
-type PreviewSwapJSONRequestBody = SwapInput
-
 // CreateProductJSONRequestBody defines body for CreateProduct for application/json ContentType.
 type CreateProductJSONRequestBody = ProductInput
 
 // UpdateProductJSONRequestBody defines body for UpdateProduct for application/json ContentType.
 type UpdateProductJSONRequestBody = ProductInput
 
-// CreateRecipeJSONRequestBody defines body for CreateRecipe for application/json ContentType.
-type CreateRecipeJSONRequestBody = RecipeTemplateInput
-
-// UpdateShoppingListItemJSONRequestBody defines body for UpdateShoppingListItem for application/json ContentType.
-type UpdateShoppingListItemJSONRequestBody UpdateShoppingListItemJSONBody
-
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
-	// Средние БЖУ по едоку за период (planned/actual)
-	// (GET /analytics/macros)
-	GetMacroAnalytics(w http.ResponseWriter, r *http.Request, params GetMacroAnalyticsParams)
-	// Quality-аналитика по едоку за период (FR-8)
-	// (GET /analytics/nutrition-quality)
-	GetNutritionQualityAnalytics(w http.ResponseWriter, r *http.Request, params GetNutritionQualityAnalyticsParams)
-	// Топ рецептов по числу готовок
-	// (GET /analytics/top-recipes)
-	GetTopRecipes(w http.ResponseWriter, r *http.Request, params GetTopRecipesParams)
 	// Список едоков
 	// (GET /eaters)
 	ListEaters(w http.ResponseWriter, r *http.Request)
@@ -1433,39 +696,6 @@ type ServerInterface interface {
 	// Удалить исключение
 	// (DELETE /exclusions/{exclusionId})
 	DeleteExclusion(w http.ResponseWriter, r *http.Request, exclusionId int64)
-	// Оценка/комментарий → сдвиг веса (не бан, FR-7)
-	// (POST /feedback)
-	CreateFeedback(w http.ResponseWriter, r *http.Request)
-	// Залогировать факт еды (actual пишется руками только при отклонении, FR-6)
-	// (POST /meals/{mealId}/log)
-	LogMeal(w http.ResponseWriter, r *http.Request, mealId int64)
-	// Список планов
-	// (GET /plans)
-	ListPlans(w http.ResponseWriter, r *http.Request)
-	// Сгенерировать план (reuse-first; LLM только при нехватке матчей/novelty≥2)
-	// (POST /plans)
-	GeneratePlan(w http.ResponseWriter, r *http.Request)
-	// Архивировать план
-	// (DELETE /plans/{planId})
-	ArchivePlan(w http.ResponseWriter, r *http.Request, planId PlanId)
-	// Полный план (компоненты, заполнения слотов, приёмы, prep-граф)
-	// (GET /plans/{planId})
-	GetPlan(w http.ResponseWriter, r *http.Request, planId PlanId)
-	// Приёмы пищи плана (planned + actual)
-	// (GET /plans/{planId}/meals)
-	ListPlanMeals(w http.ResponseWriter, r *http.Request, planId PlanId, params ListPlanMealsParams)
-	// Список покупок (производная от плана)
-	// (GET /plans/{planId}/shopping-list)
-	GetShoppingList(w http.ResponseWriter, r *http.Request, planId PlanId)
-	// (Пере)генерировать список покупок; сохраняет отметки неизменившихся позиций
-	// (POST /plans/{planId}/shopping-list)
-	RegenerateShoppingList(w http.ResponseWriter, r *http.Request, planId PlanId)
-	// Применить своп (после подтверждения)
-	// (POST /plans/{planId}/swap)
-	ApplySwap(w http.ResponseWriter, r *http.Request, planId PlanId)
-	// Предпросмотр свопа — blast radius ДО подтверждения (FR-4)
-	// (POST /plans/{planId}/swap/preview)
-	PreviewSwap(w http.ResponseWriter, r *http.Request, planId PlanId)
 	// Список продуктов
 	// (GET /products)
 	ListProducts(w http.ResponseWriter, r *http.Request, params ListProductsParams)
@@ -1481,24 +711,9 @@ type ServerInterface interface {
 	// Обновить продукт
 	// (PUT /products/{productId})
 	UpdateProduct(w http.ResponseWriter, r *http.Request, productId ProductId)
-	// Библиотека рецептов-шаблонов
-	// (GET /recipes)
-	ListRecipes(w http.ResponseWriter, r *http.Request, params ListRecipesParams)
-	// Создать рецепт-шаблон вручную (status=draft по умолчанию)
-	// (POST /recipes)
-	CreateRecipe(w http.ResponseWriter, r *http.Request)
-	// Рецепт-шаблон со слотами
-	// (GET /recipes/{recipeId})
-	GetRecipe(w http.ResponseWriter, r *http.Request, recipeId RecipeId)
-	// Повысить draft → permanent после реальной готовки + одобрения (FR-9)
-	// (POST /recipes/{recipeId}/promote)
-	PromoteRecipe(w http.ResponseWriter, r *http.Request, recipeId RecipeId)
 	// Справочник ролевых тегов (с подклассами)
 	// (GET /role-tags)
 	ListRoleTags(w http.ResponseWriter, r *http.Request)
-	// Отметить позицию купленной
-	// (PATCH /shopping-list-items/{itemId})
-	UpdateShoppingListItem(w http.ResponseWriter, r *http.Request, itemId int64)
 }
 
 // ServerInterfaceWrapper converts contexts to parameters.
@@ -1509,188 +724,6 @@ type ServerInterfaceWrapper struct {
 }
 
 type MiddlewareFunc func(http.Handler) http.Handler
-
-// GetMacroAnalytics operation middleware
-func (siw *ServerInterfaceWrapper) GetMacroAnalytics(w http.ResponseWriter, r *http.Request) {
-
-	var err error
-	_ = err
-
-	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, ApiTokenScopes, []string{})
-
-	r = r.WithContext(ctx)
-
-	// Parameter object where we will unmarshal all parameters from the context
-	var params GetMacroAnalyticsParams
-
-	// ------------- Required query parameter "eaterId" -------------
-
-	err = runtime.BindQueryParameterWithOptions("form", true, true, "eaterId", r.URL.Query(), &params.EaterId, runtime.BindQueryParameterOptions{Type: "integer", Format: "int64"})
-	if err != nil {
-		var requiredError *runtime.RequiredParameterError
-		if errors.As(err, &requiredError) {
-			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "eaterId"})
-		} else {
-			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "eaterId", Err: err})
-		}
-		return
-	}
-
-	// ------------- Required query parameter "from" -------------
-
-	err = runtime.BindQueryParameterWithOptions("form", true, true, "from", r.URL.Query(), &params.From, runtime.BindQueryParameterOptions{Type: "string", Format: "date"})
-	if err != nil {
-		var requiredError *runtime.RequiredParameterError
-		if errors.As(err, &requiredError) {
-			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "from"})
-		} else {
-			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "from", Err: err})
-		}
-		return
-	}
-
-	// ------------- Required query parameter "to" -------------
-
-	err = runtime.BindQueryParameterWithOptions("form", true, true, "to", r.URL.Query(), &params.To, runtime.BindQueryParameterOptions{Type: "string", Format: "date"})
-	if err != nil {
-		var requiredError *runtime.RequiredParameterError
-		if errors.As(err, &requiredError) {
-			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "to"})
-		} else {
-			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "to", Err: err})
-		}
-		return
-	}
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.GetMacroAnalytics(w, r, params)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
-// GetNutritionQualityAnalytics operation middleware
-func (siw *ServerInterfaceWrapper) GetNutritionQualityAnalytics(w http.ResponseWriter, r *http.Request) {
-
-	var err error
-	_ = err
-
-	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, ApiTokenScopes, []string{})
-
-	r = r.WithContext(ctx)
-
-	// Parameter object where we will unmarshal all parameters from the context
-	var params GetNutritionQualityAnalyticsParams
-
-	// ------------- Required query parameter "eaterId" -------------
-
-	err = runtime.BindQueryParameterWithOptions("form", true, true, "eaterId", r.URL.Query(), &params.EaterId, runtime.BindQueryParameterOptions{Type: "integer", Format: "int64"})
-	if err != nil {
-		var requiredError *runtime.RequiredParameterError
-		if errors.As(err, &requiredError) {
-			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "eaterId"})
-		} else {
-			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "eaterId", Err: err})
-		}
-		return
-	}
-
-	// ------------- Required query parameter "from" -------------
-
-	err = runtime.BindQueryParameterWithOptions("form", true, true, "from", r.URL.Query(), &params.From, runtime.BindQueryParameterOptions{Type: "string", Format: "date"})
-	if err != nil {
-		var requiredError *runtime.RequiredParameterError
-		if errors.As(err, &requiredError) {
-			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "from"})
-		} else {
-			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "from", Err: err})
-		}
-		return
-	}
-
-	// ------------- Required query parameter "to" -------------
-
-	err = runtime.BindQueryParameterWithOptions("form", true, true, "to", r.URL.Query(), &params.To, runtime.BindQueryParameterOptions{Type: "string", Format: "date"})
-	if err != nil {
-		var requiredError *runtime.RequiredParameterError
-		if errors.As(err, &requiredError) {
-			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "to"})
-		} else {
-			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "to", Err: err})
-		}
-		return
-	}
-
-	// ------------- Optional query parameter "basis" -------------
-
-	err = runtime.BindQueryParameterWithOptions("form", true, false, "basis", r.URL.Query(), &params.Basis, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
-	if err != nil {
-		var requiredError *runtime.RequiredParameterError
-		if errors.As(err, &requiredError) {
-			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "basis"})
-		} else {
-			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "basis", Err: err})
-		}
-		return
-	}
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.GetNutritionQualityAnalytics(w, r, params)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
-// GetTopRecipes operation middleware
-func (siw *ServerInterfaceWrapper) GetTopRecipes(w http.ResponseWriter, r *http.Request) {
-
-	var err error
-	_ = err
-
-	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, ApiTokenScopes, []string{})
-
-	r = r.WithContext(ctx)
-
-	// Parameter object where we will unmarshal all parameters from the context
-	var params GetTopRecipesParams
-
-	// ------------- Optional query parameter "limit" -------------
-
-	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
-	if err != nil {
-		var requiredError *runtime.RequiredParameterError
-		if errors.As(err, &requiredError) {
-			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
-		} else {
-			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
-		}
-		return
-	}
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.GetTopRecipes(w, r, params)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
 
 // ListEaters operation middleware
 func (siw *ServerInterfaceWrapper) ListEaters(w http.ResponseWriter, r *http.Request) {
@@ -2020,338 +1053,6 @@ func (siw *ServerInterfaceWrapper) DeleteExclusion(w http.ResponseWriter, r *htt
 	handler.ServeHTTP(w, r)
 }
 
-// CreateFeedback operation middleware
-func (siw *ServerInterfaceWrapper) CreateFeedback(w http.ResponseWriter, r *http.Request) {
-
-	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, ApiTokenScopes, []string{})
-
-	r = r.WithContext(ctx)
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.CreateFeedback(w, r)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
-// LogMeal operation middleware
-func (siw *ServerInterfaceWrapper) LogMeal(w http.ResponseWriter, r *http.Request) {
-
-	var err error
-	_ = err
-
-	// ------------- Path parameter "mealId" -------------
-	var mealId int64
-
-	err = runtime.BindStyledParameterWithOptions("simple", "mealId", r.PathValue("mealId"), &mealId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "int64"})
-	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "mealId", Err: err})
-		return
-	}
-
-	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, ApiTokenScopes, []string{})
-
-	r = r.WithContext(ctx)
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.LogMeal(w, r, mealId)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
-// ListPlans operation middleware
-func (siw *ServerInterfaceWrapper) ListPlans(w http.ResponseWriter, r *http.Request) {
-
-	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, ApiTokenScopes, []string{})
-
-	r = r.WithContext(ctx)
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.ListPlans(w, r)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
-// GeneratePlan operation middleware
-func (siw *ServerInterfaceWrapper) GeneratePlan(w http.ResponseWriter, r *http.Request) {
-
-	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, ApiTokenScopes, []string{})
-
-	r = r.WithContext(ctx)
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.GeneratePlan(w, r)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
-// ArchivePlan operation middleware
-func (siw *ServerInterfaceWrapper) ArchivePlan(w http.ResponseWriter, r *http.Request) {
-
-	var err error
-	_ = err
-
-	// ------------- Path parameter "planId" -------------
-	var planId PlanId
-
-	err = runtime.BindStyledParameterWithOptions("simple", "planId", r.PathValue("planId"), &planId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "int64"})
-	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "planId", Err: err})
-		return
-	}
-
-	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, ApiTokenScopes, []string{})
-
-	r = r.WithContext(ctx)
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.ArchivePlan(w, r, planId)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
-// GetPlan operation middleware
-func (siw *ServerInterfaceWrapper) GetPlan(w http.ResponseWriter, r *http.Request) {
-
-	var err error
-	_ = err
-
-	// ------------- Path parameter "planId" -------------
-	var planId PlanId
-
-	err = runtime.BindStyledParameterWithOptions("simple", "planId", r.PathValue("planId"), &planId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "int64"})
-	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "planId", Err: err})
-		return
-	}
-
-	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, ApiTokenScopes, []string{})
-
-	r = r.WithContext(ctx)
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.GetPlan(w, r, planId)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
-// ListPlanMeals operation middleware
-func (siw *ServerInterfaceWrapper) ListPlanMeals(w http.ResponseWriter, r *http.Request) {
-
-	var err error
-	_ = err
-
-	// ------------- Path parameter "planId" -------------
-	var planId PlanId
-
-	err = runtime.BindStyledParameterWithOptions("simple", "planId", r.PathValue("planId"), &planId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "int64"})
-	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "planId", Err: err})
-		return
-	}
-
-	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, ApiTokenScopes, []string{})
-
-	r = r.WithContext(ctx)
-
-	// Parameter object where we will unmarshal all parameters from the context
-	var params ListPlanMealsParams
-
-	// ------------- Optional query parameter "eaterId" -------------
-
-	err = runtime.BindQueryParameterWithOptions("form", true, false, "eaterId", r.URL.Query(), &params.EaterId, runtime.BindQueryParameterOptions{Type: "integer", Format: "int64"})
-	if err != nil {
-		var requiredError *runtime.RequiredParameterError
-		if errors.As(err, &requiredError) {
-			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "eaterId"})
-		} else {
-			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "eaterId", Err: err})
-		}
-		return
-	}
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.ListPlanMeals(w, r, planId, params)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
-// GetShoppingList operation middleware
-func (siw *ServerInterfaceWrapper) GetShoppingList(w http.ResponseWriter, r *http.Request) {
-
-	var err error
-	_ = err
-
-	// ------------- Path parameter "planId" -------------
-	var planId PlanId
-
-	err = runtime.BindStyledParameterWithOptions("simple", "planId", r.PathValue("planId"), &planId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "int64"})
-	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "planId", Err: err})
-		return
-	}
-
-	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, ApiTokenScopes, []string{})
-
-	r = r.WithContext(ctx)
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.GetShoppingList(w, r, planId)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
-// RegenerateShoppingList operation middleware
-func (siw *ServerInterfaceWrapper) RegenerateShoppingList(w http.ResponseWriter, r *http.Request) {
-
-	var err error
-	_ = err
-
-	// ------------- Path parameter "planId" -------------
-	var planId PlanId
-
-	err = runtime.BindStyledParameterWithOptions("simple", "planId", r.PathValue("planId"), &planId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "int64"})
-	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "planId", Err: err})
-		return
-	}
-
-	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, ApiTokenScopes, []string{})
-
-	r = r.WithContext(ctx)
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.RegenerateShoppingList(w, r, planId)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
-// ApplySwap operation middleware
-func (siw *ServerInterfaceWrapper) ApplySwap(w http.ResponseWriter, r *http.Request) {
-
-	var err error
-	_ = err
-
-	// ------------- Path parameter "planId" -------------
-	var planId PlanId
-
-	err = runtime.BindStyledParameterWithOptions("simple", "planId", r.PathValue("planId"), &planId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "int64"})
-	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "planId", Err: err})
-		return
-	}
-
-	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, ApiTokenScopes, []string{})
-
-	r = r.WithContext(ctx)
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.ApplySwap(w, r, planId)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
-// PreviewSwap operation middleware
-func (siw *ServerInterfaceWrapper) PreviewSwap(w http.ResponseWriter, r *http.Request) {
-
-	var err error
-	_ = err
-
-	// ------------- Path parameter "planId" -------------
-	var planId PlanId
-
-	err = runtime.BindStyledParameterWithOptions("simple", "planId", r.PathValue("planId"), &planId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "int64"})
-	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "planId", Err: err})
-		return
-	}
-
-	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, ApiTokenScopes, []string{})
-
-	r = r.WithContext(ctx)
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.PreviewSwap(w, r, planId)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
 // ListProducts operation middleware
 func (siw *ServerInterfaceWrapper) ListProducts(w http.ResponseWriter, r *http.Request) {
 
@@ -2507,129 +1208,6 @@ func (siw *ServerInterfaceWrapper) UpdateProduct(w http.ResponseWriter, r *http.
 	handler.ServeHTTP(w, r)
 }
 
-// ListRecipes operation middleware
-func (siw *ServerInterfaceWrapper) ListRecipes(w http.ResponseWriter, r *http.Request) {
-
-	var err error
-	_ = err
-
-	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, ApiTokenScopes, []string{})
-
-	r = r.WithContext(ctx)
-
-	// Parameter object where we will unmarshal all parameters from the context
-	var params ListRecipesParams
-
-	// ------------- Optional query parameter "status" -------------
-
-	err = runtime.BindQueryParameterWithOptions("form", true, false, "status", r.URL.Query(), &params.Status, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
-	if err != nil {
-		var requiredError *runtime.RequiredParameterError
-		if errors.As(err, &requiredError) {
-			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "status"})
-		} else {
-			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "status", Err: err})
-		}
-		return
-	}
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.ListRecipes(w, r, params)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
-// CreateRecipe operation middleware
-func (siw *ServerInterfaceWrapper) CreateRecipe(w http.ResponseWriter, r *http.Request) {
-
-	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, ApiTokenScopes, []string{})
-
-	r = r.WithContext(ctx)
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.CreateRecipe(w, r)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
-// GetRecipe operation middleware
-func (siw *ServerInterfaceWrapper) GetRecipe(w http.ResponseWriter, r *http.Request) {
-
-	var err error
-	_ = err
-
-	// ------------- Path parameter "recipeId" -------------
-	var recipeId RecipeId
-
-	err = runtime.BindStyledParameterWithOptions("simple", "recipeId", r.PathValue("recipeId"), &recipeId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "int64"})
-	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "recipeId", Err: err})
-		return
-	}
-
-	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, ApiTokenScopes, []string{})
-
-	r = r.WithContext(ctx)
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.GetRecipe(w, r, recipeId)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
-// PromoteRecipe operation middleware
-func (siw *ServerInterfaceWrapper) PromoteRecipe(w http.ResponseWriter, r *http.Request) {
-
-	var err error
-	_ = err
-
-	// ------------- Path parameter "recipeId" -------------
-	var recipeId RecipeId
-
-	err = runtime.BindStyledParameterWithOptions("simple", "recipeId", r.PathValue("recipeId"), &recipeId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "int64"})
-	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "recipeId", Err: err})
-		return
-	}
-
-	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, ApiTokenScopes, []string{})
-
-	r = r.WithContext(ctx)
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.PromoteRecipe(w, r, recipeId)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
 // ListRoleTags operation middleware
 func (siw *ServerInterfaceWrapper) ListRoleTags(w http.ResponseWriter, r *http.Request) {
 
@@ -2641,38 +1219,6 @@ func (siw *ServerInterfaceWrapper) ListRoleTags(w http.ResponseWriter, r *http.R
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ListRoleTags(w, r)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
-// UpdateShoppingListItem operation middleware
-func (siw *ServerInterfaceWrapper) UpdateShoppingListItem(w http.ResponseWriter, r *http.Request) {
-
-	var err error
-	_ = err
-
-	// ------------- Path parameter "itemId" -------------
-	var itemId int64
-
-	err = runtime.BindStyledParameterWithOptions("simple", "itemId", r.PathValue("itemId"), &itemId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "int64"})
-	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "itemId", Err: err})
-		return
-	}
-
-	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, ApiTokenScopes, []string{})
-
-	r = r.WithContext(ctx)
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.UpdateShoppingListItem(w, r, itemId)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -2802,9 +1348,6 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 		ErrorHandlerFunc:   options.ErrorHandlerFunc,
 	}
 
-	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/analytics/macros", wrapper.GetMacroAnalytics)
-	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/analytics/nutrition-quality", wrapper.GetNutritionQualityAnalytics)
-	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/analytics/top-recipes", wrapper.GetTopRecipes)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/eaters", wrapper.ListEaters)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/eaters", wrapper.CreateEater)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/eaters/{eaterId}", wrapper.GetEater)
@@ -2816,28 +1359,12 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/eaters/{eaterId}/goals", wrapper.ListEaterGoals)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/eaters/{eaterId}/goals", wrapper.CreateEaterGoal)
 	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/exclusions/{exclusionId}", wrapper.DeleteExclusion)
-	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/feedback", wrapper.CreateFeedback)
-	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/meals/{mealId}/log", wrapper.LogMeal)
-	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/plans", wrapper.ListPlans)
-	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/plans", wrapper.GeneratePlan)
-	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/plans/{planId}", wrapper.ArchivePlan)
-	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/plans/{planId}", wrapper.GetPlan)
-	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/plans/{planId}/meals", wrapper.ListPlanMeals)
-	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/plans/{planId}/shopping-list", wrapper.GetShoppingList)
-	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/plans/{planId}/shopping-list", wrapper.RegenerateShoppingList)
-	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/plans/{planId}/swap", wrapper.ApplySwap)
-	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/plans/{planId}/swap/preview", wrapper.PreviewSwap)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/products", wrapper.ListProducts)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/products", wrapper.CreateProduct)
 	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/products/{productId}", wrapper.DeleteProduct)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/products/{productId}", wrapper.GetProduct)
 	m.HandleFunc(http.MethodPut+" "+options.BaseURL+"/products/{productId}", wrapper.UpdateProduct)
-	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/recipes", wrapper.ListRecipes)
-	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/recipes", wrapper.CreateRecipe)
-	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/recipes/{recipeId}", wrapper.GetRecipe)
-	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/recipes/{recipeId}/promote", wrapper.PromoteRecipe)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/role-tags", wrapper.ListRoleTags)
-	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/shopping-list-items/{itemId}", wrapper.UpdateShoppingListItem)
 
 	return m
 }
@@ -2848,148 +1375,9 @@ type NotFoundJSONResponse Error
 
 type NotImplementedJSONResponse Error
 
-type PlanOKJSONResponse Plan
-
 type ProductOKJSONResponse Product
 
-type RecipeOKJSONResponse RecipeTemplate
-
-type ShoppingOKJSONResponse ShoppingList
-
 type ValidationErrorJSONResponse Error
-
-type GetMacroAnalyticsRequestObject struct {
-	Params GetMacroAnalyticsParams
-}
-
-type GetMacroAnalyticsResponseObject interface {
-	VisitGetMacroAnalyticsResponse(w http.ResponseWriter) error
-}
-
-type GetMacroAnalytics200JSONResponse MacroSummary
-
-func (response GetMacroAnalytics200JSONResponse) VisitGetMacroAnalyticsResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(response); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(200)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type GetMacroAnalytics501JSONResponse struct{ NotImplementedJSONResponse }
-
-func (response GetMacroAnalytics501JSONResponse) VisitGetMacroAnalyticsResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(response); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(501)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type GetNutritionQualityAnalyticsRequestObject struct {
-	Params GetNutritionQualityAnalyticsParams
-}
-
-type GetNutritionQualityAnalyticsResponseObject interface {
-	VisitGetNutritionQualityAnalyticsResponse(w http.ResponseWriter) error
-}
-
-type GetNutritionQualityAnalytics200JSONResponse struct {
-	AddedSugarsG      *float32 `json:"added_sugars_g,omitempty"`
-	DataCoverageScore *float32 `json:"data_coverage_score,omitempty"`
-	EaterId           *int64   `json:"eater_id,omitempty"`
-	FiberG            *float32 `json:"fiber_g,omitempty"`
-
-	// FixedMealQualityBurden вклад фиксированных приёмов (напр. Сашин завтрак)
-	FixedMealQualityBurden *struct {
-		ProcessedMeatG *float32 `json:"processed_meat_g,omitempty"`
-		SaturatedFatG  *float32 `json:"saturated_fat_g,omitempty"`
-		SodiumMg       *float32 `json:"sodium_mg,omitempty"`
-	} `json:"fixed_meal_quality_burden,omitempty"`
-	From                    *openapi_types.Date `json:"from,omitempty"`
-	FruitVegG               *float32            `json:"fruit_veg_g,omitempty"`
-	LegumeG                 *float32            `json:"legume_g,omitempty"`
-	ProcessedMeatGRolling7d *float32            `json:"processed_meat_g_rolling_7d,omitempty"`
-	QualityScore            *float32            `json:"quality_score,omitempty"`
-	RedMeatGRolling7d       *float32            `json:"red_meat_g_rolling_7d,omitempty"`
-	RuleEvaluations         *[]RuleEvaluation   `json:"rule_evaluations,omitempty"`
-	SaturatedFatG           *float32            `json:"saturated_fat_g,omitempty"`
-	SodiumMg                *float32            `json:"sodium_mg,omitempty"`
-	To                      *openapi_types.Date `json:"to,omitempty"`
-	UpfKcalShareEst         *float32            `json:"upf_kcal_share_est,omitempty"`
-	WarningsCount           *int                `json:"warnings_count,omitempty"`
-	WholeGrainGEquiv        *float32            `json:"whole_grain_g_equiv,omitempty"`
-}
-
-func (response GetNutritionQualityAnalytics200JSONResponse) VisitGetNutritionQualityAnalyticsResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(response); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(200)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type GetNutritionQualityAnalytics501JSONResponse struct{ NotImplementedJSONResponse }
-
-func (response GetNutritionQualityAnalytics501JSONResponse) VisitGetNutritionQualityAnalyticsResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(response); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(501)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type GetTopRecipesRequestObject struct {
-	Params GetTopRecipesParams
-}
-
-type GetTopRecipesResponseObject interface {
-	VisitGetTopRecipesResponse(w http.ResponseWriter) error
-}
-
-type GetTopRecipes200JSONResponse []TopRecipe
-
-func (response GetTopRecipes200JSONResponse) VisitGetTopRecipesResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(response); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(200)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type GetTopRecipes501JSONResponse struct{ NotImplementedJSONResponse }
-
-func (response GetTopRecipes501JSONResponse) VisitGetTopRecipesResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(response); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(501)
-	_, err := buf.WriteTo(w)
-	return err
-}
 
 type ListEatersRequestObject struct {
 }
@@ -3008,20 +1396,6 @@ func (response ListEaters200JSONResponse) VisitListEatersResponse(w http.Respons
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(200)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type ListEaters501JSONResponse struct{ NotImplementedJSONResponse }
-
-func (response ListEaters501JSONResponse) VisitListEatersResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(response); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(501)
 	_, err := buf.WriteTo(w)
 	return err
 }
@@ -3048,6 +1422,20 @@ func (response CreateEater201JSONResponse) VisitCreateEaterResponse(w http.Respo
 	return err
 }
 
+type CreateEater409JSONResponse Error
+
+func (response CreateEater409JSONResponse) VisitCreateEaterResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type CreateEater422JSONResponse struct{ ValidationErrorJSONResponse }
 
 func (response CreateEater422JSONResponse) VisitCreateEaterResponse(w http.ResponseWriter) error {
@@ -3058,20 +1446,6 @@ func (response CreateEater422JSONResponse) VisitCreateEaterResponse(w http.Respo
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(422)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type CreateEater501JSONResponse struct{ NotImplementedJSONResponse }
-
-func (response CreateEater501JSONResponse) VisitCreateEaterResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(response); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(501)
 	_, err := buf.WriteTo(w)
 	return err
 }
@@ -3108,20 +1482,6 @@ func (response GetEater404JSONResponse) VisitGetEaterResponse(w http.ResponseWri
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(404)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type GetEater501JSONResponse struct{ NotImplementedJSONResponse }
-
-func (response GetEater501JSONResponse) VisitGetEaterResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(response); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(501)
 	_, err := buf.WriteTo(w)
 	return err
 }
@@ -3163,16 +1523,16 @@ func (response UpdateEater404JSONResponse) VisitUpdateEaterResponse(w http.Respo
 	return err
 }
 
-type UpdateEater501JSONResponse struct{ NotImplementedJSONResponse }
+type UpdateEater409JSONResponse Error
 
-func (response UpdateEater501JSONResponse) VisitUpdateEaterResponse(w http.ResponseWriter) error {
+func (response UpdateEater409JSONResponse) VisitUpdateEaterResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response); err != nil {
 		return err
 	}
 	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(501)
+	w.WriteHeader(409)
 	_, err := buf.WriteTo(w)
 	return err
 }
@@ -3209,20 +1569,6 @@ func (response ListExclusions404JSONResponse) VisitListExclusionsResponse(w http
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(404)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type ListExclusions501JSONResponse struct{ NotImplementedJSONResponse }
-
-func (response ListExclusions501JSONResponse) VisitListExclusionsResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(response); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(501)
 	_, err := buf.WriteTo(w)
 	return err
 }
@@ -3264,6 +1610,20 @@ func (response CreateExclusion404JSONResponse) VisitCreateExclusionResponse(w ht
 	return err
 }
 
+type CreateExclusion409JSONResponse Error
+
+func (response CreateExclusion409JSONResponse) VisitCreateExclusionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type CreateExclusion422JSONResponse struct{ ValidationErrorJSONResponse }
 
 func (response CreateExclusion422JSONResponse) VisitCreateExclusionResponse(w http.ResponseWriter) error {
@@ -3274,20 +1634,6 @@ func (response CreateExclusion422JSONResponse) VisitCreateExclusionResponse(w ht
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(422)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type CreateExclusion501JSONResponse struct{ NotImplementedJSONResponse }
-
-func (response CreateExclusion501JSONResponse) VisitCreateExclusionResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(response); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(501)
 	_, err := buf.WriteTo(w)
 	return err
 }
@@ -3314,16 +1660,16 @@ func (response ListFixedMeals200JSONResponse) VisitListFixedMealsResponse(w http
 	return err
 }
 
-type ListFixedMeals501JSONResponse struct{ NotImplementedJSONResponse }
+type ListFixedMeals404JSONResponse struct{ NotFoundJSONResponse }
 
-func (response ListFixedMeals501JSONResponse) VisitListFixedMealsResponse(w http.ResponseWriter) error {
+func (response ListFixedMeals404JSONResponse) VisitListFixedMealsResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response); err != nil {
 		return err
 	}
 	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(501)
+	w.WriteHeader(404)
 	_, err := buf.WriteTo(w)
 	return err
 }
@@ -3351,6 +1697,34 @@ func (response CreateFixedMeal201JSONResponse) VisitCreateFixedMealResponse(w ht
 	return err
 }
 
+type CreateFixedMeal404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response CreateFixedMeal404JSONResponse) VisitCreateFixedMealResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateFixedMeal409JSONResponse Error
+
+func (response CreateFixedMeal409JSONResponse) VisitCreateFixedMealResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type CreateFixedMeal422JSONResponse struct{ ValidationErrorJSONResponse }
 
 func (response CreateFixedMeal422JSONResponse) VisitCreateFixedMealResponse(w http.ResponseWriter) error {
@@ -3361,20 +1735,6 @@ func (response CreateFixedMeal422JSONResponse) VisitCreateFixedMealResponse(w ht
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(422)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type CreateFixedMeal501JSONResponse struct{ NotImplementedJSONResponse }
-
-func (response CreateFixedMeal501JSONResponse) VisitCreateFixedMealResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(response); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(501)
 	_, err := buf.WriteTo(w)
 	return err
 }
@@ -3411,20 +1771,6 @@ func (response ListEaterGoals404JSONResponse) VisitListEaterGoalsResponse(w http
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(404)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type ListEaterGoals501JSONResponse struct{ NotImplementedJSONResponse }
-
-func (response ListEaterGoals501JSONResponse) VisitListEaterGoalsResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(response); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(501)
 	_, err := buf.WriteTo(w)
 	return err
 }
@@ -3466,6 +1812,20 @@ func (response CreateEaterGoal404JSONResponse) VisitCreateEaterGoalResponse(w ht
 	return err
 }
 
+type CreateEaterGoal409JSONResponse Error
+
+func (response CreateEaterGoal409JSONResponse) VisitCreateEaterGoalResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type CreateEaterGoal422JSONResponse struct{ ValidationErrorJSONResponse }
 
 func (response CreateEaterGoal422JSONResponse) VisitCreateEaterGoalResponse(w http.ResponseWriter) error {
@@ -3476,20 +1836,6 @@ func (response CreateEaterGoal422JSONResponse) VisitCreateEaterGoalResponse(w ht
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(422)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type CreateEaterGoal501JSONResponse struct{ NotImplementedJSONResponse }
-
-func (response CreateEaterGoal501JSONResponse) VisitCreateEaterGoalResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(response); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(501)
 	_, err := buf.WriteTo(w)
 	return err
 }
@@ -3524,581 +1870,6 @@ func (response DeleteExclusion404JSONResponse) VisitDeleteExclusionResponse(w ht
 	return err
 }
 
-type DeleteExclusion501JSONResponse struct{ NotImplementedJSONResponse }
-
-func (response DeleteExclusion501JSONResponse) VisitDeleteExclusionResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(response); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(501)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type CreateFeedbackRequestObject struct {
-	Body *CreateFeedbackJSONRequestBody
-}
-
-type CreateFeedbackResponseObject interface {
-	VisitCreateFeedbackResponse(w http.ResponseWriter) error
-}
-
-type CreateFeedback201JSONResponse FeedbackEvent
-
-func (response CreateFeedback201JSONResponse) VisitCreateFeedbackResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(response); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(201)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type CreateFeedback422JSONResponse struct{ ValidationErrorJSONResponse }
-
-func (response CreateFeedback422JSONResponse) VisitCreateFeedbackResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(response); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(422)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type CreateFeedback501JSONResponse struct{ NotImplementedJSONResponse }
-
-func (response CreateFeedback501JSONResponse) VisitCreateFeedbackResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(response); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(501)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type LogMealRequestObject struct {
-	MealId int64 `json:"mealId"`
-	Body   *LogMealJSONRequestBody
-}
-
-type LogMealResponseObject interface {
-	VisitLogMealResponse(w http.ResponseWriter) error
-}
-
-type LogMeal200JSONResponse Meal
-
-func (response LogMeal200JSONResponse) VisitLogMealResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(response); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(200)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type LogMeal404JSONResponse struct{ NotFoundJSONResponse }
-
-func (response LogMeal404JSONResponse) VisitLogMealResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(response); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(404)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type LogMeal501JSONResponse struct{ NotImplementedJSONResponse }
-
-func (response LogMeal501JSONResponse) VisitLogMealResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(response); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(501)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type ListPlansRequestObject struct {
-}
-
-type ListPlansResponseObject interface {
-	VisitListPlansResponse(w http.ResponseWriter) error
-}
-
-type ListPlans200JSONResponse []PlanSummary
-
-func (response ListPlans200JSONResponse) VisitListPlansResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(response); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(200)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type ListPlans501JSONResponse struct{ NotImplementedJSONResponse }
-
-func (response ListPlans501JSONResponse) VisitListPlansResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(response); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(501)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type GeneratePlanRequestObject struct {
-	Body *GeneratePlanJSONRequestBody
-}
-
-type GeneratePlanResponseObject interface {
-	VisitGeneratePlanResponse(w http.ResponseWriter) error
-}
-
-type GeneratePlan201JSONResponse struct{ PlanOKJSONResponse }
-
-func (response GeneratePlan201JSONResponse) VisitGeneratePlanResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(response); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(201)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type GeneratePlan422JSONResponse SolverError
-
-func (response GeneratePlan422JSONResponse) VisitGeneratePlanResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(response); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(422)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type GeneratePlan501JSONResponse struct{ NotImplementedJSONResponse }
-
-func (response GeneratePlan501JSONResponse) VisitGeneratePlanResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(response); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(501)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type GeneratePlan503JSONResponse Error
-
-func (response GeneratePlan503JSONResponse) VisitGeneratePlanResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(response); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(503)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type ArchivePlanRequestObject struct {
-	PlanId PlanId `json:"planId"`
-}
-
-type ArchivePlanResponseObject interface {
-	VisitArchivePlanResponse(w http.ResponseWriter) error
-}
-
-type ArchivePlan204Response struct {
-}
-
-func (response ArchivePlan204Response) VisitArchivePlanResponse(w http.ResponseWriter) error {
-	w.WriteHeader(204)
-	return nil
-}
-
-type ArchivePlan404JSONResponse struct{ NotFoundJSONResponse }
-
-func (response ArchivePlan404JSONResponse) VisitArchivePlanResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(response); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(404)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type ArchivePlan501JSONResponse struct{ NotImplementedJSONResponse }
-
-func (response ArchivePlan501JSONResponse) VisitArchivePlanResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(response); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(501)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type GetPlanRequestObject struct {
-	PlanId PlanId `json:"planId"`
-}
-
-type GetPlanResponseObject interface {
-	VisitGetPlanResponse(w http.ResponseWriter) error
-}
-
-type GetPlan200JSONResponse struct{ PlanOKJSONResponse }
-
-func (response GetPlan200JSONResponse) VisitGetPlanResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(response); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(200)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type GetPlan404JSONResponse struct{ NotFoundJSONResponse }
-
-func (response GetPlan404JSONResponse) VisitGetPlanResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(response); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(404)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type GetPlan501JSONResponse struct{ NotImplementedJSONResponse }
-
-func (response GetPlan501JSONResponse) VisitGetPlanResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(response); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(501)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type ListPlanMealsRequestObject struct {
-	PlanId PlanId `json:"planId"`
-	Params ListPlanMealsParams
-}
-
-type ListPlanMealsResponseObject interface {
-	VisitListPlanMealsResponse(w http.ResponseWriter) error
-}
-
-type ListPlanMeals200JSONResponse []Meal
-
-func (response ListPlanMeals200JSONResponse) VisitListPlanMealsResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(response); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(200)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type ListPlanMeals501JSONResponse struct{ NotImplementedJSONResponse }
-
-func (response ListPlanMeals501JSONResponse) VisitListPlanMealsResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(response); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(501)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type GetShoppingListRequestObject struct {
-	PlanId PlanId `json:"planId"`
-}
-
-type GetShoppingListResponseObject interface {
-	VisitGetShoppingListResponse(w http.ResponseWriter) error
-}
-
-type GetShoppingList200JSONResponse struct{ ShoppingOKJSONResponse }
-
-func (response GetShoppingList200JSONResponse) VisitGetShoppingListResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(response); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(200)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type GetShoppingList404JSONResponse struct{ NotFoundJSONResponse }
-
-func (response GetShoppingList404JSONResponse) VisitGetShoppingListResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(response); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(404)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type GetShoppingList501JSONResponse struct{ NotImplementedJSONResponse }
-
-func (response GetShoppingList501JSONResponse) VisitGetShoppingListResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(response); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(501)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type RegenerateShoppingListRequestObject struct {
-	PlanId PlanId `json:"planId"`
-}
-
-type RegenerateShoppingListResponseObject interface {
-	VisitRegenerateShoppingListResponse(w http.ResponseWriter) error
-}
-
-type RegenerateShoppingList200JSONResponse struct{ ShoppingOKJSONResponse }
-
-func (response RegenerateShoppingList200JSONResponse) VisitRegenerateShoppingListResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(response); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(200)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type RegenerateShoppingList404JSONResponse struct{ NotFoundJSONResponse }
-
-func (response RegenerateShoppingList404JSONResponse) VisitRegenerateShoppingListResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(response); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(404)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type RegenerateShoppingList501JSONResponse struct{ NotImplementedJSONResponse }
-
-func (response RegenerateShoppingList501JSONResponse) VisitRegenerateShoppingListResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(response); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(501)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type ApplySwapRequestObject struct {
-	PlanId PlanId `json:"planId"`
-	Body   *ApplySwapJSONRequestBody
-}
-
-type ApplySwapResponseObject interface {
-	VisitApplySwapResponse(w http.ResponseWriter) error
-}
-
-type ApplySwap200JSONResponse Plan
-
-func (response ApplySwap200JSONResponse) VisitApplySwapResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(response); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(200)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type ApplySwap404JSONResponse struct{ NotFoundJSONResponse }
-
-func (response ApplySwap404JSONResponse) VisitApplySwapResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(response); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(404)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type ApplySwap409JSONResponse SwapPreview
-
-func (response ApplySwap409JSONResponse) VisitApplySwapResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(response); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(409)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type ApplySwap501JSONResponse struct{ NotImplementedJSONResponse }
-
-func (response ApplySwap501JSONResponse) VisitApplySwapResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(response); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(501)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type PreviewSwapRequestObject struct {
-	PlanId PlanId `json:"planId"`
-	Body   *PreviewSwapJSONRequestBody
-}
-
-type PreviewSwapResponseObject interface {
-	VisitPreviewSwapResponse(w http.ResponseWriter) error
-}
-
-type PreviewSwap200JSONResponse SwapPreview
-
-func (response PreviewSwap200JSONResponse) VisitPreviewSwapResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(response); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(200)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type PreviewSwap404JSONResponse struct{ NotFoundJSONResponse }
-
-func (response PreviewSwap404JSONResponse) VisitPreviewSwapResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(response); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(404)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type PreviewSwap422JSONResponse struct{ ValidationErrorJSONResponse }
-
-func (response PreviewSwap422JSONResponse) VisitPreviewSwapResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(response); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(422)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type PreviewSwap501JSONResponse struct{ NotImplementedJSONResponse }
-
-func (response PreviewSwap501JSONResponse) VisitPreviewSwapResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(response); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(501)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
 type ListProductsRequestObject struct {
 	Params ListProductsParams
 }
@@ -4117,20 +1888,6 @@ func (response ListProducts200JSONResponse) VisitListProductsResponse(w http.Res
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(200)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type ListProducts501JSONResponse struct{ NotImplementedJSONResponse }
-
-func (response ListProducts501JSONResponse) VisitListProductsResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(response); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(501)
 	_, err := buf.WriteTo(w)
 	return err
 }
@@ -4157,6 +1914,20 @@ func (response CreateProduct201JSONResponse) VisitCreateProductResponse(w http.R
 	return err
 }
 
+type CreateProduct409JSONResponse Error
+
+func (response CreateProduct409JSONResponse) VisitCreateProductResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type CreateProduct422JSONResponse struct{ ValidationErrorJSONResponse }
 
 func (response CreateProduct422JSONResponse) VisitCreateProductResponse(w http.ResponseWriter) error {
@@ -4167,20 +1938,6 @@ func (response CreateProduct422JSONResponse) VisitCreateProductResponse(w http.R
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(422)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type CreateProduct501JSONResponse struct{ NotImplementedJSONResponse }
-
-func (response CreateProduct501JSONResponse) VisitCreateProductResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(response); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(501)
 	_, err := buf.WriteTo(w)
 	return err
 }
@@ -4229,20 +1986,6 @@ func (response DeleteProduct422JSONResponse) VisitDeleteProductResponse(w http.R
 	return err
 }
 
-type DeleteProduct501JSONResponse struct{ NotImplementedJSONResponse }
-
-func (response DeleteProduct501JSONResponse) VisitDeleteProductResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(response); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(501)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
 type GetProductRequestObject struct {
 	ProductId ProductId `json:"productId"`
 }
@@ -4275,20 +2018,6 @@ func (response GetProduct404JSONResponse) VisitGetProductResponse(w http.Respons
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(404)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type GetProduct501JSONResponse struct{ NotImplementedJSONResponse }
-
-func (response GetProduct501JSONResponse) VisitGetProductResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(response); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(501)
 	_, err := buf.WriteTo(w)
 	return err
 }
@@ -4330,209 +2059,9 @@ func (response UpdateProduct404JSONResponse) VisitUpdateProductResponse(w http.R
 	return err
 }
 
-type UpdateProduct422JSONResponse struct{ ValidationErrorJSONResponse }
+type UpdateProduct409JSONResponse Error
 
-func (response UpdateProduct422JSONResponse) VisitUpdateProductResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(response); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(422)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type UpdateProduct501JSONResponse struct{ NotImplementedJSONResponse }
-
-func (response UpdateProduct501JSONResponse) VisitUpdateProductResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(response); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(501)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type ListRecipesRequestObject struct {
-	Params ListRecipesParams
-}
-
-type ListRecipesResponseObject interface {
-	VisitListRecipesResponse(w http.ResponseWriter) error
-}
-
-type ListRecipes200JSONResponse []RecipeTemplate
-
-func (response ListRecipes200JSONResponse) VisitListRecipesResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(response); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(200)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type ListRecipes501JSONResponse struct{ NotImplementedJSONResponse }
-
-func (response ListRecipes501JSONResponse) VisitListRecipesResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(response); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(501)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type CreateRecipeRequestObject struct {
-	Body *CreateRecipeJSONRequestBody
-}
-
-type CreateRecipeResponseObject interface {
-	VisitCreateRecipeResponse(w http.ResponseWriter) error
-}
-
-type CreateRecipe201JSONResponse struct{ RecipeOKJSONResponse }
-
-func (response CreateRecipe201JSONResponse) VisitCreateRecipeResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(response); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(201)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type CreateRecipe422JSONResponse struct{ ValidationErrorJSONResponse }
-
-func (response CreateRecipe422JSONResponse) VisitCreateRecipeResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(response); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(422)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type CreateRecipe501JSONResponse struct{ NotImplementedJSONResponse }
-
-func (response CreateRecipe501JSONResponse) VisitCreateRecipeResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(response); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(501)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type GetRecipeRequestObject struct {
-	RecipeId RecipeId `json:"recipeId"`
-}
-
-type GetRecipeResponseObject interface {
-	VisitGetRecipeResponse(w http.ResponseWriter) error
-}
-
-type GetRecipe200JSONResponse struct{ RecipeOKJSONResponse }
-
-func (response GetRecipe200JSONResponse) VisitGetRecipeResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(response); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(200)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type GetRecipe404JSONResponse struct{ NotFoundJSONResponse }
-
-func (response GetRecipe404JSONResponse) VisitGetRecipeResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(response); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(404)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type GetRecipe501JSONResponse struct{ NotImplementedJSONResponse }
-
-func (response GetRecipe501JSONResponse) VisitGetRecipeResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(response); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(501)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type PromoteRecipeRequestObject struct {
-	RecipeId RecipeId `json:"recipeId"`
-}
-
-type PromoteRecipeResponseObject interface {
-	VisitPromoteRecipeResponse(w http.ResponseWriter) error
-}
-
-type PromoteRecipe200JSONResponse struct{ RecipeOKJSONResponse }
-
-func (response PromoteRecipe200JSONResponse) VisitPromoteRecipeResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(response); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(200)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type PromoteRecipe404JSONResponse struct{ NotFoundJSONResponse }
-
-func (response PromoteRecipe404JSONResponse) VisitPromoteRecipeResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(response); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(404)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type PromoteRecipe409JSONResponse Error
-
-func (response PromoteRecipe409JSONResponse) VisitPromoteRecipeResponse(w http.ResponseWriter) error {
+func (response UpdateProduct409JSONResponse) VisitUpdateProductResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response); err != nil {
@@ -4544,16 +2073,16 @@ func (response PromoteRecipe409JSONResponse) VisitPromoteRecipeResponse(w http.R
 	return err
 }
 
-type PromoteRecipe501JSONResponse struct{ NotImplementedJSONResponse }
+type UpdateProduct422JSONResponse struct{ ValidationErrorJSONResponse }
 
-func (response PromoteRecipe501JSONResponse) VisitPromoteRecipeResponse(w http.ResponseWriter) error {
+func (response UpdateProduct422JSONResponse) VisitUpdateProductResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response); err != nil {
 		return err
 	}
 	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(501)
+	w.WriteHeader(422)
 	_, err := buf.WriteTo(w)
 	return err
 }
@@ -4593,68 +2122,8 @@ func (response ListRoleTags501JSONResponse) VisitListRoleTagsResponse(w http.Res
 	return err
 }
 
-type UpdateShoppingListItemRequestObject struct {
-	ItemId int64 `json:"itemId"`
-	Body   *UpdateShoppingListItemJSONRequestBody
-}
-
-type UpdateShoppingListItemResponseObject interface {
-	VisitUpdateShoppingListItemResponse(w http.ResponseWriter) error
-}
-
-type UpdateShoppingListItem200JSONResponse ShoppingItem
-
-func (response UpdateShoppingListItem200JSONResponse) VisitUpdateShoppingListItemResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(response); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(200)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type UpdateShoppingListItem404JSONResponse struct{ NotFoundJSONResponse }
-
-func (response UpdateShoppingListItem404JSONResponse) VisitUpdateShoppingListItemResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(response); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(404)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type UpdateShoppingListItem501JSONResponse struct{ NotImplementedJSONResponse }
-
-func (response UpdateShoppingListItem501JSONResponse) VisitUpdateShoppingListItemResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(response); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(501)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
 // StrictServerInterface represents all server handlers.
 type StrictServerInterface interface {
-	// Средние БЖУ по едоку за период (planned/actual)
-	// (GET /analytics/macros)
-	GetMacroAnalytics(ctx context.Context, request GetMacroAnalyticsRequestObject) (GetMacroAnalyticsResponseObject, error)
-	// Quality-аналитика по едоку за период (FR-8)
-	// (GET /analytics/nutrition-quality)
-	GetNutritionQualityAnalytics(ctx context.Context, request GetNutritionQualityAnalyticsRequestObject) (GetNutritionQualityAnalyticsResponseObject, error)
-	// Топ рецептов по числу готовок
-	// (GET /analytics/top-recipes)
-	GetTopRecipes(ctx context.Context, request GetTopRecipesRequestObject) (GetTopRecipesResponseObject, error)
 	// Список едоков
 	// (GET /eaters)
 	ListEaters(ctx context.Context, request ListEatersRequestObject) (ListEatersResponseObject, error)
@@ -4688,39 +2157,6 @@ type StrictServerInterface interface {
 	// Удалить исключение
 	// (DELETE /exclusions/{exclusionId})
 	DeleteExclusion(ctx context.Context, request DeleteExclusionRequestObject) (DeleteExclusionResponseObject, error)
-	// Оценка/комментарий → сдвиг веса (не бан, FR-7)
-	// (POST /feedback)
-	CreateFeedback(ctx context.Context, request CreateFeedbackRequestObject) (CreateFeedbackResponseObject, error)
-	// Залогировать факт еды (actual пишется руками только при отклонении, FR-6)
-	// (POST /meals/{mealId}/log)
-	LogMeal(ctx context.Context, request LogMealRequestObject) (LogMealResponseObject, error)
-	// Список планов
-	// (GET /plans)
-	ListPlans(ctx context.Context, request ListPlansRequestObject) (ListPlansResponseObject, error)
-	// Сгенерировать план (reuse-first; LLM только при нехватке матчей/novelty≥2)
-	// (POST /plans)
-	GeneratePlan(ctx context.Context, request GeneratePlanRequestObject) (GeneratePlanResponseObject, error)
-	// Архивировать план
-	// (DELETE /plans/{planId})
-	ArchivePlan(ctx context.Context, request ArchivePlanRequestObject) (ArchivePlanResponseObject, error)
-	// Полный план (компоненты, заполнения слотов, приёмы, prep-граф)
-	// (GET /plans/{planId})
-	GetPlan(ctx context.Context, request GetPlanRequestObject) (GetPlanResponseObject, error)
-	// Приёмы пищи плана (planned + actual)
-	// (GET /plans/{planId}/meals)
-	ListPlanMeals(ctx context.Context, request ListPlanMealsRequestObject) (ListPlanMealsResponseObject, error)
-	// Список покупок (производная от плана)
-	// (GET /plans/{planId}/shopping-list)
-	GetShoppingList(ctx context.Context, request GetShoppingListRequestObject) (GetShoppingListResponseObject, error)
-	// (Пере)генерировать список покупок; сохраняет отметки неизменившихся позиций
-	// (POST /plans/{planId}/shopping-list)
-	RegenerateShoppingList(ctx context.Context, request RegenerateShoppingListRequestObject) (RegenerateShoppingListResponseObject, error)
-	// Применить своп (после подтверждения)
-	// (POST /plans/{planId}/swap)
-	ApplySwap(ctx context.Context, request ApplySwapRequestObject) (ApplySwapResponseObject, error)
-	// Предпросмотр свопа — blast radius ДО подтверждения (FR-4)
-	// (POST /plans/{planId}/swap/preview)
-	PreviewSwap(ctx context.Context, request PreviewSwapRequestObject) (PreviewSwapResponseObject, error)
 	// Список продуктов
 	// (GET /products)
 	ListProducts(ctx context.Context, request ListProductsRequestObject) (ListProductsResponseObject, error)
@@ -4736,24 +2172,9 @@ type StrictServerInterface interface {
 	// Обновить продукт
 	// (PUT /products/{productId})
 	UpdateProduct(ctx context.Context, request UpdateProductRequestObject) (UpdateProductResponseObject, error)
-	// Библиотека рецептов-шаблонов
-	// (GET /recipes)
-	ListRecipes(ctx context.Context, request ListRecipesRequestObject) (ListRecipesResponseObject, error)
-	// Создать рецепт-шаблон вручную (status=draft по умолчанию)
-	// (POST /recipes)
-	CreateRecipe(ctx context.Context, request CreateRecipeRequestObject) (CreateRecipeResponseObject, error)
-	// Рецепт-шаблон со слотами
-	// (GET /recipes/{recipeId})
-	GetRecipe(ctx context.Context, request GetRecipeRequestObject) (GetRecipeResponseObject, error)
-	// Повысить draft → permanent после реальной готовки + одобрения (FR-9)
-	// (POST /recipes/{recipeId}/promote)
-	PromoteRecipe(ctx context.Context, request PromoteRecipeRequestObject) (PromoteRecipeResponseObject, error)
 	// Справочник ролевых тегов (с подклассами)
 	// (GET /role-tags)
 	ListRoleTags(ctx context.Context, request ListRoleTagsRequestObject) (ListRoleTagsResponseObject, error)
-	// Отметить позицию купленной
-	// (PATCH /shopping-list-items/{itemId})
-	UpdateShoppingListItem(ctx context.Context, request UpdateShoppingListItemRequestObject) (UpdateShoppingListItemResponseObject, error)
 }
 
 type StrictHandlerFunc func(ctx context.Context, w http.ResponseWriter, r *http.Request, request any) (any, error)
@@ -4783,84 +2204,6 @@ type strictHandler struct {
 	ssi         StrictServerInterface
 	middlewares []StrictMiddlewareFunc
 	options     StrictHTTPServerOptions
-}
-
-// GetMacroAnalytics operation middleware
-func (sh *strictHandler) GetMacroAnalytics(w http.ResponseWriter, r *http.Request, params GetMacroAnalyticsParams) {
-	var request GetMacroAnalyticsRequestObject
-
-	request.Params = params
-
-	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
-		return sh.ssi.GetMacroAnalytics(ctx, request.(GetMacroAnalyticsRequestObject))
-	}
-	for _, middleware := range sh.middlewares {
-		handler = middleware(handler, "GetMacroAnalytics")
-	}
-
-	response, err := handler(r.Context(), w, r, request)
-
-	if err != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, err)
-	} else if validResponse, ok := response.(GetMacroAnalyticsResponseObject); ok {
-		if err := validResponse.VisitGetMacroAnalyticsResponse(w); err != nil {
-			sh.options.ResponseErrorHandlerFunc(w, r, err)
-		}
-	} else if response != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
-	}
-}
-
-// GetNutritionQualityAnalytics operation middleware
-func (sh *strictHandler) GetNutritionQualityAnalytics(w http.ResponseWriter, r *http.Request, params GetNutritionQualityAnalyticsParams) {
-	var request GetNutritionQualityAnalyticsRequestObject
-
-	request.Params = params
-
-	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
-		return sh.ssi.GetNutritionQualityAnalytics(ctx, request.(GetNutritionQualityAnalyticsRequestObject))
-	}
-	for _, middleware := range sh.middlewares {
-		handler = middleware(handler, "GetNutritionQualityAnalytics")
-	}
-
-	response, err := handler(r.Context(), w, r, request)
-
-	if err != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, err)
-	} else if validResponse, ok := response.(GetNutritionQualityAnalyticsResponseObject); ok {
-		if err := validResponse.VisitGetNutritionQualityAnalyticsResponse(w); err != nil {
-			sh.options.ResponseErrorHandlerFunc(w, r, err)
-		}
-	} else if response != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
-	}
-}
-
-// GetTopRecipes operation middleware
-func (sh *strictHandler) GetTopRecipes(w http.ResponseWriter, r *http.Request, params GetTopRecipesParams) {
-	var request GetTopRecipesRequestObject
-
-	request.Params = params
-
-	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
-		return sh.ssi.GetTopRecipes(ctx, request.(GetTopRecipesRequestObject))
-	}
-	for _, middleware := range sh.middlewares {
-		handler = middleware(handler, "GetTopRecipes")
-	}
-
-	response, err := handler(r.Context(), w, r, request)
-
-	if err != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, err)
-	} else if validResponse, ok := response.(GetTopRecipesResponseObject); ok {
-		if err := validResponse.VisitGetTopRecipesResponse(w); err != nil {
-			sh.options.ResponseErrorHandlerFunc(w, r, err)
-		}
-	} else if response != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
-	}
 }
 
 // ListEaters operation middleware
@@ -5180,322 +2523,6 @@ func (sh *strictHandler) DeleteExclusion(w http.ResponseWriter, r *http.Request,
 	}
 }
 
-// CreateFeedback operation middleware
-func (sh *strictHandler) CreateFeedback(w http.ResponseWriter, r *http.Request) {
-	var request CreateFeedbackRequestObject
-
-	var body CreateFeedbackJSONRequestBody
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
-		return
-	}
-	request.Body = &body
-
-	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
-		return sh.ssi.CreateFeedback(ctx, request.(CreateFeedbackRequestObject))
-	}
-	for _, middleware := range sh.middlewares {
-		handler = middleware(handler, "CreateFeedback")
-	}
-
-	response, err := handler(r.Context(), w, r, request)
-
-	if err != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, err)
-	} else if validResponse, ok := response.(CreateFeedbackResponseObject); ok {
-		if err := validResponse.VisitCreateFeedbackResponse(w); err != nil {
-			sh.options.ResponseErrorHandlerFunc(w, r, err)
-		}
-	} else if response != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
-	}
-}
-
-// LogMeal operation middleware
-func (sh *strictHandler) LogMeal(w http.ResponseWriter, r *http.Request, mealId int64) {
-	var request LogMealRequestObject
-
-	request.MealId = mealId
-
-	var body LogMealJSONRequestBody
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
-		return
-	}
-	request.Body = &body
-
-	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
-		return sh.ssi.LogMeal(ctx, request.(LogMealRequestObject))
-	}
-	for _, middleware := range sh.middlewares {
-		handler = middleware(handler, "LogMeal")
-	}
-
-	response, err := handler(r.Context(), w, r, request)
-
-	if err != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, err)
-	} else if validResponse, ok := response.(LogMealResponseObject); ok {
-		if err := validResponse.VisitLogMealResponse(w); err != nil {
-			sh.options.ResponseErrorHandlerFunc(w, r, err)
-		}
-	} else if response != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
-	}
-}
-
-// ListPlans operation middleware
-func (sh *strictHandler) ListPlans(w http.ResponseWriter, r *http.Request) {
-	var request ListPlansRequestObject
-
-	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
-		return sh.ssi.ListPlans(ctx, request.(ListPlansRequestObject))
-	}
-	for _, middleware := range sh.middlewares {
-		handler = middleware(handler, "ListPlans")
-	}
-
-	response, err := handler(r.Context(), w, r, request)
-
-	if err != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, err)
-	} else if validResponse, ok := response.(ListPlansResponseObject); ok {
-		if err := validResponse.VisitListPlansResponse(w); err != nil {
-			sh.options.ResponseErrorHandlerFunc(w, r, err)
-		}
-	} else if response != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
-	}
-}
-
-// GeneratePlan operation middleware
-func (sh *strictHandler) GeneratePlan(w http.ResponseWriter, r *http.Request) {
-	var request GeneratePlanRequestObject
-
-	var body GeneratePlanJSONRequestBody
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
-		return
-	}
-	request.Body = &body
-
-	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
-		return sh.ssi.GeneratePlan(ctx, request.(GeneratePlanRequestObject))
-	}
-	for _, middleware := range sh.middlewares {
-		handler = middleware(handler, "GeneratePlan")
-	}
-
-	response, err := handler(r.Context(), w, r, request)
-
-	if err != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, err)
-	} else if validResponse, ok := response.(GeneratePlanResponseObject); ok {
-		if err := validResponse.VisitGeneratePlanResponse(w); err != nil {
-			sh.options.ResponseErrorHandlerFunc(w, r, err)
-		}
-	} else if response != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
-	}
-}
-
-// ArchivePlan operation middleware
-func (sh *strictHandler) ArchivePlan(w http.ResponseWriter, r *http.Request, planId PlanId) {
-	var request ArchivePlanRequestObject
-
-	request.PlanId = planId
-
-	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
-		return sh.ssi.ArchivePlan(ctx, request.(ArchivePlanRequestObject))
-	}
-	for _, middleware := range sh.middlewares {
-		handler = middleware(handler, "ArchivePlan")
-	}
-
-	response, err := handler(r.Context(), w, r, request)
-
-	if err != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, err)
-	} else if validResponse, ok := response.(ArchivePlanResponseObject); ok {
-		if err := validResponse.VisitArchivePlanResponse(w); err != nil {
-			sh.options.ResponseErrorHandlerFunc(w, r, err)
-		}
-	} else if response != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
-	}
-}
-
-// GetPlan operation middleware
-func (sh *strictHandler) GetPlan(w http.ResponseWriter, r *http.Request, planId PlanId) {
-	var request GetPlanRequestObject
-
-	request.PlanId = planId
-
-	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
-		return sh.ssi.GetPlan(ctx, request.(GetPlanRequestObject))
-	}
-	for _, middleware := range sh.middlewares {
-		handler = middleware(handler, "GetPlan")
-	}
-
-	response, err := handler(r.Context(), w, r, request)
-
-	if err != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, err)
-	} else if validResponse, ok := response.(GetPlanResponseObject); ok {
-		if err := validResponse.VisitGetPlanResponse(w); err != nil {
-			sh.options.ResponseErrorHandlerFunc(w, r, err)
-		}
-	} else if response != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
-	}
-}
-
-// ListPlanMeals operation middleware
-func (sh *strictHandler) ListPlanMeals(w http.ResponseWriter, r *http.Request, planId PlanId, params ListPlanMealsParams) {
-	var request ListPlanMealsRequestObject
-
-	request.PlanId = planId
-	request.Params = params
-
-	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
-		return sh.ssi.ListPlanMeals(ctx, request.(ListPlanMealsRequestObject))
-	}
-	for _, middleware := range sh.middlewares {
-		handler = middleware(handler, "ListPlanMeals")
-	}
-
-	response, err := handler(r.Context(), w, r, request)
-
-	if err != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, err)
-	} else if validResponse, ok := response.(ListPlanMealsResponseObject); ok {
-		if err := validResponse.VisitListPlanMealsResponse(w); err != nil {
-			sh.options.ResponseErrorHandlerFunc(w, r, err)
-		}
-	} else if response != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
-	}
-}
-
-// GetShoppingList operation middleware
-func (sh *strictHandler) GetShoppingList(w http.ResponseWriter, r *http.Request, planId PlanId) {
-	var request GetShoppingListRequestObject
-
-	request.PlanId = planId
-
-	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
-		return sh.ssi.GetShoppingList(ctx, request.(GetShoppingListRequestObject))
-	}
-	for _, middleware := range sh.middlewares {
-		handler = middleware(handler, "GetShoppingList")
-	}
-
-	response, err := handler(r.Context(), w, r, request)
-
-	if err != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, err)
-	} else if validResponse, ok := response.(GetShoppingListResponseObject); ok {
-		if err := validResponse.VisitGetShoppingListResponse(w); err != nil {
-			sh.options.ResponseErrorHandlerFunc(w, r, err)
-		}
-	} else if response != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
-	}
-}
-
-// RegenerateShoppingList operation middleware
-func (sh *strictHandler) RegenerateShoppingList(w http.ResponseWriter, r *http.Request, planId PlanId) {
-	var request RegenerateShoppingListRequestObject
-
-	request.PlanId = planId
-
-	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
-		return sh.ssi.RegenerateShoppingList(ctx, request.(RegenerateShoppingListRequestObject))
-	}
-	for _, middleware := range sh.middlewares {
-		handler = middleware(handler, "RegenerateShoppingList")
-	}
-
-	response, err := handler(r.Context(), w, r, request)
-
-	if err != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, err)
-	} else if validResponse, ok := response.(RegenerateShoppingListResponseObject); ok {
-		if err := validResponse.VisitRegenerateShoppingListResponse(w); err != nil {
-			sh.options.ResponseErrorHandlerFunc(w, r, err)
-		}
-	} else if response != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
-	}
-}
-
-// ApplySwap operation middleware
-func (sh *strictHandler) ApplySwap(w http.ResponseWriter, r *http.Request, planId PlanId) {
-	var request ApplySwapRequestObject
-
-	request.PlanId = planId
-
-	var body ApplySwapJSONRequestBody
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
-		return
-	}
-	request.Body = &body
-
-	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
-		return sh.ssi.ApplySwap(ctx, request.(ApplySwapRequestObject))
-	}
-	for _, middleware := range sh.middlewares {
-		handler = middleware(handler, "ApplySwap")
-	}
-
-	response, err := handler(r.Context(), w, r, request)
-
-	if err != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, err)
-	} else if validResponse, ok := response.(ApplySwapResponseObject); ok {
-		if err := validResponse.VisitApplySwapResponse(w); err != nil {
-			sh.options.ResponseErrorHandlerFunc(w, r, err)
-		}
-	} else if response != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
-	}
-}
-
-// PreviewSwap operation middleware
-func (sh *strictHandler) PreviewSwap(w http.ResponseWriter, r *http.Request, planId PlanId) {
-	var request PreviewSwapRequestObject
-
-	request.PlanId = planId
-
-	var body PreviewSwapJSONRequestBody
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
-		return
-	}
-	request.Body = &body
-
-	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
-		return sh.ssi.PreviewSwap(ctx, request.(PreviewSwapRequestObject))
-	}
-	for _, middleware := range sh.middlewares {
-		handler = middleware(handler, "PreviewSwap")
-	}
-
-	response, err := handler(r.Context(), w, r, request)
-
-	if err != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, err)
-	} else if validResponse, ok := response.(PreviewSwapResponseObject); ok {
-		if err := validResponse.VisitPreviewSwapResponse(w); err != nil {
-			sh.options.ResponseErrorHandlerFunc(w, r, err)
-		}
-	} else if response != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
-	}
-}
-
 // ListProducts operation middleware
 func (sh *strictHandler) ListProducts(w http.ResponseWriter, r *http.Request, params ListProductsParams) {
 	var request ListProductsRequestObject
@@ -5638,115 +2665,6 @@ func (sh *strictHandler) UpdateProduct(w http.ResponseWriter, r *http.Request, p
 	}
 }
 
-// ListRecipes operation middleware
-func (sh *strictHandler) ListRecipes(w http.ResponseWriter, r *http.Request, params ListRecipesParams) {
-	var request ListRecipesRequestObject
-
-	request.Params = params
-
-	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
-		return sh.ssi.ListRecipes(ctx, request.(ListRecipesRequestObject))
-	}
-	for _, middleware := range sh.middlewares {
-		handler = middleware(handler, "ListRecipes")
-	}
-
-	response, err := handler(r.Context(), w, r, request)
-
-	if err != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, err)
-	} else if validResponse, ok := response.(ListRecipesResponseObject); ok {
-		if err := validResponse.VisitListRecipesResponse(w); err != nil {
-			sh.options.ResponseErrorHandlerFunc(w, r, err)
-		}
-	} else if response != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
-	}
-}
-
-// CreateRecipe operation middleware
-func (sh *strictHandler) CreateRecipe(w http.ResponseWriter, r *http.Request) {
-	var request CreateRecipeRequestObject
-
-	var body CreateRecipeJSONRequestBody
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
-		return
-	}
-	request.Body = &body
-
-	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
-		return sh.ssi.CreateRecipe(ctx, request.(CreateRecipeRequestObject))
-	}
-	for _, middleware := range sh.middlewares {
-		handler = middleware(handler, "CreateRecipe")
-	}
-
-	response, err := handler(r.Context(), w, r, request)
-
-	if err != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, err)
-	} else if validResponse, ok := response.(CreateRecipeResponseObject); ok {
-		if err := validResponse.VisitCreateRecipeResponse(w); err != nil {
-			sh.options.ResponseErrorHandlerFunc(w, r, err)
-		}
-	} else if response != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
-	}
-}
-
-// GetRecipe operation middleware
-func (sh *strictHandler) GetRecipe(w http.ResponseWriter, r *http.Request, recipeId RecipeId) {
-	var request GetRecipeRequestObject
-
-	request.RecipeId = recipeId
-
-	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
-		return sh.ssi.GetRecipe(ctx, request.(GetRecipeRequestObject))
-	}
-	for _, middleware := range sh.middlewares {
-		handler = middleware(handler, "GetRecipe")
-	}
-
-	response, err := handler(r.Context(), w, r, request)
-
-	if err != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, err)
-	} else if validResponse, ok := response.(GetRecipeResponseObject); ok {
-		if err := validResponse.VisitGetRecipeResponse(w); err != nil {
-			sh.options.ResponseErrorHandlerFunc(w, r, err)
-		}
-	} else if response != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
-	}
-}
-
-// PromoteRecipe operation middleware
-func (sh *strictHandler) PromoteRecipe(w http.ResponseWriter, r *http.Request, recipeId RecipeId) {
-	var request PromoteRecipeRequestObject
-
-	request.RecipeId = recipeId
-
-	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
-		return sh.ssi.PromoteRecipe(ctx, request.(PromoteRecipeRequestObject))
-	}
-	for _, middleware := range sh.middlewares {
-		handler = middleware(handler, "PromoteRecipe")
-	}
-
-	response, err := handler(r.Context(), w, r, request)
-
-	if err != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, err)
-	} else if validResponse, ok := response.(PromoteRecipeResponseObject); ok {
-		if err := validResponse.VisitPromoteRecipeResponse(w); err != nil {
-			sh.options.ResponseErrorHandlerFunc(w, r, err)
-		}
-	} else if response != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
-	}
-}
-
 // ListRoleTags operation middleware
 func (sh *strictHandler) ListRoleTags(w http.ResponseWriter, r *http.Request) {
 	var request ListRoleTagsRequestObject
@@ -5771,190 +2689,89 @@ func (sh *strictHandler) ListRoleTags(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// UpdateShoppingListItem operation middleware
-func (sh *strictHandler) UpdateShoppingListItem(w http.ResponseWriter, r *http.Request, itemId int64) {
-	var request UpdateShoppingListItemRequestObject
-
-	request.ItemId = itemId
-
-	var body UpdateShoppingListItemJSONRequestBody
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
-		return
-	}
-	request.Body = &body
-
-	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
-		return sh.ssi.UpdateShoppingListItem(ctx, request.(UpdateShoppingListItemRequestObject))
-	}
-	for _, middleware := range sh.middlewares {
-		handler = middleware(handler, "UpdateShoppingListItem")
-	}
-
-	response, err := handler(r.Context(), w, r, request)
-
-	if err != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, err)
-	} else if validResponse, ok := response.(UpdateShoppingListItemResponseObject); ok {
-		if err := validResponse.VisitUpdateShoppingListItemResponse(w); err != nil {
-			sh.options.ResponseErrorHandlerFunc(w, r, err)
-		}
-	} else if response != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
-	}
-}
-
 // Base64 encoded, compressed with deflate, json marshaled OpenAPI spec.
 // Stored as a slice of fixed-width chunks rather than one concatenated
 // const string: with thousands of chunks the chained `+` fold is several
 // times slower for the Go compiler than parsing a slice literal.
 var swaggerSpec = []string{
-	"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",
-	"Xdi4vvH/AwAA//8=",
+	"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",
 }
 
 // decodeSpec returns the embedded OpenAPI spec as raw JSON bytes,

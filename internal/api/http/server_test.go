@@ -45,30 +45,18 @@ func TestOpenAPIRouteRequiresTokenWhenConfigured(t *testing.T) {
 	}
 }
 
-func TestAPIRouteIsNotRegisteredWithValidToken(t *testing.T) {
-	handler := New(Deps{APIToken: "secret"})
+func TestOpenAPIRouteRejectsUnsupportedMethod(t *testing.T) {
+	handler := New(Deps{})
 
-	req := httptest.NewRequest(http.MethodGet, "/eaters", http.NoBody)
-	req.Header.Set("X-API-Token", "secret")
+	req := httptest.NewRequest(http.MethodPatch, "/products/42", http.NoBody)
 	rec := httptest.NewRecorder()
 
 	handler.ServeHTTP(rec, req)
 
-	if rec.Code != http.StatusNotFound {
-		t.Fatalf("GET /eaters status = %d, want %d", rec.Code, http.StatusNotFound)
+	if rec.Code != http.StatusMethodNotAllowed {
+		t.Fatalf("PATCH /products/42 status = %d, want %d", rec.Code, http.StatusMethodNotAllowed)
 	}
-}
-
-func TestUnregisteredAPIRouteReturnsNotFoundWithValidToken(t *testing.T) {
-	handler := New(Deps{APIToken: "secret"})
-
-	req := httptest.NewRequest(http.MethodGet, "/analytics/macros", http.NoBody)
-	req.Header.Set("X-API-Token", "secret")
-	rec := httptest.NewRecorder()
-
-	handler.ServeHTTP(rec, req)
-
-	if rec.Code != http.StatusNotFound {
-		t.Fatalf("GET /analytics/macros status = %d, want %d", rec.Code, http.StatusNotFound)
+	if rec.Header().Get("Allow") == "" {
+		t.Fatal("PATCH /products/42 response has no Allow header")
 	}
 }

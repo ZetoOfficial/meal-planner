@@ -38,7 +38,6 @@ paths:
               schema:
                 type: array
                 items: { $ref: '#/components/schemas/Eater' }
-        '501': { $ref: '#/components/responses/NotImplemented' }
     post:
       operationId: createEater
       tags: [eaters]
@@ -50,8 +49,12 @@ paths:
             schema: { $ref: '#/components/schemas/EaterInput' }
       responses:
         '201': { $ref: '#/components/responses/EaterOK' }
+        '409':
+          description: Едок с таким именем уже существует
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
         '422': { $ref: '#/components/responses/ValidationError' }
-        '501': { $ref: '#/components/responses/NotImplemented' }
 
   /eaters/{eaterId}:
     parameters:
@@ -63,7 +66,6 @@ paths:
       responses:
         '200': { $ref: '#/components/responses/EaterOK' }
         '404': { $ref: '#/components/responses/NotFound' }
-        '501': { $ref: '#/components/responses/NotImplemented' }
     put:
       operationId: updateEater
       tags: [eaters]
@@ -76,7 +78,11 @@ paths:
       responses:
         '200': { $ref: '#/components/responses/EaterOK' }
         '404': { $ref: '#/components/responses/NotFound' }
-        '501': { $ref: '#/components/responses/NotImplemented' }
+        '409':
+          description: Имя едока или дата новой цели уже заняты
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
 
   /eaters/{eaterId}/goals:
     parameters:
@@ -94,7 +100,6 @@ paths:
                 type: array
                 items: { $ref: '#/components/schemas/MacroGoal' }
         '404': { $ref: '#/components/responses/NotFound' }
-        '501': { $ref: '#/components/responses/NotImplemented' }
     post:
       operationId: createEaterGoal
       tags: [eaters]
@@ -111,8 +116,12 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/MacroGoal' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: Цель с такой датой начала уже существует
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
         '422': { $ref: '#/components/responses/ValidationError' }
-        '501': { $ref: '#/components/responses/NotImplemented' }
 
   /eaters/{eaterId}/fixed-meals:
     parameters:
@@ -129,7 +138,7 @@ paths:
               schema:
                 type: array
                 items: { $ref: '#/components/schemas/FixedMeal' }
-        '501': { $ref: '#/components/responses/NotImplemented' }
+        '404': { $ref: '#/components/responses/NotFound' }
     post:
       operationId: createFixedMeal
       tags: [eaters]
@@ -145,8 +154,13 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/FixedMeal' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: Такой фиксированный приём уже существует
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
         '422': { $ref: '#/components/responses/ValidationError' }
-        '501': { $ref: '#/components/responses/NotImplemented' }
 
   /eaters/{eaterId}/exclusions:
     parameters:
@@ -164,7 +178,6 @@ paths:
                 type: array
                 items: { $ref: '#/components/schemas/Exclusion' }
         '404': { $ref: '#/components/responses/NotFound' }
-        '501': { $ref: '#/components/responses/NotImplemented' }
     post:
       operationId: createExclusion
       tags: [eaters]
@@ -181,8 +194,12 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/Exclusion' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: Такое исключение уже существует
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
         '422': { $ref: '#/components/responses/ValidationError' }
-        '501': { $ref: '#/components/responses/NotImplemented' }
 
   /exclusions/{exclusionId}:
     parameters:
@@ -197,7 +214,6 @@ paths:
       responses:
         '204': { description: No Content }
         '404': { $ref: '#/components/responses/NotFound' }
-        '501': { $ref: '#/components/responses/NotImplemented' }
 
   # ---------------------------------------------------------------- products
   /products:
@@ -218,7 +234,6 @@ paths:
               schema:
                 type: array
                 items: { $ref: '#/components/schemas/Product' }
-        '501': { $ref: '#/components/responses/NotImplemented' }
     post:
       operationId: createProduct
       tags: [products]
@@ -230,8 +245,12 @@ paths:
             schema: { $ref: '#/components/schemas/ProductInput' }
       responses:
         '201': { $ref: '#/components/responses/ProductOK' }
+        '409':
+          description: Продукт с таким брендом и именем уже существует
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
         '422': { $ref: '#/components/responses/ValidationError' }
-        '501': { $ref: '#/components/responses/NotImplemented' }
 
   /products/{productId}:
     parameters:
@@ -243,7 +262,6 @@ paths:
       responses:
         '200': { $ref: '#/components/responses/ProductOK' }
         '404': { $ref: '#/components/responses/NotFound' }
-        '501': { $ref: '#/components/responses/NotImplemented' }
     put:
       operationId: updateProduct
       tags: [products]
@@ -256,8 +274,12 @@ paths:
       responses:
         '200': { $ref: '#/components/responses/ProductOK' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: Продукт с таким брендом и именем уже существует
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
         '422': { $ref: '#/components/responses/ValidationError' }
-        '501': { $ref: '#/components/responses/NotImplemented' }
     delete:
       operationId: deleteProduct
       tags: [products]
@@ -266,7 +288,6 @@ paths:
         '204': { description: No Content }
         '404': { $ref: '#/components/responses/NotFound' }
         '422': { $ref: '#/components/responses/ValidationError' }
-        '501': { $ref: '#/components/responses/NotImplemented' }
 
   /role-tags:
     get:

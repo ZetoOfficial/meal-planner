@@ -8,7 +8,6 @@ import (
 	"go.uber.org/mock/gomock"
 
 	"github.com/ZetoOfficial/meal-planner/internal/postgres/mocks"
-	"github.com/ZetoOfficial/meal-planner/internal/postgres/repositories"
 )
 
 func TestTxManagerWithTxCommitsAfterSuccessfulCallback(t *testing.T) {
@@ -156,52 +155,52 @@ func TestTxManagerWithTxReturnsBeginErrorWithoutInvokingCallback(t *testing.T) {
 	}
 }
 
-func TestRepositoriesQueriesUseDefaultExecutor(t *testing.T) {
+func TestStoreQueriesUseDefaultExecutor(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	ctx := context.Background()
 	db := mocks.NewMockDBTX(ctrl)
 	row := mocks.NewMockRow(ctrl)
-	repos := repositories.New(db)
+	store := NewStore(db)
 	want := errors.New("row scan failed")
 
 	db.EXPECT().QueryRow(ctx, gomock.Any(), int64(42)).Return(row)
 	row.EXPECT().Scan(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(want)
 
-	_, err := repos.Queries(ctx).GetEater(ctx, 42)
+	_, err := store.Queries(ctx).GetEater(ctx, 42)
 
 	if !errors.Is(err, want) {
 		t.Fatalf("GetEater() error = %v, want %v", err, want)
 	}
 }
 
-func TestRepositoriesQueriesUseContextBoundTransactionExecutor(t *testing.T) {
+func TestStoreQueriesUseContextBoundTransactionExecutor(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	ctx := context.Background()
 	defaultDB := mocks.NewMockDBTX(ctrl)
 	tx := mocks.NewMockTx(ctrl)
 	row := mocks.NewMockRow(ctrl)
-	repos := repositories.New(defaultDB)
+	store := NewStore(defaultDB)
 	want := errors.New("row scan failed")
-	txCtx := repositories.WithExecutor(ctx, tx)
+	txCtx := withExecutor(ctx, tx)
 
 	tx.EXPECT().QueryRow(txCtx, gomock.Any(), int64(42)).Return(row)
 	row.EXPECT().Scan(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(want)
 
-	_, err := repos.Queries(txCtx).GetEater(txCtx, 42)
+	_, err := store.Queries(txCtx).GetEater(txCtx, 42)
 
 	if !errors.Is(err, want) {
 		t.Fatalf("GetEater() error = %v, want %v", err, want)
 	}
 }
 
-func TestTxManagerBindsTransactionExecutorForRepositories(t *testing.T) {
+func TestTxManagerBindsTransactionExecutorForStore(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	ctx := context.Background()
 	defaultDB := mocks.NewMockDBTX(ctrl)
 	beginner := mocks.NewMocktxBeginner(ctrl)
 	tx := mocks.NewMockTx(ctrl)
 	row := mocks.NewMockRow(ctrl)
-	repos := repositories.New(defaultDB)
+	store := NewStore(defaultDB)
 	manager := newTxManager(beginner)
 	want := errors.New("row scan failed")
 
@@ -211,7 +210,7 @@ func TestTxManagerBindsTransactionExecutorForRepositories(t *testing.T) {
 	tx.EXPECT().Rollback(ctx).Return(nil)
 
 	err := manager.WithTx(ctx, func(txCtx context.Context) error {
-		_, err := repos.Queries(txCtx).GetProduct(txCtx, 42)
+		_, err := store.Queries(txCtx).GetProduct(txCtx, 42)
 		return err
 	})
 
