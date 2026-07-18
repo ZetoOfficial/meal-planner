@@ -75,12 +75,16 @@ internal/
       generated.go
     http/
       server.go
-      handlers_eaters.go
-      handlers_products.go
-      handlers_recipes.go
-      handlers_plans.go
-      handlers_analytics.go
-      mapper.go
+      eater_handlers.go
+      eater_mapping.go
+      catalog_handlers.go
+      catalog_mapping.go
+      recipe_handlers.go
+      recipe_mapping.go
+      planning_handlers.go
+      planning_mapping.go
+      analytics_handlers.go
+      analytics_mapping.go
 
   domain/
     eater/
@@ -163,17 +167,32 @@ internal/
 
   postgres/
     db.go
+    store.go
     tx.go
     sqlc/
       generated.go
-    repositories/
-      eater.go
-      product.go
-      recipe.go
-      plan.go
-      meal.go
-      analytics.go
-      llm.go
+    pgvalue/
+      numeric.go
+    dberror/
+      error.go
+    catalog/
+      repository.go
+      mapping.go
+    eater/
+      repository.go
+      mapping.go
+    recipe/
+      repository.go
+      mapping.go
+    planning/
+      repository.go
+      mapping.go
+    analytics/
+      repository.go
+      mapping.go
+    llm/
+      repository.go
+      mapping.go
 
   clock/
   errors/
@@ -511,7 +530,7 @@ sqlc-типы не должны протекать в domain/usecase/solver/qual
 Допустимо:
 
 ```text
-postgres/repositories/product.go imports postgres/sqlc and domain/catalog
+postgres/catalog/repository.go imports postgres/sqlc and domain/catalog
 ```
 
 Недопустимо:

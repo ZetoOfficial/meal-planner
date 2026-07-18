@@ -8,8 +8,6 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
-
-	"github.com/ZetoOfficial/meal-planner/internal/postgres/repositories"
 )
 
 type txBeginner interface {
@@ -37,7 +35,7 @@ func (m *TxManager) WithTx(ctx context.Context, fn func(ctx context.Context) err
 			_ = tx.Rollback(ctx)
 		}
 	}()
-	if callbackErr := fn(repositories.WithExecutor(ctx, tx)); callbackErr != nil {
+	if callbackErr := fn(withExecutor(ctx, tx)); callbackErr != nil {
 		rollbackErr := tx.Rollback(ctx)
 		finalized = true
 		if rollbackErr != nil {

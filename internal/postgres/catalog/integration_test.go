@@ -1,6 +1,6 @@
 //go:build integration
 
-package postgres_test
+package catalog_test
 
 import (
 	"context"
@@ -12,7 +12,7 @@ import (
 	catalogdom "github.com/ZetoOfficial/meal-planner/internal/domain/catalog"
 	apperr "github.com/ZetoOfficial/meal-planner/internal/errors"
 	postgresdb "github.com/ZetoOfficial/meal-planner/internal/postgres"
-	"github.com/ZetoOfficial/meal-planner/internal/postgres/repositories"
+	catalogrepo "github.com/ZetoOfficial/meal-planner/internal/postgres/catalog"
 	"github.com/ZetoOfficial/meal-planner/internal/postgres/sqlc"
 	testpostgres "github.com/ZetoOfficial/meal-planner/internal/testkit/postgres"
 	catalogusecase "github.com/ZetoOfficial/meal-planner/internal/usecase/catalog"
@@ -21,7 +21,7 @@ import (
 
 func TestCatalogRoundTripReplacesAggregateAndPreservesNullNutrition(t *testing.T) {
 	database := testpostgres.RequireDatabase(t)
-	repository := repositories.NewCatalog(repositories.New(database.Pool))
+	repository := catalogrepo.New(postgresdb.NewStore(database.Pool))
 	ctx := context.Background()
 
 	proteinRole, err := repository.GetRoleTag(ctx, "protein:lean:breast")
@@ -97,7 +97,7 @@ func TestCatalogRoundTripReplacesAggregateAndPreservesNullNutrition(t *testing.T
 
 func TestCatalogCreateRollsBackWhenRelatedWriteFails(t *testing.T) {
 	database := testpostgres.RequireDatabase(t)
-	repository := repositories.NewCatalog(repositories.New(database.Pool))
+	repository := catalogrepo.New(postgresdb.NewStore(database.Pool))
 	ctrl := gomock.NewController(t)
 	productRepository := catalogmocks.NewMockProductRepository(ctrl)
 	productRepository.EXPECT().

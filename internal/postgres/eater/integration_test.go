@@ -1,6 +1,6 @@
 //go:build integration
 
-package postgres_test
+package eater_test
 
 import (
 	"context"
@@ -14,14 +14,16 @@ import (
 	eaterdom "github.com/ZetoOfficial/meal-planner/internal/domain/eater"
 	apperr "github.com/ZetoOfficial/meal-planner/internal/errors"
 	postgresdb "github.com/ZetoOfficial/meal-planner/internal/postgres"
-	"github.com/ZetoOfficial/meal-planner/internal/postgres/repositories"
+	catalogrepo "github.com/ZetoOfficial/meal-planner/internal/postgres/catalog"
+	eaterrepo "github.com/ZetoOfficial/meal-planner/internal/postgres/eater"
 	testpostgres "github.com/ZetoOfficial/meal-planner/internal/testkit/postgres"
 	eaterusecase "github.com/ZetoOfficial/meal-planner/internal/usecase/eater"
 )
 
 func TestEaterRoundTripProfileGoalFixedMealAndExclusion(t *testing.T) {
 	database := testpostgres.RequireDatabase(t)
-	repository := repositories.NewEater(repositories.New(database.Pool))
+	store := postgresdb.NewStore(database.Pool)
+	repository := eaterrepo.New(store)
 	service := eaterusecase.NewService(repository, postgresdb.NewTxManager(database.Pool), clock.System{})
 	ctx := context.Background()
 
@@ -60,7 +62,7 @@ func TestEaterRoundTripProfileGoalFixedMealAndExclusion(t *testing.T) {
 		t.Fatalf("fixed meal = %#v, %v", meal, err)
 	}
 
-	product, err := repositories.NewCatalog(repositories.New(database.Pool)).Create(ctx, catalogdom.Product{
+	product, err := catalogrepo.New(store).Create(ctx, catalogdom.Product{
 		Brand: "Brand", Name: "Product", ProteinPer100G: 1, FatPer100G: 1, CarbPer100G: 1, KcalPer100G: 10, DefaultUnit: "g", Purchasable: true,
 		DataQuality:    catalogdom.NutritionData{Quality: catalogdom.NutritionDataQualityUnknown},
 		Classification: catalogdom.FoodClassification{FoodGroup: catalogdom.FoodGroupOther, ProcessingLevel: catalogdom.ProcessingLevelUnknown},
@@ -83,7 +85,7 @@ func TestEaterRoundTripProfileGoalFixedMealAndExclusion(t *testing.T) {
 
 func TestEaterUpdateRollsBackProfileAndAllergensWhenGoalDateConflicts(t *testing.T) {
 	database := testpostgres.RequireDatabase(t)
-	service := eaterusecase.NewService(repositories.NewEater(repositories.New(database.Pool)), postgresdb.NewTxManager(database.Pool), clock.System{})
+	service := eaterusecase.NewService(eaterrepo.New(postgresdb.NewStore(database.Pool)), postgresdb.NewTxManager(database.Pool), clock.System{})
 	ctx := context.Background()
 	date := time.Date(2026, 7, 1, 0, 0, 0, 0, time.UTC)
 	created, err := service.CreateEater(ctx, eaterusecase.CreateEaterCommand{
