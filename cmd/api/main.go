@@ -17,8 +17,10 @@ import (
 	"github.com/ZetoOfficial/meal-planner/internal/postgres"
 	catalogrepo "github.com/ZetoOfficial/meal-planner/internal/postgres/catalog"
 	eaterrepo "github.com/ZetoOfficial/meal-planner/internal/postgres/eater"
+	reciperepo "github.com/ZetoOfficial/meal-planner/internal/postgres/recipe"
 	usecasecatalog "github.com/ZetoOfficial/meal-planner/internal/usecase/catalog"
 	usecaseeater "github.com/ZetoOfficial/meal-planner/internal/usecase/eater"
+	usecaserecipe "github.com/ZetoOfficial/meal-planner/internal/usecase/recipe"
 )
 
 const readHeaderTimeout = 10 * time.Second
@@ -56,6 +58,7 @@ func run() error {
 		APIToken: cfg.APIToken,
 		Catalog:  usecasecatalog.NewService(catalogrepo.New(store), tx),
 		Eater:    usecaseeater.NewService(eaterrepo.New(store), tx, clock.System{}),
+		Recipe:   usecaserecipe.NewService(reciperepo.New(store), tx, clock.System{}),
 	})
 
 	srv := &http.Server{

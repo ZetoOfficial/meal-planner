@@ -166,7 +166,7 @@ func (s *Service) productFromCommand(ctx context.Context, command CreateProductC
 		if err != nil {
 			return catalogdom.Product{}, err
 		}
-		if !roleMatchesKind(role) {
+		if !role.MatchesKind() {
 			return catalogdom.Product{}, apperr.Validation("role code does not match role kind", code)
 		}
 		seen[code] = struct{}{}
@@ -256,11 +256,6 @@ func validateRatio(name string, value *float64) error {
 		return apperr.Validation(name + " must be between 0 and 1")
 	}
 	return nil
-}
-
-func roleMatchesKind(role catalogdom.RoleTag) bool {
-	prefix, _, _ := strings.Cut(role.Code, ":")
-	return prefix == string(role.Kind)
 }
 
 func normalizeAllergens(allergens []catalogdom.Allergen) ([]catalogdom.Allergen, error) {

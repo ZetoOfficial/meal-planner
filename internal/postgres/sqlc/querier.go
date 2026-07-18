@@ -17,6 +17,8 @@ type Querier interface {
 	CreateProduct(ctx context.Context, arg CreateProductParams) (Product, error)
 	CreateProductAllergen(ctx context.Context, arg CreateProductAllergenParams) error
 	CreateProductRole(ctx context.Context, arg CreateProductRoleParams) error
+	CreateRecipeSlot(ctx context.Context, arg CreateRecipeSlotParams) (RecipeSlot, error)
+	CreateRecipeTemplate(ctx context.Context, arg CreateRecipeTemplateParams) (RecipeTemplate, error)
 	DeleteEaterAllergens(ctx context.Context, eaterID int64) error
 	DeleteEaterExclusion(ctx context.Context, id int64) (EaterExclusion, error)
 	DeleteProduct(ctx context.Context, id int64) (int64, error)
@@ -26,6 +28,7 @@ type Querier interface {
 	GetEater(ctx context.Context, id int64) (Eater, error)
 	GetProduct(ctx context.Context, id int64) (Product, error)
 	GetProductFoodClassification(ctx context.Context, productID int64) (ProductFoodClassification, error)
+	GetRecipeTemplate(ctx context.Context, id int64) (RecipeTemplate, error)
 	GetRoleTagByCode(ctx context.Context, code string) (RoleTag, error)
 	ListActiveFixedMeals(ctx context.Context, eaterID int64) ([]FixedMeal, error)
 	ListEaterAllergens(ctx context.Context, eaterID int64) ([]string, error)
@@ -36,8 +39,13 @@ type Querier interface {
 	ListProductRoleTags(ctx context.Context, productID int64) ([]RoleTag, error)
 	ListProducts(ctx context.Context) ([]Product, error)
 	ListProductsByRole(ctx context.Context, roleCode string) ([]Product, error)
+	ListRecipeSlotsByTemplate(ctx context.Context, templateID int64) ([]ListRecipeSlotsByTemplateRow, error)
+	ListRecipeTemplates(ctx context.Context) ([]RecipeTemplate, error)
+	ListRecipeTemplatesByStatus(ctx context.Context, status RecipeStatus) ([]RecipeTemplate, error)
 	ListRoleTags(ctx context.Context) ([]RoleTag, error)
 	ProductExists(ctx context.Context, id int64) (bool, error)
+	PromoteRecipeTemplate(ctx context.Context, arg PromoteRecipeTemplateParams) (RecipeTemplate, error)
+	ResolveRecipeRoleTags(ctx context.Context, codes []string) ([]RoleTag, error)
 	RoleTagExists(ctx context.Context, code string) (bool, error)
 	UpdateEater(ctx context.Context, arg UpdateEaterParams) (Eater, error)
 	UpdateProduct(ctx context.Context, arg UpdateProductParams) (Product, error)

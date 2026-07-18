@@ -17,6 +17,7 @@ type Deps struct {
 	APIToken string
 	Catalog  CatalogUseCases
 	Eater    EaterUseCases
+	Recipe   RecipeUseCases
 }
 
 func New(d Deps) http.Handler {
@@ -34,7 +35,7 @@ func New(d Deps) http.Handler {
 	swagger.Servers = nil
 	swagger.Security = nil
 
-	strict := openapi.NewStrictHandlerWithOptions(newAPI(d.Catalog, d.Eater), nil, openapi.StrictHTTPServerOptions{
+	strict := openapi.NewStrictHandlerWithOptions(newAPI(d.Catalog, d.Eater, d.Recipe), nil, openapi.StrictHTTPServerOptions{
 		RequestErrorHandlerFunc: func(w http.ResponseWriter, r *http.Request, err error) {
 			requestError(w, r, err, http.StatusBadRequest)
 		},

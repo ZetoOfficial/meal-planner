@@ -7,8 +7,10 @@ import (
 
 	catalogdom "github.com/ZetoOfficial/meal-planner/internal/domain/catalog"
 	eaterdom "github.com/ZetoOfficial/meal-planner/internal/domain/eater"
+	recipedom "github.com/ZetoOfficial/meal-planner/internal/domain/recipe"
 	usecasecatalog "github.com/ZetoOfficial/meal-planner/internal/usecase/catalog"
 	usecaseeater "github.com/ZetoOfficial/meal-planner/internal/usecase/eater"
+	usecaserecipe "github.com/ZetoOfficial/meal-planner/internal/usecase/recipe"
 )
 
 type CatalogUseCases interface {
@@ -34,11 +36,19 @@ type EaterUseCases interface {
 	DeleteExclusion(context.Context, eaterdom.ExclusionID) error
 }
 
+type RecipeUseCases interface {
+	CreateRecipe(context.Context, usecaserecipe.CreateRecipeCommand) (recipedom.Template, error)
+	ListRecipes(context.Context, *recipedom.Status) ([]recipedom.Template, error)
+	GetRecipe(context.Context, recipedom.ID) (recipedom.Template, error)
+	PromoteRecipe(context.Context, recipedom.ID) (recipedom.Template, error)
+}
+
 type api struct {
 	catalog CatalogUseCases
 	eater   EaterUseCases
+	recipe  RecipeUseCases
 }
 
-func newAPI(catalog CatalogUseCases, eater EaterUseCases) *api {
-	return &api{catalog: catalog, eater: eater}
+func newAPI(catalog CatalogUseCases, eater EaterUseCases, recipe RecipeUseCases) *api {
+	return &api{catalog: catalog, eater: eater, recipe: recipe}
 }
