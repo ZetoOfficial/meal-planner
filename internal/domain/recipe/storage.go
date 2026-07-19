@@ -8,3 +8,21 @@ const (
 	StorageAssembleFresh StorageProfile = "assemble_fresh"
 	StorageEatSameDay    StorageProfile = "eat_same_day"
 )
+
+func (p StorageProfile) Valid() bool {
+	switch p {
+	case StorageKeeps3d, StorageKeeps3dReheat, StorageAssembleFresh, StorageEatSameDay:
+		return true
+	default:
+		return false
+	}
+}
+
+func (p StorageProfile) SupportsMultiDay() bool {
+	switch p {
+	case StorageKeeps3d, StorageKeeps3dReheat, StorageAssembleFresh:
+		return true
+	default:
+		return false
+	}
+}

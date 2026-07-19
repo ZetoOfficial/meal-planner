@@ -55,6 +55,74 @@ func TestUpdateEaterReplacesAllergensAndAppendsGoal(t *testing.T) {
 	}
 }
 
+func TestCreateEaterCommandProfileNormalizesValues(t *testing.T) {
+	command := CreateEaterCommand{
+		Name:      " Sasha ",
+		Allergens: []eaterdom.Allergen{" casein ", "casein", "nuts"},
+	}
+
+	profile, err := command.profile()
+	if err != nil {
+		t.Fatalf("CreateEaterCommand.profile() error = %v", err)
+	}
+	if profile.Name != "Sasha" || profile.Sex != eaterdom.SexUnspecified {
+		t.Fatalf("CreateEaterCommand.profile() = %#v, want normalized defaults", profile)
+	}
+	if !slices.Equal(profile.Allergens, []eaterdom.Allergen{"casein", "nuts"}) {
+		t.Fatalf("CreateEaterCommand.profile() allergens = %#v", profile.Allergens)
+	}
+}
+
+func TestMacroGoalCommandGoalDefaultsEffectiveDate(t *testing.T) {
+	now := time.Date(2026, 7, 19, 12, 30, 0, 0, time.FixedZone("YEKT", 5*60*60))
+	command := MacroGoalCommand{
+		Range: eaterdom.MacroRange{
+			ProteinMaxG: 100,
+			FatMaxG:     50,
+			CarbMaxG:    150,
+			KcalMax:     1800,
+		},
+	}
+
+	goal, err := command.goal(7, now)
+	if err != nil {
+		t.Fatalf("MacroGoalCommand.goal() error = %v", err)
+	}
+	if goal.EaterID != 7 || !goal.EffectiveFrom.Equal(now.UTC().Truncate(dayDuration)) {
+		t.Fatalf("MacroGoalCommand.goal() = %#v, want eater/default date", goal)
+	}
+}
+
+func TestCreateFixedMealCommandMealDefaultsFlags(t *testing.T) {
+	command := CreateFixedMealCommand{
+		MealType: eaterdom.MealTypeBreakfast,
+		Label:    " breakfast ",
+		Macros:   eaterdom.Macros{ProteinG: 20, FatG: 10, CarbG: 30, Kcal: 300},
+	}
+
+	meal := command.meal(3)
+
+	if meal.EaterID != 3 || meal.Label != "breakfast" || !meal.Active {
+		t.Fatalf("CreateFixedMealCommand.meal() = %#v, want normalized meal", meal)
+	}
+	if !meal.Quality.IncludeInAnalytics || !meal.Quality.IncludeInWarnings {
+		t.Fatalf("CreateFixedMealCommand.meal() quality = %#v, want default flags", meal.Quality)
+	}
+}
+
+func TestCreateExclusionCommandExclusionDefaultsSeverity(t *testing.T) {
+	command := CreateExclusionCommand{
+		TargetKind:  eaterdom.ExclusionTargetRoleTag,
+		TargetValue: " protein:lean ",
+	}
+
+	exclusion := command.exclusion(5)
+
+	if exclusion.EaterID != 5 || exclusion.TargetValue != "protein:lean" || exclusion.Severity != eaterdom.ExclusionSeverityHard {
+		t.Fatalf("CreateExclusionCommand.exclusion() = %#v, want normalized defaults", exclusion)
+	}
+}
+
 func TestUpdateEaterSchedulesSameDayGoalForNextAvailableDate(t *testing.T) {
 	service, repository, transactions, clock := newMockService(t)
 	now := time.Date(2026, 7, 12, 18, 30, 0, 0, time.UTC)

@@ -1,5 +1,7 @@
 package catalog
 
+import "strings"
+
 type RoleKind string
 
 const (
@@ -17,4 +19,9 @@ type RoleTag struct {
 	Kind     RoleKind
 	Label    string
 	ParentID *int64
+}
+
+func (r RoleTag) MatchesKind() bool {
+	prefix, _, _ := strings.Cut(r.Code, ":")
+	return prefix == string(r.Kind)
 }

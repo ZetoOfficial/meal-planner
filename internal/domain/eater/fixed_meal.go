@@ -11,6 +11,10 @@ const (
 	MealTypeSnack     MealType = "snack"
 )
 
+func (t MealType) Valid() bool {
+	return t == MealTypeBreakfast || t == MealTypeLunch || t == MealTypeDinner || t == MealTypeSnack
+}
+
 type Macros struct {
 	ProteinG float64
 	FatG     float64

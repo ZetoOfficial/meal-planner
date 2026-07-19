@@ -76,14 +76,14 @@ func (s *Service) ListProducts(ctx context.Context, roleCode string) ([]catalogd
 }
 
 func (s *Service) GetProduct(ctx context.Context, id catalogdom.ProductID) (catalogdom.Product, error) {
-	if id <= 0 {
+	if !id.Valid() {
 		return catalogdom.Product{}, apperr.Validation("product id must be positive")
 	}
 	return s.products.Get(ctx, id)
 }
 
 func (s *Service) UpdateProduct(ctx context.Context, id catalogdom.ProductID, command UpdateProductCommand) (catalogdom.Product, error) {
-	if id <= 0 {
+	if !id.Valid() {
 		return catalogdom.Product{}, apperr.Validation("product id must be positive")
 	}
 	var updated catalogdom.Product
@@ -103,7 +103,7 @@ func (s *Service) UpdateProduct(ctx context.Context, id catalogdom.ProductID, co
 }
 
 func (s *Service) DeleteProduct(ctx context.Context, id catalogdom.ProductID) error {
-	if id <= 0 {
+	if !id.Valid() {
 		return apperr.Validation("product id must be positive")
 	}
 	return s.products.Delete(ctx, id)
@@ -114,6 +114,38 @@ func (s *Service) ListRoleTags(ctx context.Context) ([]catalogdom.RoleTag, error
 }
 
 func (s *Service) productFromCommand(ctx context.Context, command CreateProductCommand) (catalogdom.Product, error) {
+	product, err := command.product()
+	if err != nil {
+		return catalogdom.Product{}, err
+	}
+	if len(command.Roles) == 0 {
+		return catalogdom.Product{}, apperr.Validation("product must have at least one role")
+	}
+	roles := make([]catalogdom.RoleTag, 0, len(command.Roles))
+	seen := make(map[string]struct{}, len(command.Roles))
+	for _, code := range command.Roles {
+		code = strings.TrimSpace(code)
+		if code == "" {
+			return catalogdom.Product{}, apperr.Validation("role code must not be blank")
+		}
+		if _, ok := seen[code]; ok {
+			continue
+		}
+		role, err := s.products.GetRoleTag(ctx, code)
+		if err != nil {
+			return catalogdom.Product{}, err
+		}
+		if !role.MatchesKind() {
+			return catalogdom.Product{}, apperr.Validation("role code does not match role kind", code)
+		}
+		seen[code] = struct{}{}
+		roles = append(roles, role)
+	}
+	product.Roles = roles
+	return product, nil
+}
+
+func (command CreateProductCommand) product() (catalogdom.Product, error) {
 	product := catalogdom.Product{
 		Brand:          strings.TrimSpace(command.Brand),
 		Name:           strings.TrimSpace(command.Name),
@@ -149,30 +181,6 @@ func (s *Service) productFromCommand(ctx context.Context, command CreateProductC
 	if err := validateProduct(product); err != nil {
 		return catalogdom.Product{}, err
 	}
-	if len(command.Roles) == 0 {
-		return catalogdom.Product{}, apperr.Validation("product must have at least one role")
-	}
-	roles := make([]catalogdom.RoleTag, 0, len(command.Roles))
-	seen := make(map[string]struct{}, len(command.Roles))
-	for _, code := range command.Roles {
-		code = strings.TrimSpace(code)
-		if code == "" {
-			return catalogdom.Product{}, apperr.Validation("role code must not be blank")
-		}
-		if _, ok := seen[code]; ok {
-			continue
-		}
-		role, err := s.products.GetRoleTag(ctx, code)
-		if err != nil {
-			return catalogdom.Product{}, err
-		}
-		if !roleMatchesKind(role) {
-			return catalogdom.Product{}, apperr.Validation("role code does not match role kind", code)
-		}
-		seen[code] = struct{}{}
-		roles = append(roles, role)
-	}
-	product.Roles = roles
 	product.DataQuality.Coverage = product.Nutrition.Coverage()
 	return product, nil
 }
@@ -194,16 +202,16 @@ func validateProduct(product catalogdom.Product) error {
 	if err := validateOptionalNumeric("price_per_100g", product.PricePer100G, maxPricePer100G); err != nil {
 		return err
 	}
-	if !validNutritionDataQuality(product.DataQuality.Quality) {
+	if !product.DataQuality.Quality.Valid() {
 		return apperr.Validation("nutrition_data_quality is invalid")
 	}
-	if product.DataQuality.SourceKind != nil && !validSourceKind(*product.DataQuality.SourceKind) {
+	if product.DataQuality.SourceKind != nil && !product.DataQuality.SourceKind.Valid() {
 		return apperr.Validation("source_kind is invalid")
 	}
-	if !validFoodGroup(product.Classification.FoodGroup) {
+	if !product.Classification.FoodGroup.Valid() {
 		return apperr.Validation("food_group is invalid")
 	}
-	if !validProcessingLevel(product.Classification.ProcessingLevel) {
+	if !product.Classification.ProcessingLevel.Valid() {
 		return apperr.Validation("processing_level is invalid")
 	}
 	for name, value := range map[string]optionalNumericInput{
@@ -258,11 +266,6 @@ func validateRatio(name string, value *float64) error {
 	return nil
 }
 
-func roleMatchesKind(role catalogdom.RoleTag) bool {
-	prefix, _, _ := strings.Cut(role.Code, ":")
-	return prefix == string(role.Kind)
-}
-
 func normalizeAllergens(allergens []catalogdom.Allergen) ([]catalogdom.Allergen, error) {
 	normalized := make([]catalogdom.Allergen, 0, len(allergens))
 	seen := make(map[catalogdom.Allergen]struct{}, len(allergens))
@@ -278,67 +281,4 @@ func normalizeAllergens(allergens []catalogdom.Allergen) ([]catalogdom.Allergen,
 		normalized = append(normalized, allergen)
 	}
 	return normalized, nil
-}
-
-func validNutritionDataQuality(value catalogdom.NutritionDataQuality) bool {
-	switch value {
-	case catalogdom.NutritionDataQualityLabelExact,
-		catalogdom.NutritionDataQualityTrustedDB,
-		catalogdom.NutritionDataQualityEstimated,
-		catalogdom.NutritionDataQualityUnknown:
-		return true
-	default:
-		return false
-	}
-}
-
-func validSourceKind(value catalogdom.SourceKind) bool {
-	switch value {
-	case catalogdom.SourceKindPackLabel,
-		catalogdom.SourceKindStoreCard,
-		catalogdom.SourceKindCompositionTable,
-		catalogdom.SourceKindManualEstimate:
-		return true
-	default:
-		return false
-	}
-}
-
-func validFoodGroup(value catalogdom.FoodGroup) bool {
-	switch value {
-	case catalogdom.FoodGroupFruit,
-		catalogdom.FoodGroupVegetable,
-		catalogdom.FoodGroupPotato,
-		catalogdom.FoodGroupGrain,
-		catalogdom.FoodGroupLegume,
-		catalogdom.FoodGroupNutsSeeds,
-		catalogdom.FoodGroupDairy,
-		catalogdom.FoodGroupDairyAlt,
-		catalogdom.FoodGroupFishSeafood,
-		catalogdom.FoodGroupEgg,
-		catalogdom.FoodGroupRedMeat,
-		catalogdom.FoodGroupWhiteMeat,
-		catalogdom.FoodGroupProcessedMeat,
-		catalogdom.FoodGroupMixed,
-		catalogdom.FoodGroupSauceCondiment,
-		catalogdom.FoodGroupConfectionery,
-		catalogdom.FoodGroupBeverage,
-		catalogdom.FoodGroupOther:
-		return true
-	default:
-		return false
-	}
-}
-
-func validProcessingLevel(value catalogdom.ProcessingLevel) bool {
-	switch value {
-	case catalogdom.ProcessingLevelMinimallyProcessed,
-		catalogdom.ProcessingLevelProcessedCulinary,
-		catalogdom.ProcessingLevelProcessedFood,
-		catalogdom.ProcessingLevelUltraProcessed,
-		catalogdom.ProcessingLevelUnknown:
-		return true
-	default:
-		return false
-	}
 }

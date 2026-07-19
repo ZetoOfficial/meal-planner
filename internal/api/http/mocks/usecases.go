@@ -15,8 +15,10 @@ import (
 
 	catalog "github.com/ZetoOfficial/meal-planner/internal/domain/catalog"
 	eater "github.com/ZetoOfficial/meal-planner/internal/domain/eater"
+	recipe "github.com/ZetoOfficial/meal-planner/internal/domain/recipe"
 	catalog0 "github.com/ZetoOfficial/meal-planner/internal/usecase/catalog"
 	eater0 "github.com/ZetoOfficial/meal-planner/internal/usecase/eater"
+	recipe0 "github.com/ZetoOfficial/meal-planner/internal/usecase/recipe"
 	gomock "go.uber.org/mock/gomock"
 )
 
@@ -319,4 +321,88 @@ func (m *MockEaterUseCases) UpdateEater(arg0 context.Context, arg1 eater.ID, arg
 func (mr *MockEaterUseCasesMockRecorder) UpdateEater(arg0, arg1, arg2 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateEater", reflect.TypeOf((*MockEaterUseCases)(nil).UpdateEater), arg0, arg1, arg2)
+}
+
+// MockRecipeUseCases is a mock of RecipeUseCases interface.
+type MockRecipeUseCases struct {
+	ctrl     *gomock.Controller
+	recorder *MockRecipeUseCasesMockRecorder
+	isgomock struct{}
+}
+
+// MockRecipeUseCasesMockRecorder is the mock recorder for MockRecipeUseCases.
+type MockRecipeUseCasesMockRecorder struct {
+	mock *MockRecipeUseCases
+}
+
+// NewMockRecipeUseCases creates a new mock instance.
+func NewMockRecipeUseCases(ctrl *gomock.Controller) *MockRecipeUseCases {
+	mock := &MockRecipeUseCases{ctrl: ctrl}
+	mock.recorder = &MockRecipeUseCasesMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockRecipeUseCases) EXPECT() *MockRecipeUseCasesMockRecorder {
+	return m.recorder
+}
+
+// CreateRecipe mocks base method.
+func (m *MockRecipeUseCases) CreateRecipe(arg0 context.Context, arg1 recipe0.CreateRecipeCommand) (recipe.Template, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateRecipe", arg0, arg1)
+	ret0, _ := ret[0].(recipe.Template)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// CreateRecipe indicates an expected call of CreateRecipe.
+func (mr *MockRecipeUseCasesMockRecorder) CreateRecipe(arg0, arg1 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateRecipe", reflect.TypeOf((*MockRecipeUseCases)(nil).CreateRecipe), arg0, arg1)
+}
+
+// GetRecipe mocks base method.
+func (m *MockRecipeUseCases) GetRecipe(arg0 context.Context, arg1 recipe.ID) (recipe.Template, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetRecipe", arg0, arg1)
+	ret0, _ := ret[0].(recipe.Template)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetRecipe indicates an expected call of GetRecipe.
+func (mr *MockRecipeUseCasesMockRecorder) GetRecipe(arg0, arg1 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetRecipe", reflect.TypeOf((*MockRecipeUseCases)(nil).GetRecipe), arg0, arg1)
+}
+
+// ListRecipes mocks base method.
+func (m *MockRecipeUseCases) ListRecipes(arg0 context.Context, arg1 *recipe.Status) ([]recipe.Template, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListRecipes", arg0, arg1)
+	ret0, _ := ret[0].([]recipe.Template)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListRecipes indicates an expected call of ListRecipes.
+func (mr *MockRecipeUseCasesMockRecorder) ListRecipes(arg0, arg1 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListRecipes", reflect.TypeOf((*MockRecipeUseCases)(nil).ListRecipes), arg0, arg1)
+}
+
+// PromoteRecipe mocks base method.
+func (m *MockRecipeUseCases) PromoteRecipe(arg0 context.Context, arg1 recipe.ID) (recipe.Template, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "PromoteRecipe", arg0, arg1)
+	ret0, _ := ret[0].(recipe.Template)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// PromoteRecipe indicates an expected call of PromoteRecipe.
+func (mr *MockRecipeUseCasesMockRecorder) PromoteRecipe(arg0, arg1 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PromoteRecipe", reflect.TypeOf((*MockRecipeUseCases)(nil).PromoteRecipe), arg0, arg1)
 }
