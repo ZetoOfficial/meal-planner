@@ -10,6 +10,10 @@ const (
 	SexUnspecified Sex = "unspecified"
 )
 
+func (s Sex) Valid() bool {
+	return s == SexMale || s == SexFemale || s == SexUnspecified
+}
+
 type Eater struct {
 	ID          ID
 	Name        string

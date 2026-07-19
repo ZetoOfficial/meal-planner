@@ -4,7 +4,6 @@ import (
 	"context"
 	"strings"
 
-	"github.com/ZetoOfficial/meal-planner/internal/domain/catalog"
 	recipedom "github.com/ZetoOfficial/meal-planner/internal/domain/recipe"
 	apperr "github.com/ZetoOfficial/meal-planner/internal/errors"
 )
@@ -46,12 +45,12 @@ func (s *Service) CreateRecipe(ctx context.Context, command CreateRecipeCommand)
 	template := templateFromCommand(command)
 	var created recipedom.Template
 	err := s.transactions.WithTx(ctx, func(ctx context.Context) error {
-		roles, err := s.recipes.ResolveRoleTags(ctx, roleCodes(template))
+		roles, err := s.recipes.ResolveRoleTags(ctx, template.RoleCodes())
 		if err != nil {
 			return err
 		}
-		if err := validateTemplate(template, roles); err != nil {
-			return err
+		if err := template.Validate(roles); err != nil {
+			return apperr.Validation(err.Error())
 		}
 		created, err = s.recipes.Create(ctx, template, roles)
 		return err
@@ -63,7 +62,7 @@ func (s *Service) CreateRecipe(ctx context.Context, command CreateRecipeCommand)
 }
 
 func (s *Service) ListRecipes(ctx context.Context, status *recipedom.Status) ([]recipedom.Template, error) {
-	if status != nil && !validStatus(*status) {
+	if status != nil && !status.Valid() {
 		return nil, apperr.Validation("recipe status is invalid")
 	}
 	return s.recipes.List(ctx, status)
@@ -86,12 +85,12 @@ func (s *Service) PromoteRecipe(ctx context.Context, id recipedom.ID) (recipedom
 		if err != nil {
 			return err
 		}
-		roles, err := s.recipes.ResolveRoleTags(ctx, roleCodes(template))
+		roles, err := s.recipes.ResolveRoleTags(ctx, template.RoleCodes())
 		if err != nil {
 			return err
 		}
-		if err := validateTemplate(template, roles); err != nil {
-			return err
+		if err := template.Validate(roles); err != nil {
+			return apperr.Validation(err.Error())
 		}
 		if template.Status != recipedom.StatusDraft {
 			return apperr.Conflict("only draft recipes can be promoted")
@@ -163,33 +162,4 @@ func normalizedEquipment(values []string) []string {
 		result = append(result, normalized)
 	}
 	return result
-}
-
-func roleCodes(template recipedom.Template) []string {
-	result := make([]string, 0, len(template.Slots))
-	seen := make(map[string]struct{}, len(template.Slots))
-	for _, slot := range template.Slots {
-		if _, exists := seen[slot.RoleTagCode]; exists {
-			continue
-		}
-		seen[slot.RoleTagCode] = struct{}{}
-		result = append(result, slot.RoleTagCode)
-	}
-	return result
-}
-
-func validateTemplate(template recipedom.Template, roles map[string]catalog.RoleTag) error {
-	if err := recipedom.Validate(template, roles); err != nil {
-		return apperr.Validation(err.Error())
-	}
-	return nil
-}
-
-func validStatus(status recipedom.Status) bool {
-	switch status {
-	case recipedom.StatusDraft, recipedom.StatusPermanent, recipedom.StatusRejected:
-		return true
-	default:
-		return false
-	}
 }

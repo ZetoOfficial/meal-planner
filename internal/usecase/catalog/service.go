@@ -194,16 +194,16 @@ func validateProduct(product catalogdom.Product) error {
 	if err := validateOptionalNumeric("price_per_100g", product.PricePer100G, maxPricePer100G); err != nil {
 		return err
 	}
-	if !validNutritionDataQuality(product.DataQuality.Quality) {
+	if !product.DataQuality.Quality.Valid() {
 		return apperr.Validation("nutrition_data_quality is invalid")
 	}
-	if product.DataQuality.SourceKind != nil && !validSourceKind(*product.DataQuality.SourceKind) {
+	if product.DataQuality.SourceKind != nil && !product.DataQuality.SourceKind.Valid() {
 		return apperr.Validation("source_kind is invalid")
 	}
-	if !validFoodGroup(product.Classification.FoodGroup) {
+	if !product.Classification.FoodGroup.Valid() {
 		return apperr.Validation("food_group is invalid")
 	}
-	if !validProcessingLevel(product.Classification.ProcessingLevel) {
+	if !product.Classification.ProcessingLevel.Valid() {
 		return apperr.Validation("processing_level is invalid")
 	}
 	for name, value := range map[string]optionalNumericInput{
@@ -273,67 +273,4 @@ func normalizeAllergens(allergens []catalogdom.Allergen) ([]catalogdom.Allergen,
 		normalized = append(normalized, allergen)
 	}
 	return normalized, nil
-}
-
-func validNutritionDataQuality(value catalogdom.NutritionDataQuality) bool {
-	switch value {
-	case catalogdom.NutritionDataQualityLabelExact,
-		catalogdom.NutritionDataQualityTrustedDB,
-		catalogdom.NutritionDataQualityEstimated,
-		catalogdom.NutritionDataQualityUnknown:
-		return true
-	default:
-		return false
-	}
-}
-
-func validSourceKind(value catalogdom.SourceKind) bool {
-	switch value {
-	case catalogdom.SourceKindPackLabel,
-		catalogdom.SourceKindStoreCard,
-		catalogdom.SourceKindCompositionTable,
-		catalogdom.SourceKindManualEstimate:
-		return true
-	default:
-		return false
-	}
-}
-
-func validFoodGroup(value catalogdom.FoodGroup) bool {
-	switch value {
-	case catalogdom.FoodGroupFruit,
-		catalogdom.FoodGroupVegetable,
-		catalogdom.FoodGroupPotato,
-		catalogdom.FoodGroupGrain,
-		catalogdom.FoodGroupLegume,
-		catalogdom.FoodGroupNutsSeeds,
-		catalogdom.FoodGroupDairy,
-		catalogdom.FoodGroupDairyAlt,
-		catalogdom.FoodGroupFishSeafood,
-		catalogdom.FoodGroupEgg,
-		catalogdom.FoodGroupRedMeat,
-		catalogdom.FoodGroupWhiteMeat,
-		catalogdom.FoodGroupProcessedMeat,
-		catalogdom.FoodGroupMixed,
-		catalogdom.FoodGroupSauceCondiment,
-		catalogdom.FoodGroupConfectionery,
-		catalogdom.FoodGroupBeverage,
-		catalogdom.FoodGroupOther:
-		return true
-	default:
-		return false
-	}
-}
-
-func validProcessingLevel(value catalogdom.ProcessingLevel) bool {
-	switch value {
-	case catalogdom.ProcessingLevelMinimallyProcessed,
-		catalogdom.ProcessingLevelProcessedCulinary,
-		catalogdom.ProcessingLevelProcessedFood,
-		catalogdom.ProcessingLevelUltraProcessed,
-		catalogdom.ProcessingLevelUnknown:
-		return true
-	default:
-		return false
-	}
 }

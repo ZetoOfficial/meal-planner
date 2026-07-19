@@ -18,8 +18,8 @@ func TestValidateAcceptsRoleBasedTemplate(t *testing.T) {
 		},
 	}
 
-	if err := Validate(template, roles); err != nil {
-		t.Fatalf("Validate() error = %v", err)
+	if err := template.Validate(roles); err != nil {
+		t.Fatalf("Template.Validate() error = %v", err)
 	}
 }
 
@@ -35,8 +35,8 @@ func TestValidateAcceptsRootRoleMatchingItsKind(t *testing.T) {
 		},
 	}
 
-	if err := Validate(template, roles); err != nil {
-		t.Fatalf("Validate() error = %v", err)
+	if err := template.Validate(roles); err != nil {
+		t.Fatalf("Template.Validate() error = %v", err)
 	}
 }
 
@@ -123,11 +123,52 @@ func TestValidateRejectsInvalidTemplate(t *testing.T) {
 			template := validTemplate()
 			test.mutate(&template)
 
-			err := Validate(template, test.roles)
+			err := template.Validate(test.roles)
 			if err == nil || !strings.Contains(err.Error(), test.message) {
-				t.Fatalf("Validate() error = %v, want containing %q", err, test.message)
+				t.Fatalf("Template.Validate() error = %v, want containing %q", err, test.message)
 			}
 		})
+	}
+}
+
+func TestTemplateRoleCodesPreservesFirstSlotOrder(t *testing.T) {
+	template := validTemplate()
+	template.Slots = append(template.Slots,
+		Slot{RoleTagCode: "veg:green", Position: 1},
+		Slot{RoleTagCode: "protein:lean", Position: 2},
+	)
+
+	got := template.RoleCodes()
+	want := []string{"protein:lean", "veg:green"}
+	if len(got) != len(want) {
+		t.Fatalf("Template.RoleCodes() = %v, want %v", got, want)
+	}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Fatalf("Template.RoleCodes() = %v, want %v", got, want)
+		}
+	}
+}
+
+func TestRecipeEnumValidity(t *testing.T) {
+	for value, want := range map[Status]bool{
+		StatusDraft:       true,
+		StatusPermanent:   true,
+		StatusRejected:    true,
+		Status("unknown"): false,
+	} {
+		if got := value.Valid(); got != want {
+			t.Errorf("Status(%q).Valid() = %t, want %t", value, got, want)
+		}
+	}
+	for value, want := range map[Source]bool{
+		SourceLLM:         true,
+		SourceManual:      true,
+		Source("unknown"): false,
+	} {
+		if got := value.Valid(); got != want {
+			t.Errorf("Source(%q).Valid() = %t, want %t", value, got, want)
+		}
 	}
 }
 

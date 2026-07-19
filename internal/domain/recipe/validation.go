@@ -14,7 +14,7 @@ const (
 	maxSlotQuantity = 999_999.9
 )
 
-func Validate(template Template, roles map[string]catalog.RoleTag) error {
+func (template Template) Validate(roles map[string]catalog.RoleTag) error {
 	if err := validateTemplateFields(template); err != nil {
 		return err
 	}
@@ -28,10 +28,10 @@ func validateTemplateFields(template Template) error {
 	if strings.TrimSpace(template.Name) == "" {
 		return errors.New("recipe name must not be blank")
 	}
-	if !validStatus(template.Status) {
+	if !template.Status.Valid() {
 		return fmt.Errorf("recipe status %q is invalid", template.Status)
 	}
-	if !validSource(template.Source) {
+	if !template.Source.Valid() {
 		return fmt.Errorf("recipe source %q is invalid", template.Source)
 	}
 	if !template.Storage.Valid() {
@@ -97,22 +97,4 @@ func validateSlot(slot Slot, roles map[string]catalog.RoleTag) error {
 		return fmt.Errorf("recipe slot role %q is incompatible with role kind %q", role.Code, role.Kind)
 	}
 	return nil
-}
-
-func validStatus(status Status) bool {
-	switch status {
-	case StatusDraft, StatusPermanent, StatusRejected:
-		return true
-	default:
-		return false
-	}
-}
-
-func validSource(source Source) bool {
-	switch source {
-	case SourceLLM, SourceManual:
-		return true
-	default:
-		return false
-	}
 }

@@ -44,6 +44,32 @@ const (
 	FoodGroupOther          FoodGroup = "other"
 )
 
+func (g FoodGroup) Valid() bool {
+	switch g {
+	case FoodGroupFruit,
+		FoodGroupVegetable,
+		FoodGroupPotato,
+		FoodGroupGrain,
+		FoodGroupLegume,
+		FoodGroupNutsSeeds,
+		FoodGroupDairy,
+		FoodGroupDairyAlt,
+		FoodGroupFishSeafood,
+		FoodGroupEgg,
+		FoodGroupRedMeat,
+		FoodGroupWhiteMeat,
+		FoodGroupProcessedMeat,
+		FoodGroupMixed,
+		FoodGroupSauceCondiment,
+		FoodGroupConfectionery,
+		FoodGroupBeverage,
+		FoodGroupOther:
+		return true
+	default:
+		return false
+	}
+}
+
 type ProcessingLevel string
 
 const (
@@ -53,6 +79,19 @@ const (
 	ProcessingLevelUltraProcessed     ProcessingLevel = "ultra_processed"
 	ProcessingLevelUnknown            ProcessingLevel = "unknown"
 )
+
+func (l ProcessingLevel) Valid() bool {
+	switch l {
+	case ProcessingLevelMinimallyProcessed,
+		ProcessingLevelProcessedCulinary,
+		ProcessingLevelProcessedFood,
+		ProcessingLevelUltraProcessed,
+		ProcessingLevelUnknown:
+		return true
+	default:
+		return false
+	}
+}
 
 type FoodClassification struct {
 	FoodGroup            FoodGroup

@@ -213,7 +213,7 @@ func profileFromCommand(command CreateEaterCommand, now time.Time) (eaterdom.Eat
 	if profile.Sex == "" {
 		profile.Sex = eaterdom.SexUnspecified
 	}
-	if !validSex(profile.Sex) {
+	if !profile.Sex.Valid() {
 		return eaterdom.Eater{}, eaterdom.MacroGoal{}, apperr.Validation("sex is invalid")
 	}
 	allergens, err := normalizeAllergens(command.Allergens)
@@ -269,7 +269,7 @@ func validateMacroRange(value eaterdom.MacroRange) error {
 }
 
 func validateFixedMeal(meal *eaterdom.FixedMeal) error {
-	if !validMealType(meal.MealType) || meal.Label == "" {
+	if !meal.MealType.Valid() || meal.Label == "" {
 		return apperr.Validation("fixed meal type and label are required")
 	}
 	for name, value := range map[string]float64{
@@ -332,7 +332,7 @@ func (s *Service) validateExclusion(ctx context.Context, exclusion eaterdom.Excl
 	}
 	switch exclusion.TargetKind {
 	case eaterdom.ExclusionTargetFoodGroup:
-		if !validFoodGroup(catalogdom.FoodGroup(exclusion.TargetValue)) {
+		if !catalogdom.FoodGroup(exclusion.TargetValue).Valid() {
 			return apperr.Validation("exclusion food group is invalid")
 		}
 	case eaterdom.ExclusionTargetRoleTag:
@@ -376,21 +376,4 @@ func normalizeAllergens(values []eaterdom.Allergen) ([]eaterdom.Allergen, error)
 		result = append(result, value)
 	}
 	return result, nil
-}
-
-func validSex(value eaterdom.Sex) bool {
-	return value == eaterdom.SexMale || value == eaterdom.SexFemale || value == eaterdom.SexUnspecified
-}
-
-func validMealType(value eaterdom.MealType) bool {
-	return value == eaterdom.MealTypeBreakfast || value == eaterdom.MealTypeLunch || value == eaterdom.MealTypeDinner || value == eaterdom.MealTypeSnack
-}
-
-func validFoodGroup(value catalogdom.FoodGroup) bool {
-	switch value {
-	case catalogdom.FoodGroupFruit, catalogdom.FoodGroupVegetable, catalogdom.FoodGroupPotato, catalogdom.FoodGroupGrain, catalogdom.FoodGroupLegume, catalogdom.FoodGroupNutsSeeds, catalogdom.FoodGroupDairy, catalogdom.FoodGroupDairyAlt, catalogdom.FoodGroupFishSeafood, catalogdom.FoodGroupEgg, catalogdom.FoodGroupRedMeat, catalogdom.FoodGroupWhiteMeat, catalogdom.FoodGroupProcessedMeat, catalogdom.FoodGroupMixed, catalogdom.FoodGroupSauceCondiment, catalogdom.FoodGroupConfectionery, catalogdom.FoodGroupBeverage, catalogdom.FoodGroupOther:
-		return true
-	default:
-		return false
-	}
 }

@@ -49,6 +49,18 @@ const (
 	NutritionDataQualityUnknown    NutritionDataQuality = "unknown"
 )
 
+func (q NutritionDataQuality) Valid() bool {
+	switch q {
+	case NutritionDataQualityLabelExact,
+		NutritionDataQualityTrustedDB,
+		NutritionDataQualityEstimated,
+		NutritionDataQualityUnknown:
+		return true
+	default:
+		return false
+	}
+}
+
 type SourceKind string
 
 const (
@@ -57,6 +69,18 @@ const (
 	SourceKindCompositionTable SourceKind = "composition_table"
 	SourceKindManualEstimate   SourceKind = "manual_estimate"
 )
+
+func (k SourceKind) Valid() bool {
+	switch k {
+	case SourceKindPackLabel,
+		SourceKindStoreCard,
+		SourceKindCompositionTable,
+		SourceKindManualEstimate:
+		return true
+	default:
+		return false
+	}
+}
 
 type NutritionData struct {
 	Quality        NutritionDataQuality

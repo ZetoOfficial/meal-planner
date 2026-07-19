@@ -28,6 +28,7 @@ Core rules:
 - Configure `slog.Default()` once in `cmd/api`; do not inject or store loggers in application structs.
 - Apply KISS and Pareto: add an abstraction only for a current repeated need, not for hypothetical reuse.
 - Do not create empty types only to namespace stateless helpers; use package-level functions when no state or interface is required.
+- Put behavior owned entirely by one domain value on that type (`value.Valid()`, `entity.Validate()`, derived value queries); keep package-level functions for collection algorithms, mappings, and orchestration without a natural receiver.
 - Add Postgres adapters as capability packages such as `internal/postgres/catalog` and `internal/postgres/eater`; keep each capability's repository, sqlc mapping, and integration tests together.
 - Keep connection, transaction, and context-aware query-executor plumbing in `internal/postgres`; share only repeated provider-specific primitives through narrowly named packages such as `pgvalue` or `dberror`. Do not introduce generic repository or mapper frameworks.
 - In adapters that must remain one package, group handlers and mappings by capability using files such as `catalog_handlers.go` and `catalog_mapping.go`. Do not create empty packages for roadmap capabilities before their implementation starts.
