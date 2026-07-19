@@ -42,7 +42,7 @@ type CreateRecipeCommand struct {
 }
 
 func (s *Service) CreateRecipe(ctx context.Context, command CreateRecipeCommand) (recipedom.Template, error) {
-	template := templateFromCommand(command)
+	template := command.template()
 	var created recipedom.Template
 	err := s.transactions.WithTx(ctx, func(ctx context.Context) error {
 		roles, err := s.recipes.ResolveRoleTags(ctx, template.RoleCodes())
@@ -69,14 +69,14 @@ func (s *Service) ListRecipes(ctx context.Context, status *recipedom.Status) ([]
 }
 
 func (s *Service) GetRecipe(ctx context.Context, id recipedom.ID) (recipedom.Template, error) {
-	if id <= 0 {
+	if !id.Valid() {
 		return recipedom.Template{}, apperr.Validation("recipe id must be positive")
 	}
 	return s.recipes.Get(ctx, id)
 }
 
 func (s *Service) PromoteRecipe(ctx context.Context, id recipedom.ID) (recipedom.Template, error) {
-	if id <= 0 {
+	if !id.Valid() {
 		return recipedom.Template{}, apperr.Validation("recipe id must be positive")
 	}
 	var promoted recipedom.Template
@@ -108,7 +108,7 @@ func (s *Service) ListPermanentCandidates(ctx context.Context) ([]recipedom.Temp
 	return s.recipes.ListPermanentCandidates(ctx)
 }
 
-func templateFromCommand(command CreateRecipeCommand) recipedom.Template {
+func (command CreateRecipeCommand) template() recipedom.Template {
 	template := recipedom.Template{
 		Name:          strings.TrimSpace(command.Name),
 		Status:        recipedom.StatusDraft,
@@ -123,20 +123,24 @@ func templateFromCommand(command CreateRecipeCommand) recipedom.Template {
 		Slots:         make([]recipedom.Slot, len(command.Slots)),
 	}
 	for i, slot := range command.Slots {
-		unit := strings.TrimSpace(slot.Unit)
-		if unit == "" {
-			unit = "g"
-		}
-		template.Slots[i] = recipedom.Slot{
-			RoleTagCode: strings.TrimSpace(slot.RoleTagCode),
-			Label:       strings.TrimSpace(slot.Label),
-			Qty:         slot.Qty,
-			Unit:        unit,
-			Position:    slot.Position,
-			Optional:    slot.Optional,
-		}
+		template.Slots[i] = slot.slot()
 	}
 	return template
+}
+
+func (command SlotCommand) slot() recipedom.Slot {
+	unit := strings.TrimSpace(command.Unit)
+	if unit == "" {
+		unit = "g"
+	}
+	return recipedom.Slot{
+		RoleTagCode: strings.TrimSpace(command.RoleTagCode),
+		Label:       strings.TrimSpace(command.Label),
+		Qty:         command.Qty,
+		Unit:        unit,
+		Position:    command.Position,
+		Optional:    command.Optional,
+	}
 }
 
 func normalizedOptional(value *string) *string {

@@ -28,3 +28,16 @@ func TestMealTypeValid(t *testing.T) {
 		t.Error("MealType(\"invalid\").Valid() = true, want false")
 	}
 }
+
+func TestIDsValid(t *testing.T) {
+	for value, want := range map[ID]bool{1: true, 0: false, -1: false} {
+		if got := value.Valid(); got != want {
+			t.Errorf("ID(%d).Valid() = %t, want %t", value, got, want)
+		}
+	}
+	for value, want := range map[ExclusionID]bool{1: true, 0: false, -1: false} {
+		if got := value.Valid(); got != want {
+			t.Errorf("ExclusionID(%d).Valid() = %t, want %t", value, got, want)
+		}
+	}
+}

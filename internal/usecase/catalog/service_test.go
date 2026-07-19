@@ -29,6 +29,34 @@ func TestCreateProductRejectsNegativeNutritionValue(t *testing.T) {
 	assertErrorCode(t, err, apperr.CodeValidation)
 }
 
+func TestCreateProductCommandProductNormalizesDefaults(t *testing.T) {
+	command := CreateProductCommand{
+		Brand:     " Brand ",
+		Name:      " Product ",
+		Allergens: []catalogdom.Allergen{" nuts ", "nuts"},
+		Nutrition: catalogdom.NutritionFacts{
+			FiberPer100G:                      float64ptr(1.5),
+			ContainsPartiallyHydrogenatedOils: boolptr(false),
+		},
+	}
+
+	product, err := command.product()
+	if err != nil {
+		t.Fatalf("CreateProductCommand.product() error = %v", err)
+	}
+	if product.Brand != "Brand" || product.Name != "Product" || product.DefaultUnit != "g" {
+		t.Fatalf("CreateProductCommand.product() = %#v, want normalized defaults", product)
+	}
+	if product.DataQuality.Quality != catalogdom.NutritionDataQualityUnknown ||
+		product.Classification.FoodGroup != catalogdom.FoodGroupOther ||
+		product.Classification.ProcessingLevel != catalogdom.ProcessingLevelUnknown {
+		t.Fatalf("CreateProductCommand.product() classification = %#v/%#v", product.DataQuality, product.Classification)
+	}
+	if !slices.Equal(product.Allergens, []catalogdom.Allergen{"nuts"}) || product.DataQuality.Coverage != 0.2 {
+		t.Fatalf("CreateProductCommand.product() allergens/coverage = %#v/%v", product.Allergens, product.DataQuality.Coverage)
+	}
+}
+
 func TestCreateProductRejectsNegativeRequiredMacro(t *testing.T) {
 	service, _ := newCatalogService(t)
 

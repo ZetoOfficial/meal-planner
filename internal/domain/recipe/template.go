@@ -4,6 +4,10 @@ import "time"
 
 type ID int64
 
+func (id ID) Valid() bool {
+	return id > 0
+}
+
 type Status string
 
 const (

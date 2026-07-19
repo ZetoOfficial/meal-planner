@@ -76,14 +76,14 @@ func (s *Service) ListProducts(ctx context.Context, roleCode string) ([]catalogd
 }
 
 func (s *Service) GetProduct(ctx context.Context, id catalogdom.ProductID) (catalogdom.Product, error) {
-	if id <= 0 {
+	if !id.Valid() {
 		return catalogdom.Product{}, apperr.Validation("product id must be positive")
 	}
 	return s.products.Get(ctx, id)
 }
 
 func (s *Service) UpdateProduct(ctx context.Context, id catalogdom.ProductID, command UpdateProductCommand) (catalogdom.Product, error) {
-	if id <= 0 {
+	if !id.Valid() {
 		return catalogdom.Product{}, apperr.Validation("product id must be positive")
 	}
 	var updated catalogdom.Product
@@ -103,7 +103,7 @@ func (s *Service) UpdateProduct(ctx context.Context, id catalogdom.ProductID, co
 }
 
 func (s *Service) DeleteProduct(ctx context.Context, id catalogdom.ProductID) error {
-	if id <= 0 {
+	if !id.Valid() {
 		return apperr.Validation("product id must be positive")
 	}
 	return s.products.Delete(ctx, id)
@@ -114,6 +114,38 @@ func (s *Service) ListRoleTags(ctx context.Context) ([]catalogdom.RoleTag, error
 }
 
 func (s *Service) productFromCommand(ctx context.Context, command CreateProductCommand) (catalogdom.Product, error) {
+	product, err := command.product()
+	if err != nil {
+		return catalogdom.Product{}, err
+	}
+	if len(command.Roles) == 0 {
+		return catalogdom.Product{}, apperr.Validation("product must have at least one role")
+	}
+	roles := make([]catalogdom.RoleTag, 0, len(command.Roles))
+	seen := make(map[string]struct{}, len(command.Roles))
+	for _, code := range command.Roles {
+		code = strings.TrimSpace(code)
+		if code == "" {
+			return catalogdom.Product{}, apperr.Validation("role code must not be blank")
+		}
+		if _, ok := seen[code]; ok {
+			continue
+		}
+		role, err := s.products.GetRoleTag(ctx, code)
+		if err != nil {
+			return catalogdom.Product{}, err
+		}
+		if !role.MatchesKind() {
+			return catalogdom.Product{}, apperr.Validation("role code does not match role kind", code)
+		}
+		seen[code] = struct{}{}
+		roles = append(roles, role)
+	}
+	product.Roles = roles
+	return product, nil
+}
+
+func (command CreateProductCommand) product() (catalogdom.Product, error) {
 	product := catalogdom.Product{
 		Brand:          strings.TrimSpace(command.Brand),
 		Name:           strings.TrimSpace(command.Name),
@@ -149,30 +181,6 @@ func (s *Service) productFromCommand(ctx context.Context, command CreateProductC
 	if err := validateProduct(product); err != nil {
 		return catalogdom.Product{}, err
 	}
-	if len(command.Roles) == 0 {
-		return catalogdom.Product{}, apperr.Validation("product must have at least one role")
-	}
-	roles := make([]catalogdom.RoleTag, 0, len(command.Roles))
-	seen := make(map[string]struct{}, len(command.Roles))
-	for _, code := range command.Roles {
-		code = strings.TrimSpace(code)
-		if code == "" {
-			return catalogdom.Product{}, apperr.Validation("role code must not be blank")
-		}
-		if _, ok := seen[code]; ok {
-			continue
-		}
-		role, err := s.products.GetRoleTag(ctx, code)
-		if err != nil {
-			return catalogdom.Product{}, err
-		}
-		if !role.MatchesKind() {
-			return catalogdom.Product{}, apperr.Validation("role code does not match role kind", code)
-		}
-		seen[code] = struct{}{}
-		roles = append(roles, role)
-	}
-	product.Roles = roles
 	product.DataQuality.Coverage = product.Nutrition.Coverage()
 	return product, nil
 }

@@ -2,6 +2,14 @@ package catalog
 
 import "testing"
 
+func TestProductIDValid(t *testing.T) {
+	for value, want := range map[ProductID]bool{1: true, 0: false, -1: false} {
+		if got := value.Valid(); got != want {
+			t.Errorf("ProductID(%d).Valid() = %t, want %t", value, got, want)
+		}
+	}
+}
+
 func TestNutritionDataQualityValid(t *testing.T) {
 	for _, value := range []NutritionDataQuality{
 		NutritionDataQualityLabelExact,

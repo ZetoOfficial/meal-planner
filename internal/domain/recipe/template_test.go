@@ -172,6 +172,18 @@ func TestRecipeEnumValidity(t *testing.T) {
 	}
 }
 
+func TestIDValid(t *testing.T) {
+	for value, want := range map[ID]bool{
+		1:  true,
+		0:  false,
+		-1: false,
+	} {
+		if got := value.Valid(); got != want {
+			t.Errorf("ID(%d).Valid() = %t, want %t", value, got, want)
+		}
+	}
+}
+
 func TestStorageProfileSupportsMultiDay(t *testing.T) {
 	for profile, want := range map[StorageProfile]bool{
 		StorageKeeps3d:       true,

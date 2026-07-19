@@ -48,7 +48,12 @@ type CreateEaterCommand struct {
 type UpdateEaterCommand = CreateEaterCommand
 
 func (s *Service) CreateEater(ctx context.Context, command CreateEaterCommand) (eaterdom.Eater, error) {
-	profile, goal, err := profileFromCommand(command, s.clock.Now())
+	now := s.clock.Now()
+	profile, err := command.profile()
+	if err != nil {
+		return eaterdom.Eater{}, err
+	}
+	goal, err := command.Goal.goal(0, now)
 	if err != nil {
 		return eaterdom.Eater{}, err
 	}
@@ -68,18 +73,23 @@ func (s *Service) ListEaters(ctx context.Context) ([]eaterdom.Eater, error) {
 }
 
 func (s *Service) GetEater(ctx context.Context, id eaterdom.ID) (eaterdom.Eater, error) {
-	if err := validateEaterID(id); err != nil {
-		return eaterdom.Eater{}, err
+	if !id.Valid() {
+		return eaterdom.Eater{}, apperr.Validation("eater id must be positive")
 	}
 	return s.eaters.Get(ctx, id)
 }
 
 func (s *Service) UpdateEater(ctx context.Context, id eaterdom.ID, command UpdateEaterCommand) (eaterdom.Eater, error) {
-	if err := validateEaterID(id); err != nil {
-		return eaterdom.Eater{}, err
+	if !id.Valid() {
+		return eaterdom.Eater{}, apperr.Validation("eater id must be positive")
 	}
 	goalEffectiveFromDefaulted := command.Goal.EffectiveFrom.IsZero()
-	profile, goal, err := profileFromCommand(command, s.clock.Now())
+	now := s.clock.Now()
+	profile, err := command.profile()
+	if err != nil {
+		return eaterdom.Eater{}, err
+	}
+	goal, err := command.Goal.goal(0, now)
 	if err != nil {
 		return eaterdom.Eater{}, err
 	}
@@ -123,17 +133,17 @@ func firstAvailableGoalDate(goals []eaterdom.MacroGoal, candidate time.Time) tim
 }
 
 func (s *Service) ListGoals(ctx context.Context, eaterID eaterdom.ID) ([]eaterdom.MacroGoal, error) {
-	if err := validateEaterID(eaterID); err != nil {
-		return nil, err
+	if !eaterID.Valid() {
+		return nil, apperr.Validation("eater id must be positive")
 	}
 	return s.eaters.ListGoals(ctx, eaterID)
 }
 
 func (s *Service) CreateGoal(ctx context.Context, eaterID eaterdom.ID, command MacroGoalCommand) (eaterdom.MacroGoal, error) {
-	if err := validateEaterID(eaterID); err != nil {
-		return eaterdom.MacroGoal{}, err
+	if !eaterID.Valid() {
+		return eaterdom.MacroGoal{}, apperr.Validation("eater id must be positive")
 	}
-	goal, err := goalFromCommand(eaterID, command, s.clock.Now())
+	goal, err := command.goal(eaterID, s.clock.Now())
 	if err != nil {
 		return eaterdom.MacroGoal{}, err
 	}
@@ -150,20 +160,17 @@ type CreateFixedMealCommand struct {
 }
 
 func (s *Service) ListFixedMeals(ctx context.Context, eaterID eaterdom.ID) ([]eaterdom.FixedMeal, error) {
-	if err := validateEaterID(eaterID); err != nil {
-		return nil, err
+	if !eaterID.Valid() {
+		return nil, apperr.Validation("eater id must be positive")
 	}
 	return s.eaters.ListFixedMeals(ctx, eaterID)
 }
 
 func (s *Service) CreateFixedMeal(ctx context.Context, eaterID eaterdom.ID, command CreateFixedMealCommand) (eaterdom.FixedMeal, error) {
-	if err := validateEaterID(eaterID); err != nil {
-		return eaterdom.FixedMeal{}, err
+	if !eaterID.Valid() {
+		return eaterdom.FixedMeal{}, apperr.Validation("eater id must be positive")
 	}
-	quality := command.Quality
-	quality.IncludeInAnalytics = optionalBool(command.IncludeInAnalytics, true)
-	quality.IncludeInWarnings = optionalBool(command.IncludeInWarnings, true)
-	meal := eaterdom.FixedMeal{EaterID: eaterID, MealType: command.MealType, Label: strings.TrimSpace(command.Label), Macros: command.Macros, Quality: quality, Active: true}
+	meal := command.meal(eaterID)
 	if err := validateFixedMeal(&meal); err != nil {
 		return eaterdom.FixedMeal{}, err
 	}
@@ -178,20 +185,17 @@ type CreateExclusionCommand struct {
 }
 
 func (s *Service) ListExclusions(ctx context.Context, eaterID eaterdom.ID) ([]eaterdom.Exclusion, error) {
-	if err := validateEaterID(eaterID); err != nil {
-		return nil, err
+	if !eaterID.Valid() {
+		return nil, apperr.Validation("eater id must be positive")
 	}
 	return s.eaters.ListExclusions(ctx, eaterID)
 }
 
 func (s *Service) CreateExclusion(ctx context.Context, eaterID eaterdom.ID, command CreateExclusionCommand) (eaterdom.Exclusion, error) {
-	if err := validateEaterID(eaterID); err != nil {
-		return eaterdom.Exclusion{}, err
+	if !eaterID.Valid() {
+		return eaterdom.Exclusion{}, apperr.Validation("eater id must be positive")
 	}
-	exclusion := eaterdom.Exclusion{EaterID: eaterID, TargetKind: command.TargetKind, TargetValue: strings.TrimSpace(command.TargetValue), Severity: command.Severity, Note: command.Note}
-	if exclusion.Severity == "" {
-		exclusion.Severity = eaterdom.ExclusionSeverityHard
-	}
+	exclusion := command.exclusion(eaterID)
 	if err := s.validateExclusion(ctx, exclusion); err != nil {
 		return eaterdom.Exclusion{}, err
 	}
@@ -199,36 +203,32 @@ func (s *Service) CreateExclusion(ctx context.Context, eaterID eaterdom.ID, comm
 }
 
 func (s *Service) DeleteExclusion(ctx context.Context, id eaterdom.ExclusionID) error {
-	if id <= 0 {
+	if !id.Valid() {
 		return apperr.Validation("exclusion id must be positive")
 	}
 	return s.eaters.DeleteExclusion(ctx, id)
 }
 
-func profileFromCommand(command CreateEaterCommand, now time.Time) (eaterdom.Eater, eaterdom.MacroGoal, error) {
+func (command CreateEaterCommand) profile() (eaterdom.Eater, error) {
 	profile := eaterdom.Eater{Name: strings.TrimSpace(command.Name), Sex: command.Sex}
 	if profile.Name == "" {
-		return eaterdom.Eater{}, eaterdom.MacroGoal{}, apperr.Validation("eater name must not be blank")
+		return eaterdom.Eater{}, apperr.Validation("eater name must not be blank")
 	}
 	if profile.Sex == "" {
 		profile.Sex = eaterdom.SexUnspecified
 	}
 	if !profile.Sex.Valid() {
-		return eaterdom.Eater{}, eaterdom.MacroGoal{}, apperr.Validation("sex is invalid")
+		return eaterdom.Eater{}, apperr.Validation("sex is invalid")
 	}
 	allergens, err := normalizeAllergens(command.Allergens)
 	if err != nil {
-		return eaterdom.Eater{}, eaterdom.MacroGoal{}, err
+		return eaterdom.Eater{}, err
 	}
 	profile.Allergens = allergens
-	goal, err := goalFromCommand(0, command.Goal, now)
-	if err != nil {
-		return eaterdom.Eater{}, eaterdom.MacroGoal{}, err
-	}
-	return profile, goal, nil
+	return profile, nil
 }
 
-func goalFromCommand(eaterID eaterdom.ID, command MacroGoalCommand, now time.Time) (eaterdom.MacroGoal, error) {
+func (command MacroGoalCommand) goal(eaterID eaterdom.ID, now time.Time) (eaterdom.MacroGoal, error) {
 	goal := eaterdom.MacroGoal{EaterID: eaterID, EffectiveFrom: command.EffectiveFrom, Range: command.Range, Note: command.Note}
 	if goal.EffectiveFrom.IsZero() {
 		goal.EffectiveFrom = now.UTC().Truncate(dayDuration)
@@ -239,11 +239,32 @@ func goalFromCommand(eaterID eaterdom.ID, command MacroGoalCommand, now time.Tim
 	return goal, nil
 }
 
-func validateEaterID(id eaterdom.ID) error {
-	if id <= 0 {
-		return apperr.Validation("eater id must be positive")
+func (command CreateFixedMealCommand) meal(eaterID eaterdom.ID) eaterdom.FixedMeal {
+	quality := command.Quality
+	quality.IncludeInAnalytics = optionalBool(command.IncludeInAnalytics, true)
+	quality.IncludeInWarnings = optionalBool(command.IncludeInWarnings, true)
+	return eaterdom.FixedMeal{
+		EaterID:  eaterID,
+		MealType: command.MealType,
+		Label:    strings.TrimSpace(command.Label),
+		Macros:   command.Macros,
+		Quality:  quality,
+		Active:   true,
 	}
-	return nil
+}
+
+func (command CreateExclusionCommand) exclusion(eaterID eaterdom.ID) eaterdom.Exclusion {
+	severity := command.Severity
+	if severity == "" {
+		severity = eaterdom.ExclusionSeverityHard
+	}
+	return eaterdom.Exclusion{
+		EaterID:     eaterID,
+		TargetKind:  command.TargetKind,
+		TargetValue: strings.TrimSpace(command.TargetValue),
+		Severity:    severity,
+		Note:        command.Note,
+	}
 }
 
 func validateMacroRange(value eaterdom.MacroRange) error {
@@ -344,11 +365,12 @@ func (s *Service) validateExclusion(ctx context.Context, exclusion eaterdom.Excl
 			return apperr.NotFound("role tag")
 		}
 	case eaterdom.ExclusionTargetProduct:
-		productID, err := strconv.ParseInt(exclusion.TargetValue, 10, 64)
-		if err != nil || productID <= 0 {
+		value, err := strconv.ParseInt(exclusion.TargetValue, 10, 64)
+		productID := catalogdom.ProductID(value)
+		if err != nil || !productID.Valid() {
 			return apperr.Validation("exclusion product id must be positive")
 		}
-		exists, err := s.eaters.ProductExists(ctx, productID)
+		exists, err := s.eaters.ProductExists(ctx, int64(productID))
 		if err != nil {
 			return err
 		}

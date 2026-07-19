@@ -2,6 +2,10 @@ package catalog
 
 type ProductID int64
 
+func (id ProductID) Valid() bool {
+	return id > 0
+}
+
 type Product struct {
 	ID             ProductID
 	Brand          string

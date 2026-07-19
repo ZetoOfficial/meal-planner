@@ -15,16 +15,16 @@ const (
 )
 
 func (template Template) Validate(roles map[string]catalog.RoleTag) error {
-	if err := validateTemplateFields(template); err != nil {
+	if err := template.validateFields(); err != nil {
 		return err
 	}
-	if err := validateEquipment(template.Equipment); err != nil {
+	if err := template.validateEquipment(); err != nil {
 		return err
 	}
-	return validateSlots(template.Slots, roles)
+	return template.validateSlots(roles)
 }
 
-func validateTemplateFields(template Template) error {
+func (template Template) validateFields() error {
 	if strings.TrimSpace(template.Name) == "" {
 		return errors.New("recipe name must not be blank")
 	}
@@ -46,8 +46,8 @@ func validateTemplateFields(template Template) error {
 	return nil
 }
 
-func validateEquipment(values []string) error {
-	for _, equipment := range values {
+func (template Template) validateEquipment() error {
+	for _, equipment := range template.Equipment {
 		if strings.TrimSpace(equipment) == "" {
 			return errors.New("recipe equipment must not be blank")
 		}
@@ -55,13 +55,13 @@ func validateEquipment(values []string) error {
 	return nil
 }
 
-func validateSlots(slots []Slot, roles map[string]catalog.RoleTag) error {
-	if len(slots) == 0 {
+func (template Template) validateSlots(roles map[string]catalog.RoleTag) error {
+	if len(template.Slots) == 0 {
 		return errors.New("recipe must have at least one slot")
 	}
-	positions := make(map[int]struct{}, len(slots))
-	for _, slot := range slots {
-		if err := validateSlot(slot, roles); err != nil {
+	positions := make(map[int]struct{}, len(template.Slots))
+	for _, slot := range template.Slots {
+		if err := slot.validate(roles); err != nil {
 			return err
 		}
 		if _, exists := positions[slot.Position]; exists {
@@ -72,7 +72,7 @@ func validateSlots(slots []Slot, roles map[string]catalog.RoleTag) error {
 	return nil
 }
 
-func validateSlot(slot Slot, roles map[string]catalog.RoleTag) error {
+func (slot Slot) validate(roles map[string]catalog.RoleTag) error {
 	code := strings.TrimSpace(slot.RoleTagCode)
 	if code == "" {
 		return errors.New("recipe slot role must not be blank")

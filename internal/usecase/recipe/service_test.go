@@ -57,6 +57,36 @@ func TestCreateRecipeDefaultsAndPersistsValidManualDraft(t *testing.T) {
 	}
 }
 
+func TestCreateRecipeCommandTemplateMapsNormalizedSlots(t *testing.T) {
+	cuisine := " Italian "
+	command := CreateRecipeCommand{
+		Name:      " Chicken bowl ",
+		Cuisine:   &cuisine,
+		Storage:   recipedom.StorageKeeps3d,
+		Equipment: []string{" oven ", "oven"},
+		Slots: []SlotCommand{{
+			RoleTagCode: " protein:lean ",
+			Label:       " Protein ",
+			Qty:         180,
+		}},
+	}
+
+	template := command.template()
+
+	if template.Name != "Chicken bowl" || template.Cuisine == nil || *template.Cuisine != "Italian" {
+		t.Fatalf("CreateRecipeCommand.template() = %#v, want normalized metadata", template)
+	}
+	if template.Status != recipedom.StatusDraft || template.Source != recipedom.SourceManual || template.Weight != 1 {
+		t.Fatalf("CreateRecipeCommand.template() = %#v, want manual draft defaults", template)
+	}
+	if !slices.Equal(template.Equipment, []string{"oven"}) || len(template.Slots) != 1 {
+		t.Fatalf("CreateRecipeCommand.template() equipment/slots = %#v/%#v", template.Equipment, template.Slots)
+	}
+	if template.Slots[0].RoleTagCode != "protein:lean" || template.Slots[0].Label != "Protein" || template.Slots[0].Unit != "g" {
+		t.Fatalf("SlotCommand.slot() = %#v, want normalized slot defaults", template.Slots[0])
+	}
+}
+
 func TestCreateRecipeRejectsMissingRole(t *testing.T) {
 	service, repository, transactions, _ := newMockService(t)
 	expectPassthroughTx(transactions)

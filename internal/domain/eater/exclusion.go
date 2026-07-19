@@ -2,6 +2,10 @@ package eater
 
 type ExclusionID int64
 
+func (id ExclusionID) Valid() bool {
+	return id > 0
+}
+
 type ExclusionTarget string
 
 const (
