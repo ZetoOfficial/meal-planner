@@ -384,11 +384,13 @@ paths:
     post:
       operationId: generatePlan
       tags: [plans]
-      summary: Сгенерировать план (reuse-first; LLM только при нехватке матчей/novelty≥2)
+      summary: Сгенерировать план для произвольного набора едоков (reuse-first)
       description: >
-        Солвер собирает 5–7 компонентов под цели БЖУ и hard-constraints,
-        раскладывает по дням/приёмам/едокам. Сначала ищет permanent-рецепты,
-        LLM вызывается только при нехватке матчей или novelty_level >= 2.
+        Детерминированный солвер выбирает общий набор независимо приготовленных
+        компонентов и рассчитывает отдельные доли партий под цели каждого едока.
+        Сначала используются permanent-рецепты; если допустимого набора нет или
+        novelty_level=3 явно просит новый шаблон, LLM может предложить только новые
+        recipe candidates, после чего Go повторно валидирует их и запускает тот же solver.
       requestBody:
         required: true
         content:
@@ -397,7 +399,7 @@ paths:
       responses:
         '201': { $ref: '#/components/responses/PlanOK' }
         '422':
-          description: Солвер не сошёлся под constraints (с диагностикой)
+          description: Вход некорректен, решение доказанно невозможно или исчерпан лимит поиска
           content:
             application/json:
               schema: { $ref: '#/components/schemas/SolverError' }
@@ -1069,6 +1071,11 @@ components:
       type: string
       enum: [draft, permanent, rejected]
 
+    ComponentKind:
+      type: string
+      description: Роль независимо приготовленной партии при сборке приёма пищи
+      enum: [protein, carb_side, vegetable_side, sauce, mixed_main]
+
     StorageProfile:
       type: string
       enum: [keeps_3d, keeps_3d_reheat, assemble_fresh, eat_same_day]
@@ -1079,15 +1086,22 @@ components:
 
     Slot:
       type: object
+      description: Вход продукта в базовую партию recipe template; расчёты ведутся в граммах
       properties:
         id: { type: integer, format: int64 }
         role_tag: { type: string, description: 'код роли, который ловит слот' }
         label: { type: string }
-        qty: { type: number, format: float }
-        unit: { type: string }
+        qty_g: { type: number, format: float, exclusiveMinimum: true, minimum: 0 }
+        prepared_qty_factor:
+          type: number
+          format: float
+          nullable: true
+          exclusiveMinimum: true
+          minimum: 0
+          description: 'optional input→prepared factor для food-group правил; NULL снижает coverage'
         position: { type: integer }
         optional: { type: boolean }
-      required: [role_tag, label, qty, unit, position]
+      required: [role_tag, label, qty_g, position]
 
     RecipeTemplate:
       type: object
@@ -1096,6 +1110,20 @@ components:
         name: { type: string }
         status: { $ref: '#/components/schemas/RecipeStatus' }
         source: { type: string, enum: [llm, manual] }
+        component_kind: { $ref: '#/components/schemas/ComponentKind' }
+        allowed_meal_types:
+          type: array
+          minItems: 1
+          uniqueItems: true
+          items: { $ref: '#/components/schemas/MealType' }
+        base_servings: { type: integer, minimum: 1 }
+        expected_output_g:
+          type: number
+          format: float
+          nullable: true
+          exclusiveMinimum: true
+          minimum: 0
+          description: 'Ожидаемый выход базовой партии; NULL означает неизвестный yield'
         cuisine: { type: string, nullable: true }
         cooking_method: { type: string, nullable: true }
         storage: { $ref: '#/components/schemas/StorageProfile' }
@@ -1109,12 +1137,25 @@ components:
         slots:
           type: array
           items: { $ref: '#/components/schemas/Slot' }
-      required: [id, name, status, storage, slots]
+      required: [id, name, status, source, component_kind, allowed_meal_types, base_servings, storage, slots]
 
     RecipeTemplateInput:
       type: object
       properties:
         name: { type: string }
+        component_kind: { $ref: '#/components/schemas/ComponentKind' }
+        allowed_meal_types:
+          type: array
+          minItems: 1
+          uniqueItems: true
+          items: { $ref: '#/components/schemas/MealType' }
+        base_servings: { type: integer, minimum: 1 }
+        expected_output_g:
+          type: number
+          format: float
+          nullable: true
+          exclusiveMinimum: true
+          minimum: 0
         cuisine: { type: string }
         cooking_method: { type: string }
         storage: { $ref: '#/components/schemas/StorageProfile' }
@@ -1130,12 +1171,29 @@ components:
             properties:
               role_tag: { type: string }
               label: { type: string }
-              qty: { type: number, format: float }
-              unit: { type: string, default: 'g' }
+              qty_g: { type: number, format: float, exclusiveMinimum: true, minimum: 0 }
+              prepared_qty_factor:
+                type: number
+                format: float
+                nullable: true
+                exclusiveMinimum: true
+                minimum: 0
               position: { type: integer }
               optional: { type: boolean, default: false }
-            required: [role_tag, label, qty, position]
-      required: [name, storage, slots]
+            required: [role_tag, label, qty_g, position]
+      required: [name, component_kind, allowed_meal_types, base_servings, storage, slots]
+
+    PlanEaterTarget:
+      type: object
+      description: Какие приёмы должен сгенерировать solver для одного едока на всём горизонте плана
+      properties:
+        eater_id: { type: integer, format: int64 }
+        generated_meal_types:
+          type: array
+          minItems: 1
+          uniqueItems: true
+          items: { $ref: '#/components/schemas/MealType' }
+      required: [eater_id, generated_meal_types]
 
     PlanGenerateInput:
       type: object
@@ -1150,11 +1208,25 @@ components:
           maximum: 3
           default: 0
           description: 'dial новизны (DESIGN §7); маппится в temperature LLM'
-        eater_ids:
+        targets:
           type: array
-          items: { type: integer, format: int64 }
           minItems: 1
-      required: [start_date, eater_ids]
+          items: { $ref: '#/components/schemas/PlanEaterTarget' }
+      required: [start_date, targets]
+
+    PlanEaterDay:
+      type: object
+      description: Снимок фактически использованной версии цели и расписания на дату
+      properties:
+        eater_id: { type: integer, format: int64 }
+        date: { type: string, format: date }
+        macro_goal_id: { type: integer, format: int64 }
+        generated_meal_types:
+          type: array
+          minItems: 1
+          uniqueItems: true
+          items: { $ref: '#/components/schemas/MealType' }
+      required: [eater_id, date, macro_goal_id, generated_meal_types]
 
     PlanSummary:
       type: object
@@ -1175,9 +1247,9 @@ components:
         id: { type: integer, format: int64 }
         slot_id: { type: integer, format: int64 }
         product_id: { type: integer, format: int64 }
-        qty_g: { type: number, format: float }
+        planned_input_qty_g: { type: number, format: float, exclusiveMinimum: true, minimum: 0 }
         macros: { $ref: '#/components/schemas/Macros' }
-      required: [slot_id, product_id, qty_g]
+      required: [slot_id, product_id, planned_input_qty_g]
 
     PlanRecipe:
       type: object
@@ -1185,11 +1257,24 @@ components:
         id: { type: integer, format: int64 }
         template_id: { type: integer, format: int64 }
         label: { type: string, nullable: true }
-        batch_qty: { type: number, format: float, nullable: true }
+        scale_factor: { type: number, format: float, exclusiveMinimum: true, minimum: 0 }
+        expected_output_g:
+          type: number
+          format: float
+          nullable: true
+          exclusiveMinimum: true
+          minimum: 0
+        reserve_factor:
+          type: number
+          format: float
+          readOnly: true
+          minimum: 0
+          maximum: 1
+          description: 'Не распределённая по meals доля партии'
         fills:
           type: array
           items: { $ref: '#/components/schemas/SlotFill' }
-      required: [id, template_id, fills]
+      required: [id, template_id, scale_factor, reserve_factor, fills]
 
     PrepDependency:
       type: object
@@ -1209,6 +1294,9 @@ components:
         cook_date: { type: string, format: date }
         novelty_level: { type: integer }
         status: { type: string, enum: [draft, active, archived] }
+        eater_days:
+          type: array
+          items: { $ref: '#/components/schemas/PlanEaterDay' }
         recipes:
           type: array
           items: { $ref: '#/components/schemas/PlanRecipe' }
@@ -1226,19 +1314,20 @@ components:
             - $ref: '#/components/schemas/NutritionQualitySummary'
           nullable: true
           description: 'Оценка качества плана (FR-3): план не блокируется за quality-fail'
-      required: [id, start_date, days, status, recipes]
+      required: [id, start_date, days, cook_date, novelty_level, status, eater_days, recipes, meals, prep_dependencies, shopping_list_stale]
 
     RuleEvaluation:
       type: object
       description: >
-        Результат одного quality-правила (explainability, FR-3/FR-8). План на двоих,
-        поэтому оценка адресна: кому (eater_id), за что (date / окно), в каких единицах.
+        Результат одного quality-правила (explainability, FR-3/FR-8), адресованный
+        конкретному едоку и периоду оценки.
       properties:
         rule_code: { type: string, example: 'sodium_max_daily_mg' }
         entity_type:
           type: string
           enum: [meal, day, rolling_window, plan]
         eater_id: { type: integer, format: int64, nullable: true }
+        basis: { type: string, enum: [planned, actual] }
         date:
           type: string
           format: date
@@ -1260,7 +1349,7 @@ components:
           maximum: 1
           description: 'доверие к оценке; низкий coverage → status=unknown (unknown ≠ pass)'
         message: { type: string, nullable: true }
-      required: [rule_code, status]
+      required: [rule_code, entity_type, basis, status]
 
     NutritionQualitySummary:
       type: object
@@ -1379,14 +1468,19 @@ components:
 
     Meal:
       type: object
+      description: >
+        Generated meal содержит одну или несколько component allocations и не имеет
+        fixed_meal_id. Fixed meal содержит fixed_meal_id и пустой components.
       properties:
         id: { type: integer, format: int64 }
         plan_id: { type: integer, format: int64 }
         eater_id: { type: integer, format: int64 }
         meal_date: { type: string, format: date }
         meal_type: { $ref: '#/components/schemas/MealType' }
-        plan_recipe_id: { type: integer, format: int64, nullable: true }
         fixed_meal_id: { type: integer, format: int64, nullable: true }
+        components:
+          type: array
+          items: { $ref: '#/components/schemas/MealComponentAllocation' }
         planned: { $ref: '#/components/schemas/Macros' }
         actual:
           allOf:
@@ -1397,7 +1491,27 @@ components:
         log_status:
           type: string
           enum: [planned, eaten_as_planned, eaten_modified, skipped]
-      required: [id, plan_id, eater_id, meal_date, meal_type, planned, log_status]
+      required: [id, plan_id, eater_id, meal_date, meal_type, components, planned, log_status]
+
+    MealComponentAllocation:
+      type: object
+      description: Каноническая доля общей партии, назначенная одному generated meal
+      properties:
+        plan_recipe_id: { type: integer, format: int64 }
+        portion_factor:
+          type: number
+          format: float
+          exclusiveMinimum: true
+          minimum: 0
+          maximum: 1
+        planned_serving_g:
+          type: number
+          format: float
+          nullable: true
+          exclusiveMinimum: true
+          minimum: 0
+          description: 'Производная подсказка; доступна только при известном expected output'
+      required: [plan_recipe_id, portion_factor]
 
     MealLogInput:
       type: object
@@ -1465,21 +1579,45 @@ components:
     SolverError:
       type: object
       properties:
-        error: { type: string }
+        error: { type: string, enum: [solver_error] }
+        code:
+          type: string
+          enum: [invalid_input, no_candidates, macro_infeasible, search_limit_reached]
+        exhaustive:
+          type: boolean
+          description: 'true, только если bounded search полностью доказал отсутствие решения'
         message: { type: string }
-        unmet_constraints:
+        diagnostics:
           type: array
-          description: 'какого класса/тега не хватило для попадания в БЖУ'
-          items:
-            $ref: '#/components/schemas/UnmetConstraint'
-      required: [error, message]
+          items: { $ref: '#/components/schemas/SolverDiagnostic' }
+      required: [error, code, exhaustive, message, diagnostics]
 
-    UnmetConstraint:
+    SolverDiagnostic:
       type: object
       properties:
-        role_tag: { type: string }
+        eater_id: { type: integer, format: int64, nullable: true }
+        date: { type: string, format: date, nullable: true }
+        meal_type:
+          allOf:
+            - $ref: '#/components/schemas/MealType'
+          nullable: true
+        constraint:
+          type: string
+          enum: [candidate_availability, protein_g, fat_g, carb_g, kcal, hard_exclusion, industrial_trans_fat, search_budget]
+        target_min: { type: number, format: float, nullable: true }
+        target_max: { type: number, format: float, nullable: true }
+        reachable_min: { type: number, format: float, nullable: true }
+        reachable_max: { type: number, format: float, nullable: true }
         reason: { type: string }
-      required: [role_tag, reason]
+        excluded_candidates:
+          type: array
+          items:
+            type: object
+            properties:
+              recipe_template_id: { type: integer, format: int64 }
+              reason: { type: string }
+            required: [recipe_template_id, reason]
+      required: [constraint, reason]
 
     Error:
       type: object

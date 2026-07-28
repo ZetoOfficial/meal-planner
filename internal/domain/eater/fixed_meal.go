@@ -1,19 +1,17 @@
 package eater
 
+import "github.com/ZetoOfficial/meal-planner/internal/domain/meal"
+
 type FixedMealID int64
 
-type MealType string
+type MealType = meal.Type
 
 const (
-	MealTypeBreakfast MealType = "breakfast"
-	MealTypeLunch     MealType = "lunch"
-	MealTypeDinner    MealType = "dinner"
-	MealTypeSnack     MealType = "snack"
+	MealTypeBreakfast = meal.TypeBreakfast
+	MealTypeLunch     = meal.TypeLunch
+	MealTypeDinner    = meal.TypeDinner
+	MealTypeSnack     = meal.TypeSnack
 )
-
-func (t MealType) Valid() bool {
-	return t == MealTypeBreakfast || t == MealTypeLunch || t == MealTypeDinner || t == MealTypeSnack
-}
 
 type Macros struct {
 	ProteinG float64

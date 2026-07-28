@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/ZetoOfficial/meal-planner/internal/clock"
+	"github.com/ZetoOfficial/meal-planner/internal/domain/meal"
 	recipedom "github.com/ZetoOfficial/meal-planner/internal/domain/recipe"
 	postgresdb "github.com/ZetoOfficial/meal-planner/internal/postgres"
 	reciperepo "github.com/ZetoOfficial/meal-planner/internal/postgres/recipe"
@@ -21,26 +22,33 @@ func TestRecipeRoundTripPromotionAndPermanentCandidates(t *testing.T) {
 	ctx := context.Background()
 
 	created, err := service.CreateRecipe(ctx, recipeusecase.CreateRecipeCommand{
-		Name:          "Chicken bowl",
-		Cuisine:       stringPointer("Mediterranean"),
-		CookingMethod: stringPointer("roast"),
-		Storage:       recipedom.StorageKeeps3dReheat,
-		StorageNotes:  stringPointer("Keep sauce separate"),
-		Equipment:     []string{"oven", "stove"},
-		Instructions:  stringPointer("Roast, portion, and chill."),
+		Name:             "Roasted chicken",
+		ComponentKind:    recipedom.ComponentKindProtein,
+		AllowedMealTypes: []meal.Type{meal.TypeLunch, meal.TypeDinner},
+		BaseServings:     4,
+		ExpectedOutputG:  float64Pointer(720),
+		Cuisine:          stringPointer("Mediterranean"),
+		CookingMethod:    stringPointer("roast"),
+		Storage:          recipedom.StorageKeeps3dReheat,
+		StorageNotes:     stringPointer("Keep sauce separate"),
+		Equipment:        []string{"oven", "stove"},
+		Instructions:     stringPointer("Roast, portion, and chill."),
 		Slots: []recipeusecase.SlotCommand{
-			{RoleTagCode: "protein:lean:breast", Label: "Protein", Qty: 180, Unit: "g", Position: 0},
-			{RoleTagCode: "carb:grain", Label: "Grain", Qty: 200, Unit: "g", Position: 1},
+			{RoleTagCode: "protein:lean:breast", Label: "Protein", QtyG: 960, PreparedQtyFactor: float64Pointer(0.75), Position: 0},
+			{RoleTagCode: "fat", Label: "Oil", QtyG: 20, PreparedQtyFactor: float64Pointer(1), Position: 1},
 		},
 	})
 	if err != nil {
 		t.Fatalf("CreateRecipe() error = %v", err)
 	}
 	otherDraft, err := service.CreateRecipe(ctx, recipeusecase.CreateRecipeCommand{
-		Name:    "Green vegetables",
-		Storage: recipedom.StorageKeeps3d,
+		Name:             "Green vegetables",
+		ComponentKind:    recipedom.ComponentKindVegetableSide,
+		AllowedMealTypes: []meal.Type{meal.TypeLunch, meal.TypeDinner},
+		BaseServings:     4,
+		Storage:          recipedom.StorageKeeps3d,
 		Slots: []recipeusecase.SlotCommand{
-			{RoleTagCode: "veg:green", Label: "Vegetables", Qty: 200, Unit: "g", Position: 0},
+			{RoleTagCode: "veg:green", Label: "Vegetables", QtyG: 800, Position: 0},
 		},
 	})
 	if err != nil {
@@ -56,6 +64,15 @@ func TestRecipeRoundTripPromotionAndPermanentCandidates(t *testing.T) {
 	}
 	if loaded.Cuisine == nil || *loaded.Cuisine != "Mediterranean" || len(loaded.Equipment) != 2 {
 		t.Fatalf("GetRecipe() metadata = %#v/%#v", loaded.Cuisine, loaded.Equipment)
+	}
+	if loaded.ComponentKind != recipedom.ComponentKindProtein ||
+		len(loaded.AllowedMealTypes) != 2 ||
+		loaded.BaseServings != 4 ||
+		loaded.ExpectedOutputG == nil ||
+		*loaded.ExpectedOutputG != 720 ||
+		loaded.Slots[0].PreparedQtyFactor == nil ||
+		*loaded.Slots[0].PreparedQtyFactor != 0.75 {
+		t.Fatalf("GetRecipe() batch contract = %#v", loaded)
 	}
 
 	draftStatus := recipedom.StatusDraft
@@ -84,4 +101,5 @@ func TestRecipeRoundTripPromotionAndPermanentCandidates(t *testing.T) {
 	}
 }
 
-func stringPointer(value string) *string { return &value }
+func stringPointer(value string) *string    { return &value }
+func float64Pointer(value float64) *float64 { return &value }

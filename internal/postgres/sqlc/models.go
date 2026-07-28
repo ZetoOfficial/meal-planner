@@ -11,6 +11,51 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+type ComponentKind string
+
+const (
+	ComponentKindProtein       ComponentKind = "protein"
+	ComponentKindCarbSide      ComponentKind = "carb_side"
+	ComponentKindVegetableSide ComponentKind = "vegetable_side"
+	ComponentKindSauce         ComponentKind = "sauce"
+	ComponentKindMixedMain     ComponentKind = "mixed_main"
+)
+
+func (e *ComponentKind) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = ComponentKind(s)
+	case string:
+		*e = ComponentKind(s)
+	default:
+		return fmt.Errorf("unsupported scan type for ComponentKind: %T", src)
+	}
+	return nil
+}
+
+type NullComponentKind struct {
+	ComponentKind ComponentKind `json:"component_kind"`
+	Valid         bool          `json:"valid"` // Valid is true if ComponentKind is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullComponentKind) Scan(value interface{}) error {
+	if value == nil {
+		ns.ComponentKind, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.ComponentKind.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullComponentKind) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.ComponentKind), nil
+}
+
 type ExclusionSeverity string
 
 const (
@@ -900,7 +945,7 @@ func (ns NullSummaryBasis) Value() (driver.Value, error) {
 type DayNutritionSummary struct {
 	ID                int64              `json:"id"`
 	EaterID           int64              `json:"eater_id"`
-	PlanID            *int64             `json:"plan_id"`
+	PlanID            int64              `json:"plan_id"`
 	SummaryDate       pgtype.Date        `json:"summary_date"`
 	Basis             SummaryBasis       `json:"basis"`
 	ProteinG          pgtype.Numeric     `json:"protein_g"`
@@ -1047,7 +1092,6 @@ type Meal struct {
 	EaterID         int64              `json:"eater_id"`
 	MealDate        pgtype.Date        `json:"meal_date"`
 	MealType        MealType           `json:"meal_type"`
-	PlanRecipeID    *int64             `json:"plan_recipe_id"`
 	FixedMealID     *int64             `json:"fixed_meal_id"`
 	PlannedProteinG pgtype.Numeric     `json:"planned_protein_g"`
 	PlannedFatG     pgtype.Numeric     `json:"planned_fat_g"`
@@ -1064,6 +1108,13 @@ type Meal struct {
 	LogStatus       MealLogStatus      `json:"log_status"`
 }
 
+type MealComponentAllocation struct {
+	MealID          int64          `json:"meal_id"`
+	PlanRecipeID    int64          `json:"plan_recipe_id"`
+	PortionFactor   pgtype.Numeric `json:"portion_factor"`
+	PlannedServingG pgtype.Numeric `json:"planned_serving_g"`
+}
+
 type Plan struct {
 	ID                   int64              `json:"id"`
 	Label                *string            `json:"label"`
@@ -1078,13 +1129,22 @@ type Plan struct {
 	CreatedAt            pgtype.Timestamptz `json:"created_at"`
 }
 
+type PlanEaterDay struct {
+	PlanID             int64       `json:"plan_id"`
+	EaterID            int64       `json:"eater_id"`
+	PlanDate           pgtype.Date `json:"plan_date"`
+	MacroGoalID        int64       `json:"macro_goal_id"`
+	GeneratedMealTypes []string    `json:"generated_meal_types"`
+}
+
 type PlanRecipe struct {
-	ID         int64              `json:"id"`
-	PlanID     int64              `json:"plan_id"`
-	TemplateID int64              `json:"template_id"`
-	Label      *string            `json:"label"`
-	BatchQty   pgtype.Numeric     `json:"batch_qty"`
-	CreatedAt  pgtype.Timestamptz `json:"created_at"`
+	ID              int64              `json:"id"`
+	PlanID          int64              `json:"plan_id"`
+	TemplateID      int64              `json:"template_id"`
+	Label           *string            `json:"label"`
+	ScaleFactor     pgtype.Numeric     `json:"scale_factor"`
+	ExpectedOutputG pgtype.Numeric     `json:"expected_output_g"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
 }
 
 type PrepDependency struct {
@@ -1152,32 +1212,36 @@ type ProductRole struct {
 }
 
 type RecipeSlot struct {
-	ID         int64          `json:"id"`
-	TemplateID int64          `json:"template_id"`
-	RoleTagID  int64          `json:"role_tag_id"`
-	Label      string         `json:"label"`
-	Qty        pgtype.Numeric `json:"qty"`
-	Unit       string         `json:"unit"`
-	Position   int32          `json:"position"`
-	Optional   bool           `json:"optional"`
+	ID                int64          `json:"id"`
+	TemplateID        int64          `json:"template_id"`
+	RoleTagID         int64          `json:"role_tag_id"`
+	Label             string         `json:"label"`
+	QtyG              pgtype.Numeric `json:"qty_g"`
+	PreparedQtyFactor pgtype.Numeric `json:"prepared_qty_factor"`
+	Position          int32          `json:"position"`
+	Optional          bool           `json:"optional"`
 }
 
 type RecipeTemplate struct {
-	ID            int64              `json:"id"`
-	Name          string             `json:"name"`
-	Status        RecipeStatus       `json:"status"`
-	Source        RecipeSource       `json:"source"`
-	Cuisine       *string            `json:"cuisine"`
-	CookingMethod *string            `json:"cooking_method"`
-	Storage       StorageProfile     `json:"storage"`
-	StorageNotes  *string            `json:"storage_notes"`
-	Equipment     []string           `json:"equipment"`
-	Instructions  *string            `json:"instructions"`
-	Weight        pgtype.Numeric     `json:"weight"`
-	CookedCount   int32              `json:"cooked_count"`
-	PromotedAt    pgtype.Timestamptz `json:"promoted_at"`
-	CreatedAt     pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt     pgtype.Timestamptz `json:"updated_at"`
+	ID               int64              `json:"id"`
+	Name             string             `json:"name"`
+	Status           RecipeStatus       `json:"status"`
+	Source           RecipeSource       `json:"source"`
+	ComponentKind    ComponentKind      `json:"component_kind"`
+	AllowedMealTypes []string           `json:"allowed_meal_types"`
+	BaseServings     int32              `json:"base_servings"`
+	ExpectedOutputG  pgtype.Numeric     `json:"expected_output_g"`
+	Cuisine          *string            `json:"cuisine"`
+	CookingMethod    *string            `json:"cooking_method"`
+	Storage          StorageProfile     `json:"storage"`
+	StorageNotes     *string            `json:"storage_notes"`
+	Equipment        []string           `json:"equipment"`
+	Instructions     *string            `json:"instructions"`
+	Weight           pgtype.Numeric     `json:"weight"`
+	CookedCount      int32              `json:"cooked_count"`
+	PromotedAt       pgtype.Timestamptz `json:"promoted_at"`
+	CreatedAt        pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt        pgtype.Timestamptz `json:"updated_at"`
 }
 
 type RoleTag struct {
@@ -1190,6 +1254,7 @@ type RoleTag struct {
 
 type RollingNutritionSummary struct {
 	ID                int64              `json:"id"`
+	PlanID            int64              `json:"plan_id"`
 	EaterID           int64              `json:"eater_id"`
 	AsOfDate          pgtype.Date        `json:"as_of_date"`
 	WindowDays        int16              `json:"window_days"`
@@ -1212,6 +1277,7 @@ type RuleEvaluationResult struct {
 	EntityID      int64              `json:"entity_id"`
 	EaterID       *int64             `json:"eater_id"`
 	RuleCode      string             `json:"rule_code"`
+	Basis         SummaryBasis       `json:"basis"`
 	Status        RuleEvalStatus     `json:"status"`
 	ActualValue   pgtype.Numeric     `json:"actual_value"`
 	TargetValue   pgtype.Numeric     `json:"target_value"`
@@ -1241,9 +1307,9 @@ type ShoppingListItem struct {
 }
 
 type SlotFill struct {
-	ID           int64          `json:"id"`
-	PlanRecipeID int64          `json:"plan_recipe_id"`
-	SlotID       int64          `json:"slot_id"`
-	ProductID    int64          `json:"product_id"`
-	QtyG         pgtype.Numeric `json:"qty_g"`
+	ID               int64          `json:"id"`
+	PlanRecipeID     int64          `json:"plan_recipe_id"`
+	SlotID           int64          `json:"slot_id"`
+	ProductID        int64          `json:"product_id"`
+	PlannedInputQtyG pgtype.Numeric `json:"planned_input_qty_g"`
 }

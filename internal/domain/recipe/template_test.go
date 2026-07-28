@@ -1,11 +1,34 @@
 package recipe
 
 import (
+	"reflect"
 	"strings"
 	"testing"
 
 	"github.com/ZetoOfficial/meal-planner/internal/domain/catalog"
+	"github.com/ZetoOfficial/meal-planner/internal/domain/meal"
 )
+
+func TestBatchComponentContractShape(t *testing.T) {
+	templateType := reflect.TypeOf(Template{})
+	for _, name := range []string{"ComponentKind", "AllowedMealTypes", "BaseServings", "ExpectedOutputG"} {
+		if _, ok := templateType.FieldByName(name); !ok {
+			t.Errorf("Template is missing %s", name)
+		}
+	}
+
+	slotType := reflect.TypeOf(Slot{})
+	for _, name := range []string{"QtyG", "PreparedQtyFactor"} {
+		if _, ok := slotType.FieldByName(name); !ok {
+			t.Errorf("Slot is missing %s", name)
+		}
+	}
+	for _, name := range []string{"Qty", "Unit"} {
+		if _, ok := slotType.FieldByName(name); ok {
+			t.Errorf("Slot still exposes legacy %s", name)
+		}
+	}
+}
 
 func TestValidateAcceptsRoleBasedTemplate(t *testing.T) {
 	template := validTemplate()
@@ -56,6 +79,36 @@ func TestValidateRejectsInvalidTemplate(t *testing.T) {
 			roles:   validRoles(),
 			message: "storage",
 		},
+		"unknown component kind": {
+			mutate:  func(template *Template) { template.ComponentKind = "unknown" },
+			roles:   validRoles(),
+			message: "component kind",
+		},
+		"empty allowed meal types": {
+			mutate:  func(template *Template) { template.AllowedMealTypes = nil },
+			roles:   validRoles(),
+			message: "meal type",
+		},
+		"duplicate allowed meal type": {
+			mutate: func(template *Template) {
+				template.AllowedMealTypes = []meal.Type{meal.TypeLunch, meal.TypeLunch}
+			},
+			roles:   validRoles(),
+			message: "meal type",
+		},
+		"nonpositive base servings": {
+			mutate:  func(template *Template) { template.BaseServings = 0 },
+			roles:   validRoles(),
+			message: "base servings",
+		},
+		"nonpositive expected output": {
+			mutate: func(template *Template) {
+				value := 0.0
+				template.ExpectedOutputG = &value
+			},
+			roles:   validRoles(),
+			message: "expected output",
+		},
 		"empty slots": {
 			mutate:  func(template *Template) { template.Slots = nil },
 			roles:   validRoles(),
@@ -79,14 +132,22 @@ func TestValidateRejectsInvalidTemplate(t *testing.T) {
 			message: "kind",
 		},
 		"nonpositive quantity": {
-			mutate:  func(template *Template) { template.Slots[0].Qty = 0 },
+			mutate:  func(template *Template) { template.Slots[0].QtyG = 0 },
 			roles:   validRoles(),
 			message: "quantity",
 		},
 		"quantity precision overflow": {
-			mutate:  func(template *Template) { template.Slots[0].Qty = 1_000_000 },
+			mutate:  func(template *Template) { template.Slots[0].QtyG = 1_000_000 },
 			roles:   validRoles(),
 			message: "quantity",
+		},
+		"nonpositive prepared quantity factor": {
+			mutate: func(template *Template) {
+				value := 0.0
+				template.Slots[0].PreparedQtyFactor = &value
+			},
+			roles:   validRoles(),
+			message: "prepared quantity factor",
 		},
 		"position integer overflow": {
 			mutate:  func(template *Template) { template.Slots[0].Position = 1 << 31 },
@@ -103,8 +164,7 @@ func TestValidateRejectsInvalidTemplate(t *testing.T) {
 				template.Slots = append(template.Slots, Slot{
 					RoleTagCode: "protein:lean",
 					Label:       "Second protein",
-					Qty:         100,
-					Unit:        "g",
+					QtyG:        100,
 					Position:    template.Slots[0].Position,
 				})
 			},
@@ -170,6 +230,18 @@ func TestRecipeEnumValidity(t *testing.T) {
 			t.Errorf("Source(%q).Valid() = %t, want %t", value, got, want)
 		}
 	}
+	for value, want := range map[ComponentKind]bool{
+		ComponentKindProtein:          true,
+		ComponentKindCarbSide:         true,
+		ComponentKindVegetableSide:    true,
+		ComponentKindSauce:            true,
+		ComponentKindMixedMain:        true,
+		ComponentKind("unknown_kind"): false,
+	} {
+		if got := value.Valid(); got != want {
+			t.Errorf("ComponentKind(%q).Valid() = %t, want %t", value, got, want)
+		}
+	}
 }
 
 func TestIDValid(t *testing.T) {
@@ -200,18 +272,23 @@ func TestStorageProfileSupportsMultiDay(t *testing.T) {
 
 func validTemplate() Template {
 	return Template{
-		Name:        "Chicken bowl",
-		Status:      StatusDraft,
-		Source:      SourceManual,
-		Storage:     StorageKeeps3dReheat,
-		Equipment:   []string{"oven"},
-		Weight:      1,
-		CookedCount: 0,
+		Name:          "Chicken bowl",
+		Status:        StatusDraft,
+		Source:        SourceManual,
+		ComponentKind: ComponentKindProtein,
+		AllowedMealTypes: []meal.Type{
+			meal.TypeLunch,
+			meal.TypeDinner,
+		},
+		BaseServings: 4,
+		Storage:      StorageKeeps3dReheat,
+		Equipment:    []string{"oven"},
+		Weight:       1,
+		CookedCount:  0,
 		Slots: []Slot{{
 			RoleTagCode: "protein:lean",
 			Label:       "Protein",
-			Qty:         180,
-			Unit:        "g",
+			QtyG:        180,
 			Position:    0,
 		}},
 	}

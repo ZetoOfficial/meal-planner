@@ -1,6 +1,10 @@
 package recipe
 
-import "time"
+import (
+	"time"
+
+	"github.com/ZetoOfficial/meal-planner/internal/domain/meal"
+)
 
 type ID int64
 
@@ -41,21 +45,48 @@ func (s Source) Valid() bool {
 	}
 }
 
+type ComponentKind string
+
+const (
+	ComponentKindProtein       ComponentKind = "protein"
+	ComponentKindCarbSide      ComponentKind = "carb_side"
+	ComponentKindVegetableSide ComponentKind = "vegetable_side"
+	ComponentKindSauce         ComponentKind = "sauce"
+	ComponentKindMixedMain     ComponentKind = "mixed_main"
+)
+
+func (k ComponentKind) Valid() bool {
+	switch k {
+	case ComponentKindProtein,
+		ComponentKindCarbSide,
+		ComponentKindVegetableSide,
+		ComponentKindSauce,
+		ComponentKindMixedMain:
+		return true
+	default:
+		return false
+	}
+}
+
 type Template struct {
-	ID            ID
-	Name          string
-	Status        Status
-	Source        Source
-	Cuisine       *string
-	CookingMethod *string
-	Storage       StorageProfile
-	StorageNotes  *string
-	Equipment     []string
-	Instructions  *string
-	Weight        float64
-	CookedCount   int
-	PromotedAt    *time.Time
-	Slots         []Slot
+	ID               ID
+	Name             string
+	Status           Status
+	Source           Source
+	ComponentKind    ComponentKind
+	AllowedMealTypes []meal.Type
+	BaseServings     int
+	ExpectedOutputG  *float64
+	Cuisine          *string
+	CookingMethod    *string
+	Storage          StorageProfile
+	StorageNotes     *string
+	Equipment        []string
+	Instructions     *string
+	Weight           float64
+	CookedCount      int
+	PromotedAt       *time.Time
+	Slots            []Slot
 }
 
 func (t Template) RoleCodes() []string {

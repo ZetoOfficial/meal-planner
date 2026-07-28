@@ -5,7 +5,7 @@
 -- Принципы:
 --   * storage_profile и role-теги — first-class поля, не комментарии (§1, §3).
 --   * planned vs actual macros разведены (§12 Q3).
---   * двухпользовательский режим: учёт «кто готовил / кто логировал» (§12 Q4).
+--   * owner-only household: едоков может быть любое число; учёт «кто готовил / кто логировал» остаётся (§12 Q4).
 --   * история и аналитика заложены заранее (§12 Q5).
 --   * usage-based weights НЕ делаем (§12 Q7) — поля под это отсутствуют.
 --   * inventory НЕ делаем (§9).
@@ -43,6 +43,17 @@ CREATE TYPE recipe_status AS ENUM (
 CREATE TYPE recipe_source AS ENUM (
     'llm',     -- придуман моделью под constraints (runtime-генерация, §5)
     'manual'   -- заведён руками человеком
+);
+
+-- component_kind — роль всей отдельно дозируемой партии.
+-- Не путать с role_kind: role_kind классифицирует ингредиент в слоте,
+-- component_kind — готовую партию, из которой solver собирает meal.
+CREATE TYPE component_kind AS ENUM (
+    'protein',
+    'carb_side',
+    'vegetable_side',
+    'sauce',
+    'mixed_main'
 );
 
 -- storage_profile — КАК долго блюдо живёт после готовки. Hard constraint §1:
@@ -221,7 +232,8 @@ CREATE TABLE eater_macro_goal (
     CONSTRAINT fat_range_ok     CHECK (fat_min_g >= 0 AND fat_min_g <= fat_max_g),
     CONSTRAINT carb_range_ok    CHECK (carb_min_g >= 0 AND carb_min_g <= carb_max_g),
     CONSTRAINT kcal_range_ok    CHECK (kcal_min >= 0 AND kcal_min <= kcal_max),
-    UNIQUE (eater_id, effective_from)                      -- одна цель на дату начала
+    UNIQUE (eater_id, effective_from),                     -- одна цель на дату начала
+    UNIQUE (id, eater_id)                                  -- composite FK planning snapshot
 );
 
 -- Быстрый поиск текущей/исторической цели.
@@ -413,12 +425,16 @@ CREATE TABLE product_role (
 -- БИБЛИОТЕКА РЕЦЕПТОВ-ШАБЛОНОВ  (§3, §4)
 -- =====================================================================
 
--- Рецепт — шаблон со слотами, а не фиксированный список ингредиентов (§3).
+-- Рецепт — шаблон одной отдельно дозируемой партии со слотами, а не целая тарелка (§3).
 CREATE TABLE recipe_template (
     id              BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     name            TEXT            NOT NULL,
     status          recipe_status   NOT NULL DEFAULT 'draft', -- draft→permanent (§4)
     source          recipe_source   NOT NULL DEFAULT 'llm',
+    component_kind  component_kind  NOT NULL,
+    allowed_meal_types TEXT[]       NOT NULL,
+    base_servings   INTEGER         NOT NULL,
+    expected_output_g NUMERIC(8,1), -- optional ручная оценка выхода базовой партии
     cuisine         TEXT,                                     -- 'азиатская', 'средиземноморская'
     cooking_method  TEXT,                                     -- 'духовка', 'аэрогриль'
     storage         storage_profile NOT NULL,                 -- first-class (§1)
@@ -432,7 +448,13 @@ CREATE TABLE recipe_template (
     promoted_at     TIMESTAMPTZ,                              -- момент повышения до permanent
     created_at      TIMESTAMPTZ     NOT NULL DEFAULT now(),
     updated_at      TIMESTAMPTZ     NOT NULL DEFAULT now(),
-    CONSTRAINT weight_nonneg CHECK (weight >= 0)
+    CONSTRAINT recipe_template_values CHECK (
+        weight >= 0
+        AND base_servings > 0
+        AND cardinality(allowed_meal_types) > 0
+        AND allowed_meal_types <@ ARRAY['breakfast', 'lunch', 'dinner', 'snack']::TEXT[]
+        AND (expected_output_g IS NULL OR expected_output_g > 0)
+    )
 );
 
 -- Слот шаблона: ловит КЛАСС по тегу, заполняется конкретным продуктом (§3).
@@ -441,12 +463,15 @@ CREATE TABLE recipe_slot (
     template_id BIGINT      NOT NULL REFERENCES recipe_template(id) ON DELETE CASCADE,
     role_tag_id BIGINT      NOT NULL REFERENCES role_tag(id),  -- какой класс принимает слот
     label       TEXT        NOT NULL,           -- 'белок', 'крупа', 'овощ', 'соус'
-    qty         NUMERIC(7,1) NOT NULL,          -- 180, 200, 30
-    unit        TEXT        NOT NULL DEFAULT 'g', -- 'g', 'ml'
+    qty_g       NUMERIC(7,1) NOT NULL,          -- input базовой партии; nutrition math всегда в граммах
+    prepared_qty_factor NUMERIC(6,3),           -- optional input→prepared factor для food-group правил
     position    INTEGER     NOT NULL DEFAULT 0,
     optional    BOOLEAN     NOT NULL DEFAULT FALSE,
     UNIQUE (template_id, position),
-    CONSTRAINT recipe_slot_qty_positive CHECK (qty > 0)
+    CONSTRAINT recipe_slot_qty_positive CHECK (
+        qty_g > 0
+        AND (prepared_qty_factor IS NULL OR prepared_qty_factor > 0)
+    )
 );
 
 -- =====================================================================
@@ -473,28 +498,50 @@ CREATE TABLE plan (
     CONSTRAINT novelty_range CHECK (novelty_level BETWEEN 0 AND 3)
 );
 
+-- Нормализованный снимок planning target на каждый день и едока.
+-- Сохраняет конкретную версию macro goal, чтобы будущая правка профиля
+-- не меняла объяснение уже сгенерированного плана.
+CREATE TABLE plan_eater_day (
+    plan_id         BIGINT      NOT NULL REFERENCES plan(id) ON DELETE CASCADE,
+    eater_id        BIGINT      NOT NULL REFERENCES eater(id),
+    plan_date       DATE        NOT NULL,
+    macro_goal_id   BIGINT      NOT NULL,
+    generated_meal_types TEXT[]     NOT NULL,
+    PRIMARY KEY (plan_id, eater_id, plan_date),
+    FOREIGN KEY (macro_goal_id, eater_id)
+        REFERENCES eater_macro_goal(id, eater_id),
+    CONSTRAINT plan_eater_day_targets_nonempty CHECK (
+        cardinality(generated_meal_types) > 0
+        AND generated_meal_types <@ ARRAY['breakfast', 'lunch', 'dinner', 'snack']::TEXT[]
+    )
+);
+
 -- Экземпляр рецепта внутри плана: шаблон + конкретные заполнения слотов.
 -- Это «компонент» партии (2 белка + 2 гарнира + овощи + соусы → комбинаторика).
 CREATE TABLE plan_recipe (
-    id          BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    plan_id     BIGINT  NOT NULL REFERENCES plan(id) ON DELETE CASCADE,
-    template_id BIGINT  NOT NULL REFERENCES recipe_template(id),
-    label       TEXT,
-    batch_qty   NUMERIC(8,1),     -- сколько готовим всего (на все порции партии)
-    created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
-    CONSTRAINT plan_recipe_batch_qty_nonneg CHECK (batch_qty IS NULL OR batch_qty >= 0)
+    id                BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    plan_id           BIGINT  NOT NULL REFERENCES plan(id) ON DELETE CASCADE,
+    template_id       BIGINT  NOT NULL REFERENCES recipe_template(id),
+    label             TEXT,
+    scale_factor      NUMERIC(9,4) NOT NULL, -- множитель базовой партии
+    expected_output_g NUMERIC(9,1),          -- scaled expected output; NULL если yield неизвестен
+    created_at        TIMESTAMPTZ NOT NULL DEFAULT now(),
+    CONSTRAINT plan_recipe_scale_positive CHECK (
+        scale_factor > 0
+        AND (expected_output_g IS NULL OR expected_output_g > 0)
+    )
 );
 
 -- Заполнение слота: какой Product встал в слот этого экземпляра (§3, §13 SlotFill).
 -- Своп = смена product_id здесь — основная операция системы (§6).
 CREATE TABLE slot_fill (
-    id              BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    plan_recipe_id  BIGINT  NOT NULL REFERENCES plan_recipe(id) ON DELETE CASCADE,
-    slot_id         BIGINT  NOT NULL REFERENCES recipe_slot(id),
-    product_id      BIGINT  NOT NULL REFERENCES product(id),
-    qty_g           NUMERIC(7,1) NOT NULL,    -- фактическое количество в этом заполнении
+    id                  BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    plan_recipe_id      BIGINT  NOT NULL REFERENCES plan_recipe(id) ON DELETE CASCADE,
+    slot_id             BIGINT  NOT NULL REFERENCES recipe_slot(id),
+    product_id          BIGINT  NOT NULL REFERENCES product(id),
+    planned_input_qty_g NUMERIC(9,1) NOT NULL,
     UNIQUE (plan_recipe_id, slot_id),
-    CONSTRAINT slot_fill_qty_positive CHECK (qty_g > 0)
+    CONSTRAINT slot_fill_qty_positive CHECK (planned_input_qty_g > 0)
 );
 
 -- Prep dependency graph (§6): блюдо B использует «вчерашнюю курицу» из блюда A.
@@ -522,8 +569,8 @@ CREATE TABLE meal (
     eater_id        BIGINT      NOT NULL REFERENCES eater(id),
     meal_date       DATE        NOT NULL,
     meal_type       meal_type   NOT NULL,
-    -- Источник еды: либо экземпляр рецепта из плана, либо фиксированный приём.
-    plan_recipe_id  BIGINT      REFERENCES plan_recipe(id) ON DELETE SET NULL,
+    -- NULL = generated meal с одной или несколькими component allocations.
+    -- NOT NULL = fixed meal; тогда allocations запрещены.
     fixed_meal_id   BIGINT      REFERENCES fixed_meal(id),
     -- Planned macros (детерминированный расчёт солвера).
     planned_protein_g NUMERIC(6,1) NOT NULL DEFAULT 0,
@@ -535,16 +582,15 @@ CREATE TABLE meal (
     actual_fat_g      NUMERIC(6,1),
     actual_carb_g     NUMERIC(6,1),
     actual_kcal       INTEGER,
-    -- Двухпользовательский учёт (§12 Q4): кто готовил, кто логировал.
+    -- Household-учёт (§12 Q4): кто готовил, кто логировал.
     cooked_by       BIGINT      REFERENCES eater(id),
     cooked_at       TIMESTAMPTZ,
     logged_by       BIGINT      REFERENCES eater(id),
     logged_at       TIMESTAMPTZ,
     log_status      meal_log_status NOT NULL DEFAULT 'planned',
-    -- Ровно один источник: либо рецепт плана, либо фиксированный приём.
-    CONSTRAINT one_source CHECK (
-        (plan_recipe_id IS NOT NULL)::int + (fixed_meal_id IS NOT NULL)::int = 1
-    ),
+    UNIQUE (plan_id, eater_id, meal_date, meal_type),
+    FOREIGN KEY (plan_id, eater_id, meal_date)
+        REFERENCES plan_eater_day(plan_id, eater_id, plan_date) ON DELETE CASCADE,
     CONSTRAINT meal_nonneg CHECK (
         planned_protein_g >= 0 AND planned_fat_g >= 0 AND planned_carb_g >= 0
         AND planned_kcal >= 0
@@ -554,6 +600,27 @@ CREATE TABLE meal (
         AND (actual_kcal IS NULL OR actual_kcal >= 0)
     )
 );
+
+-- Доля общей партии в generated meal. Это каноническая порция:
+-- macros/quality партии умножаются на portion_factor. Planned serving grams —
+-- optional подсказка, вычислимая только при известном expected output.
+CREATE TABLE meal_component_allocation (
+    meal_id            BIGINT       NOT NULL REFERENCES meal(id) ON DELETE CASCADE,
+    plan_recipe_id     BIGINT       NOT NULL REFERENCES plan_recipe(id) ON DELETE CASCADE,
+    portion_factor     NUMERIC(9,6) NOT NULL,
+    planned_serving_g  NUMERIC(9,1),
+    PRIMARY KEY (meal_id, plan_recipe_id),
+    CONSTRAINT meal_component_allocation_values CHECK (
+        portion_factor > 0 AND portion_factor <= 1
+        AND (planned_serving_g IS NULL OR planned_serving_g > 0)
+    )
+);
+
+-- Cross-row invariants проверяются domain/usecase в той же транзакции:
+--   * generated meal (fixed_meal_id IS NULL) имеет хотя бы одну allocation;
+--   * fixed meal не имеет allocations;
+--   * meal и каждая выделенная ему plan_recipe принадлежат одному plan;
+--   * SUM(portion_factor) по plan_recipe_id <= 1; остаток — резерв.
 
 -- =====================================================================
 -- FEEDBACK  (§7: вес, а не чёрный список)
@@ -661,12 +728,13 @@ CREATE TABLE eater_rule_override (
 );
 
 -- Дневной агрегат нутриентов/качества по едоку. Planned и actual — разными
--- строками (basis). Считается из slot_fill×product + fixed_meal. Нужен, чтобы
--- проверять дневные правила (клетчатка, натрий, sat fat, добавл. сахар).
+-- строками (basis). Для generated meals считается из
+-- slot_fill×product×meal_component_allocation, для fixed meals — из fixed_meal.
+-- Нужен, чтобы проверять дневные правила (клетчатка, натрий, sat fat, сахар).
 CREATE TABLE day_nutrition_summary (
     id              BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     eater_id        BIGINT      NOT NULL REFERENCES eater(id) ON DELETE CASCADE,
-    plan_id         BIGINT      REFERENCES plan(id) ON DELETE SET NULL,
+    plan_id         BIGINT      NOT NULL REFERENCES plan(id) ON DELETE CASCADE,
     summary_date    DATE        NOT NULL,
     basis           summary_basis NOT NULL,
     -- макросы (для полноты картины дня вместе с качеством)
@@ -690,7 +758,7 @@ CREATE TABLE day_nutrition_summary (
     upf_kcal_share_est NUMERIC(4,3),                -- 0..1, доля ккал из UPF (оценка)
     data_coverage_score NUMERIC(4,3),              -- 0..1, насколько данным можно верить
     created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
-    UNIQUE (eater_id, summary_date, basis),
+    UNIQUE (plan_id, eater_id, summary_date, basis),
     CONSTRAINT day_summary_shares CHECK (
         (upf_kcal_share_est  IS NULL OR upf_kcal_share_est  BETWEEN 0 AND 1)
         AND (data_coverage_score IS NULL OR data_coverage_score BETWEEN 0 AND 1)
@@ -710,6 +778,7 @@ CREATE TABLE day_nutrition_summary (
 -- мясо, бобовые. Позволяет оценивать weekly-правила даже при горизонте плана 3 дня.
 CREATE TABLE rolling_nutrition_summary (
     id              BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    plan_id         BIGINT      NOT NULL REFERENCES plan(id) ON DELETE CASCADE,
     eater_id        BIGINT      NOT NULL REFERENCES eater(id) ON DELETE CASCADE,
     as_of_date      DATE        NOT NULL,
     window_days     SMALLINT    NOT NULL,           -- 3 / 7 / 14
@@ -724,7 +793,7 @@ CREATE TABLE rolling_nutrition_summary (
     fruit_veg_g_avg NUMERIC(8,1),
     data_coverage_score NUMERIC(4,3),
     created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
-    UNIQUE (eater_id, as_of_date, window_days, basis),
+    UNIQUE (plan_id, eater_id, as_of_date, window_days, basis),
     CONSTRAINT rolling_window_ok CHECK (window_days > 0),
     CONSTRAINT rolling_coverage_ok CHECK (
         data_coverage_score IS NULL OR data_coverage_score BETWEEN 0 AND 1),
@@ -745,18 +814,23 @@ CREATE TABLE rule_evaluation_result (
     entity_id       BIGINT      NOT NULL,           -- id day/rolling/plan/meal
     eater_id        BIGINT      REFERENCES eater(id) ON DELETE CASCADE,
     rule_code       TEXT        NOT NULL,
+    basis           summary_basis NOT NULL,
     status          rule_eval_status NOT NULL,
     actual_value    NUMERIC(12,2),
     target_value    NUMERIC(12,2),
     unit            TEXT,                           -- 'g', 'mg', '% kcal', 'g/week'
-    -- Привязка по времени: для какого дня (день) или окна (rolling). План на двоих,
-    -- поэтому warning должен быть понятно адресован: кому (eater_id), за что (date/окно).
+    -- Привязка по времени: для какого дня (день) или окна (rolling).
+    -- Warning адресован конкретному едоку и периоду оценки.
     eval_date       DATE,                           -- для entity_type='day'/'meal'
     window_start    DATE,                           -- для entity_type='rolling_window'
     window_end      DATE,
     coverage_score  NUMERIC(4,3),                   -- доверие к этой оценке (unknown ≠ 0)
     message         TEXT,                           -- человекочитаемое объяснение/warning
-    evaluated_at    TIMESTAMPTZ NOT NULL DEFAULT now()
+    evaluated_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
+    UNIQUE NULLS NOT DISTINCT (entity_type, entity_id, eater_id, rule_code, basis),
+    CONSTRAINT rule_eval_coverage_ok CHECK (
+        coverage_score IS NULL OR coverage_score BETWEEN 0 AND 1
+    )
 );
 
 -- =====================================================================
@@ -768,9 +842,10 @@ CREATE INDEX idx_recipe_template_status    ON recipe_template(status);
 CREATE INDEX idx_recipe_slot_template      ON recipe_slot(template_id);
 CREATE INDEX idx_slot_fill_product         ON slot_fill(product_id);
 CREATE INDEX idx_plan_recipe_plan          ON plan_recipe(plan_id);
+CREATE INDEX idx_plan_eater_day_eater_date ON plan_eater_day(eater_id, plan_date);
 CREATE INDEX idx_meal_plan                 ON meal(plan_id);
 CREATE INDEX idx_meal_eater_date           ON meal(eater_id, meal_date);   -- аналитика по неделям
-CREATE INDEX idx_meal_recipe               ON meal(plan_recipe_id);
+CREATE INDEX idx_meal_component_recipe     ON meal_component_allocation(plan_recipe_id);
 CREATE INDEX idx_feedback_target           ON feedback_event(target_type, target_id);
 CREATE INDEX idx_llm_call_plan             ON llm_call(plan_id);
 CREATE INDEX idx_llm_call_created          ON llm_call(created_at);
