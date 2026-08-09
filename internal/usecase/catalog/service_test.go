@@ -52,7 +52,7 @@ func TestCreateProductCommandProductNormalizesDefaults(t *testing.T) {
 		product.Classification.ProcessingLevel != catalogdom.ProcessingLevelUnknown {
 		t.Fatalf("CreateProductCommand.product() classification = %#v/%#v", product.DataQuality, product.Classification)
 	}
-	if !slices.Equal(product.Allergens, []catalogdom.Allergen{"nuts"}) || product.DataQuality.Coverage != 0.2 {
+	if !slices.Equal(product.Allergens, []catalogdom.Allergen{"nuts"}) || product.DataQuality.Coverage != 2.0/9.0 {
 		t.Fatalf("CreateProductCommand.product() allergens/coverage = %#v/%v", product.Allergens, product.DataQuality.Coverage)
 	}
 }
@@ -203,8 +203,8 @@ func TestCreateProductDerivesNutritionCoverage(t *testing.T) {
 	if product.Brand != "Brand" || product.Name != "Product" {
 		t.Fatalf("CreateProduct() names = %q, %q, want trimmed values", product.Brand, product.Name)
 	}
-	if product.DataQuality.Coverage != 0.2 {
-		t.Fatalf("CreateProduct() coverage = %v, want 0.2", product.DataQuality.Coverage)
+	if product.DataQuality.Coverage != 2.0/9.0 {
+		t.Fatalf("CreateProduct() coverage = %v, want %v", product.DataQuality.Coverage, 2.0/9.0)
 	}
 	if got, want := product.Allergens, []catalogdom.Allergen{"nuts", "casein"}; !slices.Equal(got, want) {
 		t.Fatalf("CreateProduct() allergens = %#v, want %#v", got, want)

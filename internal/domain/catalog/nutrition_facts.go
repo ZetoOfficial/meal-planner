@@ -1,8 +1,12 @@
 package catalog
 
-import "time"
+import (
+	"time"
 
-const nutritionFactCoverageFields = 10
+	"github.com/ZetoOfficial/meal-planner/internal/domain/nutrition"
+)
+
+const nutritionFactCoverageFields = 9
 
 type NutritionFacts struct {
 	SaturatedFatPer100G               *float64
@@ -24,8 +28,7 @@ func (facts NutritionFacts) Coverage() float64 {
 		facts.TransFatPer100G,
 		facts.IndustrialTransFatPer100G,
 		facts.FiberPer100G,
-		facts.SodiumMgPer100G,
-		facts.SaltGPer100G,
+		facts.EffectiveSodiumMgPer100G(),
 		facts.TotalSugarsPer100G,
 		facts.AddedSugarsPer100G,
 		facts.FreeSugarsPer100G,
@@ -38,6 +41,18 @@ func (facts NutritionFacts) Coverage() float64 {
 		populated++
 	}
 	return float64(populated) / nutritionFactCoverageFields
+}
+
+// EffectiveSodiumMgPer100G prefers explicit sodium and falls back to converted salt.
+func (facts NutritionFacts) EffectiveSodiumMgPer100G() *float64 {
+	if facts.SodiumMgPer100G != nil {
+		return facts.SodiumMgPer100G
+	}
+	if facts.SaltGPer100G == nil {
+		return nil
+	}
+	sodium := nutrition.SodiumMgFromSaltG(*facts.SaltGPer100G)
+	return &sodium
 }
 
 type NutritionDataQuality string
