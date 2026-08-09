@@ -29,8 +29,11 @@ type FixedMealQuality struct {
 	FreeSugarsG      *float64
 	ProcessedMeatG   *float64
 	RedMeatG         *float64
+	GrainGEquiv      *float64
 	WholeGrainGEquiv *float64
+	LegumeG          *float64
 	FruitVegG        *float64
+	UPFKcal          *float64
 
 	IncludeInAnalytics bool
 	IncludeInWarnings  bool

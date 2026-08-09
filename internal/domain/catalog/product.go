@@ -98,15 +98,15 @@ func (l ProcessingLevel) Valid() bool {
 }
 
 type FoodClassification struct {
-	FoodGroup            FoodGroup
+	FoodGroup            *FoodGroup
 	ProcessingLevel      ProcessingLevel
 	ProcessingConfidence *float64
-	CountsToFruitVeg     bool
-	IsLegume             bool
-	IsWholeGrain         bool
+	CountsToFruitVeg     *bool
+	IsLegume             *bool
+	IsWholeGrain         *bool
 	WholeGrainRatio      *float64
-	IsRedMeat            bool
-	IsProcessedMeat      bool
+	IsRedMeat            *bool
+	IsProcessedMeat      *bool
 	Source               *string
 	Note                 *string
 }

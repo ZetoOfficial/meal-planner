@@ -910,8 +910,11 @@ components:
         free_sugars_g: { type: number, format: float, nullable: true, minimum: 0 }
         processed_meat_g: { type: number, format: float, nullable: true, minimum: 0 }
         red_meat_g: { type: number, format: float, nullable: true, minimum: 0 }
+        grain_g_equiv: { type: number, format: float, nullable: true, minimum: 0 }
         whole_grain_g_equiv: { type: number, format: float, nullable: true, minimum: 0 }
+        legume_g: { type: number, format: float, nullable: true, minimum: 0 }
         fruit_veg_g: { type: number, format: float, nullable: true, minimum: 0 }
+        upf_kcal: { type: number, format: float, nullable: true, minimum: 0 }
         include_in_analytics: { type: boolean, default: true }
         include_in_warnings: { type: boolean, default: true }
 
@@ -1001,7 +1004,9 @@ components:
 
     FoodClassification:
       type: object
-      description: Пищевая классификация для food-based правил (отдельно от role_kind)
+      description: >
+        Пищевая классификация для food-based правил (отдельно от role_kind).
+        Optional NULL означает unknown; explicit false/other означает известное значение.
       properties:
         food_group:
           type: string
@@ -1018,6 +1023,7 @@ components:
         whole_grain_ratio: { type: number, format: float, nullable: true, minimum: 0, maximum: 1 }
         is_red_meat: { type: boolean }
         is_processed_meat: { type: boolean }
+        classification_source: { type: string, nullable: true }
         classification_note: { type: string, nullable: true }
 
     Product:
@@ -1200,8 +1206,11 @@ components:
       properties:
         label: { type: string }
         start_date: { type: string, format: date }
-        days: { type: integer, default: 3 }
-        cook_date: { type: string, format: date }
+        days: { type: integer, minimum: 1, default: 3 }
+        cook_date:
+          type: string
+          format: date
+          description: 'optional; сервер использует start_date, если поле не задано'
         novelty_level:
           type: integer
           minimum: 0
@@ -1236,10 +1245,10 @@ components:
         start_date: { type: string, format: date }
         days: { type: integer }
         status: { type: string, enum: [draft, active, archived] }
-        quality_score: { type: number, format: float, nullable: true }
-        quality_warnings_count: { type: integer }
+        quality_score: { type: number, format: float, nullable: true, minimum: 0, maximum: 100 }
+        quality_warnings_count: { type: integer, minimum: 0 }
         shopping_list_stale: { type: boolean }
-      required: [id, start_date, days, status]
+      required: [id, start_date, days, status, quality_warnings_count, shopping_list_stale]
 
     SlotFill:
       type: object
@@ -1344,33 +1353,37 @@ components:
         coverage_score:
           type: number
           format: float
-          nullable: true
           minimum: 0
           maximum: 1
           description: 'доверие к оценке; низкий coverage → status=unknown (unknown ≠ pass)'
         message: { type: string, nullable: true }
-      required: [rule_code, entity_type, basis, status]
+      required: [rule_code, entity_type, basis, status, coverage_score]
 
     NutritionQualitySummary:
       type: object
       description: Сводка качества для дня/плана + rolling-проекции недели
       properties:
-        quality_score: { type: number, format: float, nullable: true }
-        warnings_count: { type: integer }
-        data_coverage_score: { type: number, format: float, nullable: true }
-        fiber_g: { type: number, format: float, nullable: true }
-        sodium_mg: { type: number, format: float, nullable: true }
-        saturated_fat_g: { type: number, format: float, nullable: true }
-        added_sugars_g: { type: number, format: float, nullable: true }
-        fruit_veg_g: { type: number, format: float, nullable: true }
-        whole_grain_g_equiv: { type: number, format: float, nullable: true }
-        legume_g: { type: number, format: float, nullable: true }
-        red_meat_g_rolling_7d: { type: number, format: float, nullable: true }
-        processed_meat_g_rolling_7d: { type: number, format: float, nullable: true }
-        upf_kcal_share_est: { type: number, format: float, nullable: true }
+        quality_score: { type: number, format: float, minimum: 0, maximum: 100 }
+        warnings_count: { type: integer, minimum: 0 }
+        data_coverage_score: { type: number, format: float, minimum: 0, maximum: 1 }
+        fiber_g: { type: number, format: float, nullable: true, minimum: 0 }
+        sodium_mg: { type: number, format: float, nullable: true, minimum: 0 }
+        saturated_fat_g: { type: number, format: float, nullable: true, minimum: 0 }
+        added_sugars_g: { type: number, format: float, nullable: true, minimum: 0 }
+        fruit_veg_g: { type: number, format: float, nullable: true, minimum: 0 }
+        grain_g_equiv: { type: number, format: float, nullable: true, minimum: 0 }
+        whole_grain_g_equiv: { type: number, format: float, nullable: true, minimum: 0 }
+        whole_grain_ratio: { type: number, format: float, nullable: true, minimum: 0, maximum: 1 }
+        legume_g: { type: number, format: float, nullable: true, minimum: 0 }
+        legume_components_plan: { type: integer, nullable: true, minimum: 0 }
+        legume_servings_rolling_7d: { type: number, format: float, nullable: true, minimum: 0 }
+        red_meat_g_rolling_7d: { type: number, format: float, nullable: true, minimum: 0 }
+        processed_meat_g_rolling_7d: { type: number, format: float, nullable: true, minimum: 0 }
+        upf_kcal_share_est: { type: number, format: float, nullable: true, minimum: 0, maximum: 1 }
         rule_evaluations:
           type: array
           items: { $ref: '#/components/schemas/RuleEvaluation' }
+      required: [quality_score, warnings_count, data_coverage_score, rule_evaluations]
 
     SwapInput:
       type: object

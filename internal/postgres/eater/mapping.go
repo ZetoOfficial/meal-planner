@@ -76,8 +76,11 @@ func fixedMealParams(meal eaterdom.FixedMeal) sqlc.CreateFixedMealParams {
 		FreeSugarsG:        pgvalue.OptionalNumeric(meal.Quality.FreeSugarsG),
 		ProcessedMeatG:     pgvalue.OptionalNumeric(meal.Quality.ProcessedMeatG),
 		RedMeatG:           pgvalue.OptionalNumeric(meal.Quality.RedMeatG),
+		GrainGEquiv:        pgvalue.OptionalNumeric(meal.Quality.GrainGEquiv),
 		WholeGrainGEquiv:   pgvalue.OptionalNumeric(meal.Quality.WholeGrainGEquiv),
+		LegumeG:            pgvalue.OptionalNumeric(meal.Quality.LegumeG),
 		FruitVegG:          pgvalue.OptionalNumeric(meal.Quality.FruitVegG),
+		UpfKcal:            pgvalue.OptionalNumeric(meal.Quality.UPFKcal),
 		IncludeInAnalytics: meal.Quality.IncludeInAnalytics,
 		IncludeInWarnings:  meal.Quality.IncludeInWarnings,
 		Active:             meal.Active,
@@ -137,7 +140,15 @@ func fixedMealQualityFromRow(row sqlc.FixedMeal) (eaterdom.FixedMealQuality, err
 	if err != nil {
 		return eaterdom.FixedMealQuality{}, err
 	}
+	grain, err := pgvalue.OptionalFloat64(row.GrainGEquiv)
+	if err != nil {
+		return eaterdom.FixedMealQuality{}, err
+	}
 	wholeGrain, err := pgvalue.OptionalFloat64(row.WholeGrainGEquiv)
+	if err != nil {
+		return eaterdom.FixedMealQuality{}, err
+	}
+	legume, err := pgvalue.OptionalFloat64(row.LegumeG)
 	if err != nil {
 		return eaterdom.FixedMealQuality{}, err
 	}
@@ -145,7 +156,11 @@ func fixedMealQualityFromRow(row sqlc.FixedMeal) (eaterdom.FixedMealQuality, err
 	if err != nil {
 		return eaterdom.FixedMealQuality{}, err
 	}
-	return eaterdom.FixedMealQuality{SaturatedFatG: saturated, TransFatG: trans, FiberG: fiber, SodiumMg: sodium, AddedSugarsG: added, FreeSugarsG: free, ProcessedMeatG: processed, RedMeatG: red, WholeGrainGEquiv: wholeGrain, FruitVegG: fruitVeg, IncludeInAnalytics: row.IncludeInAnalytics, IncludeInWarnings: row.IncludeInWarnings}, nil
+	upfKcal, err := pgvalue.OptionalFloat64(row.UpfKcal)
+	if err != nil {
+		return eaterdom.FixedMealQuality{}, err
+	}
+	return eaterdom.FixedMealQuality{SaturatedFatG: saturated, TransFatG: trans, FiberG: fiber, SodiumMg: sodium, AddedSugarsG: added, FreeSugarsG: free, ProcessedMeatG: processed, RedMeatG: red, GrainGEquiv: grain, WholeGrainGEquiv: wholeGrain, LegumeG: legume, FruitVegG: fruitVeg, UPFKcal: upfKcal, IncludeInAnalytics: row.IncludeInAnalytics, IncludeInWarnings: row.IncludeInWarnings}, nil
 }
 
 func exclusionFromRow(row sqlc.EaterExclusion) eaterdom.Exclusion {

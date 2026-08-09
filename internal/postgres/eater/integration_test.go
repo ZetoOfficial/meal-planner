@@ -55,17 +55,25 @@ func TestEaterRoundTripProfileGoalFixedMealAndExclusion(t *testing.T) {
 		t.Fatalf("profile allergens = %#v, %v", profile.Allergens, err)
 	}
 
+	grainG := 60.0
+	legumeG := 25.0
+	upfKcal := 140.0
 	meal, err := service.CreateFixedMeal(ctx, created.ID, eaterusecase.CreateFixedMealCommand{
 		MealType: eaterdom.MealTypeBreakfast, Label: "sandwiches", Macros: eaterdom.Macros{ProteinG: 20, FatG: 10, CarbG: 30, Kcal: 300},
+		Quality: eaterdom.FixedMealQuality{GrainGEquiv: &grainG, LegumeG: &legumeG, UPFKcal: &upfKcal},
 	})
-	if err != nil || meal.Quality.FiberG != nil || !meal.Quality.IncludeInAnalytics {
+	if err != nil || meal.Quality.FiberG != nil || !meal.Quality.IncludeInAnalytics ||
+		meal.Quality.GrainGEquiv == nil || *meal.Quality.GrainGEquiv != grainG ||
+		meal.Quality.LegumeG == nil || *meal.Quality.LegumeG != legumeG ||
+		meal.Quality.UPFKcal == nil || *meal.Quality.UPFKcal != upfKcal {
 		t.Fatalf("fixed meal = %#v, %v", meal, err)
 	}
 
+	otherFoodGroup := catalogdom.FoodGroupOther
 	product, err := catalogrepo.New(store).Create(ctx, catalogdom.Product{
 		Brand: "Brand", Name: "Product", ProteinPer100G: 1, FatPer100G: 1, CarbPer100G: 1, KcalPer100G: 10, DefaultUnit: "g", Purchasable: true,
 		DataQuality:    catalogdom.NutritionData{Quality: catalogdom.NutritionDataQualityUnknown},
-		Classification: catalogdom.FoodClassification{FoodGroup: catalogdom.FoodGroupOther, ProcessingLevel: catalogdom.ProcessingLevelUnknown},
+		Classification: catalogdom.FoodClassification{FoodGroup: &otherFoodGroup, ProcessingLevel: catalogdom.ProcessingLevelUnknown},
 	})
 	if err != nil {
 		t.Fatalf("create product target: %v", err)

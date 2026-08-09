@@ -21,6 +21,7 @@ Core rules:
 - Prefer small Go packages with domain names over generic folders like `services`, `utils`, `common`, `interfaces`.
 - Put interfaces on the consumer side, usually in `usecase/*/ports.go`.
 - Do not invent fields or endpoints. `docs/schema.sql` and `api/openapi.yaml` are the source of truth.
+- Give each contract one normative home: product rules, units and boundaries in `docs/SPEC.md`, persistence in `docs/schema.sql`, and HTTP in `api/openapi.yaml`. `DESIGN.md`, `ARCHITECTURE.md`, and roadmap entries may explain intent, ownership, scope, or acceptance criteria, but must link to rather than restate formulas, schema details, or implementation-like pseudocode.
 - Keep v1 scope: HTTP API only. Telegram bot, Mini App, voice, vision/barcode, FatSecret sync, inventory, RAG, agents and fine-tuning are v2+ or explicitly out of scope.
 - Comments must justify a non-obvious invariant or decision. Do not add AI-style narration, restate code, or comment routine control flow.
 - OpenAPI handlers return generated strict response objects or errors. Keep error-to-HTTP mapping in the HTTP adapter; do not hand-roll successful JSON responses.

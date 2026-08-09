@@ -58,7 +58,8 @@ func fixedMealQualityCommand(input openapi.FixedMealQuality) eaterdom.FixedMealQ
 		SaturatedFatG: float64Pointer(input.SaturatedFatG), TransFatG: float64Pointer(input.TransFatG), FiberG: float64Pointer(input.FiberG),
 		SodiumMg: float64Pointer(input.SodiumMg), AddedSugarsG: float64Pointer(input.AddedSugarsG), FreeSugarsG: float64Pointer(input.FreeSugarsG),
 		ProcessedMeatG: float64Pointer(input.ProcessedMeatG), RedMeatG: float64Pointer(input.RedMeatG),
-		WholeGrainGEquiv: float64Pointer(input.WholeGrainGEquiv), FruitVegG: float64Pointer(input.FruitVegG),
+		GrainGEquiv: float64Pointer(input.GrainGEquiv), WholeGrainGEquiv: float64Pointer(input.WholeGrainGEquiv),
+		LegumeG: float64Pointer(input.LegumeG), FruitVegG: float64Pointer(input.FruitVegG), UPFKcal: float64Pointer(input.UpfKcal),
 	}
 }
 
@@ -134,7 +135,8 @@ func fixedMealQualityResponse(value eaterdom.FixedMealQuality) *openapi.FixedMea
 	return &openapi.FixedMealQuality{
 		SaturatedFatG: float32Pointer(value.SaturatedFatG), TransFatG: float32Pointer(value.TransFatG), FiberG: float32Pointer(value.FiberG), SodiumMg: float32Pointer(value.SodiumMg),
 		AddedSugarsG: float32Pointer(value.AddedSugarsG), FreeSugarsG: float32Pointer(value.FreeSugarsG), ProcessedMeatG: float32Pointer(value.ProcessedMeatG), RedMeatG: float32Pointer(value.RedMeatG),
-		WholeGrainGEquiv: float32Pointer(value.WholeGrainGEquiv), FruitVegG: float32Pointer(value.FruitVegG),
+		GrainGEquiv: float32Pointer(value.GrainGEquiv), WholeGrainGEquiv: float32Pointer(value.WholeGrainGEquiv),
+		LegumeG: float32Pointer(value.LegumeG), FruitVegG: float32Pointer(value.FruitVegG), UpfKcal: float32Pointer(value.UPFKcal),
 		IncludeInAnalytics: boolPointer(value.IncludeInAnalytics), IncludeInWarnings: boolPointer(value.IncludeInWarnings),
 	}
 }

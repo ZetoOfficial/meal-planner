@@ -48,7 +48,7 @@ func TestCreateProductCommandProductNormalizesDefaults(t *testing.T) {
 		t.Fatalf("CreateProductCommand.product() = %#v, want normalized defaults", product)
 	}
 	if product.DataQuality.Quality != catalogdom.NutritionDataQualityUnknown ||
-		product.Classification.FoodGroup != catalogdom.FoodGroupOther ||
+		product.Classification.FoodGroup != nil ||
 		product.Classification.ProcessingLevel != catalogdom.ProcessingLevelUnknown {
 		t.Fatalf("CreateProductCommand.product() classification = %#v/%#v", product.DataQuality, product.Classification)
 	}

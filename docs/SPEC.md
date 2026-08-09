@@ -57,7 +57,7 @@
 - **HC-2 Орехи/арахис** исключены полностью у Паши. Тахини (кунжут) разрешён.
 - **HC-3 Хранение.** `storage_profile` рецепта — first-class поле. План на 3 дня берёт только рецепты с профилем `keeps_3d` / `keeps_3d_reheat` / `assemble_fresh`. `eat_same_day` в многодневный план не ставится.
 - **HC-4 Оборудование.** Рецепт не используется, если его `equipment` не покрывается доступным набором (плита, аэрогриль, духовка + опционально докупленное).
-- **HC-5 Фиксированные приёмы.** `fixed_meal` не генерируется, но его БЖУ всегда учитывается в дневном балансе едока **и в quality-аналитике/предупреждениях** (флаги `include_in_analytics` / `include_in_warnings`).
+- **HC-5 Фиксированные приёмы.** `fixed_meal` не генерируется, но его БЖУ всегда учитывается в дневном балансе едока **и в quality-аналитике/предупреждениях** (флаги `include_in_analytics` / `include_in_warnings`). Для полной реконструкции food-based правил он хранит nullable prepared-equivalent `grain_g_equiv`, `whole_grain_g_equiv`, `legume_g`, meat/fruit-veg grams и `upf_kcal`; NULL остаётся unknown.
 - **HC-6 Целостность слотов.** Каждый продукт в `slot_fill` обязан иметь роль (`product_role`), совпадающую с `role_tag` слота. Продукт не из БД в план не попадает. Nutrition-значимые количества рецепта и плана нормализуются в граммы; без явной конверсии solver не угадывает вес `ml` или `pcs`.
 - **HC-7 Окно готовки.** Между двумя готовками не больше 3–4 дней; партия живёт 2–3 дня (DESIGN §8).
 - **HC-8 Персональные макро-цели** — hard: дневная сумма Б/Ж/У/ккал должна попасть в диапазоны `eater_macro_goal`, действующей на конкретную дату еды. Версия goal, использованная для каждого eater/day, сохраняется с планом.
@@ -97,6 +97,51 @@ prepared_food_group_g = planned_input_qty_g
 - `whole_grain_ratio` = whole-grain prepared equivalent / all-grain prepared equivalent. Неизвестная classification или yield снижает coverage знаменателя.
 - `legume_servings` = legume prepared-equivalent grams / serving size из версионируемого ruleset. Размер порции не зашит в агрегатор.
 - Coverage считается отдельно для каждого правила по его релевантным вкладам. Общий product coverage — справочная метрика и не может создать ложный `pass`.
+
+#### Evaluation contract
+
+Hard violations и soft evaluation — разные результаты. Явный PHO,
+`industrial_trans_fat_per_100g > 0`, аллерген или hard-исключение отбрасывают
+candidate и возвращаются как solver diagnostic. Они не кодируются значением
+`soft_fail` и не участвуют в `quality_score`.
+
+Границы MVP ruleset определены так:
+
+| Правило | `pass` | `warn` | `soft_fail` / hard violation | Особый случай |
+|---|---|---|---|---|
+| `fiber_min_g` | значение `>=` sex-specific target | — | `< target` | неизвестная клетчатка → `unknown` |
+| `sodium_max_daily_mg` | `< 2300 mg` | — | `>= 2300 mg` | соль переводится в натрий до агрегации |
+| `added_sugar_max_pct_kcal` | `<= 5%` kcal | `> 5%` и `< 10%` | `>= 10%` | kcal `<= 0` или неизвестный numerator → `unknown` |
+| `sat_fat_max_pct_kcal` | `< 10%` kcal | — | `>= 10%` | kcal `<= 0` или неизвестный numerator → `unknown` |
+| `industrial_trans_fat` | PHO известен как false и industrial amount известен как 0 | общий `trans_fat > 0` при отсутствии industrial violation | PHO=true или industrial amount `> 0` — hard violation | неполные industrial поля без affirmative violation → `unknown` |
+| `fruit_veg_min_g` | `>= 400 g/day` | — | `< 400 g/day` | картофель и соки не входят |
+| `whole_grain_ratio` | ratio `>= 0.5` | — | ratio `< 0.5` | если all-grain denominator равен 0, ratio считается 1; объём `>=90 g/day` остаётся отдельной analytics-метрикой |
+| `legumes_min` | `>=1` distinct allocated legume component/plan или `>=3` servings/rolling-7d | — | ниже соответствующей границы | один `plan_recipe` считается один раз на eater/plan, даже если распределён на несколько meals |
+| `red_meat_max_weekly_g` | `<= 350 g/rolling-7d` | — | `> 350 g` | prepared-equivalent grams |
+| `processed_meat` | 0 g | fixed-meal contribution `>0` | generated contribution `>0` | fixed meal не блокируется |
+| `upf_share` | known share = 0 | known share `>0` | — | thresholdless continuous penalty `1-share`; unknown classification → `unknown` |
+
+Per-rule coverage всегда находится в `0..1` и хранится вместе с evaluation:
+
+- nutrient rules взвешивают известные значения по allocated input grams; salt и
+  sodium считаются одним известным источником после конверсии;
+- percentage-of-kcal rules используют известный planned kcal как denominator, а
+  coverage относится к numerator;
+- food-group rules требуют одновременно известные nullable classification flags
+  и `prepared_qty_factor`; известный `false` отличается от NULL;
+- rolling coverage агрегирует те же rule-specific known/total weights на всём
+  окне; aggregate coverage — взвешенное среднее per-rule coverage, а не product
+  `nutrition_coverage_score`;
+- если coverage недостаточен для boundary decision, status=`unknown`; неизвестное
+  никогда не даёт `pass`.
+
+`quality_score` — informational число `0..100`, не замена лексикографической
+целевой. Ruleset задаёт веса и нормализованные функции. Для пороговых soft-правил
+базовые вклады: `pass=1`, `warn=0.5`, `soft_fail=0`, `unknown=0`; analytics-only
+правила исключены, `upf_share` даёт `1-share`. Score eater/day — взвешенное
+среднее; score плана — минимум по eater/day. Mean eater/day score используется
+solver только следующим fairness tie-break. Aggregate coverage публикуется
+отдельно и не может компенсировать плохой score.
 
 Не делаем в MVP (см. `deep-research-report.md`): полный микронутриентный оптимизатор, UPF hard-ban, per-meal caps как стандарт, meal-timing/fasting как дефолт солвера, опору на новейшие спорные U.S.-сдвиги (база — пересечение WHO + EFSA/NNR + стабильная часть DGA).
 
@@ -145,7 +190,7 @@ prepared_food_group_g = planned_input_qty_g
 > Как едок, я веду личную БД продуктов с реальными БЖУ, чтобы планы считались по тому, что я реально покупаю.
 
 - CRUD продукта: бренд, название, БЖУ/100 г, ккал/100 г, цена/100 г, единица, аллергены, роли.
-- **Optional quality-поля** (NULL = неизвестно): насыщенные жиры, транс-жиры/PHO, клетчатка, натрий и/или соль, сахара (всего/добавленные/свободные), food-группа, processing level, whole-grain ratio, флаги `is_legume`/`is_red_meat`/`is_processed_meat`, `counts_to_fruit_veg`.
+- **Optional quality-поля** (NULL = неизвестно): насыщенные жиры, транс-жиры/PHO, клетчатка, натрий и/или соль, сахара (всего/добавленные/свободные), food-группа, processing level, whole-grain ratio, флаги `is_legume`/`is_whole_grain`/`is_red_meat`/`is_processed_meat`, `counts_to_fruit_veg`. Известный `false`/`other` не используется как замена NULL.
 - **Метаданные качества данных:** `nutrition_data_quality` (label_exact/trusted_db/estimated/unknown), `source_kind`, coverage_score, `last_verified_at`.
 - AC: продукт без хотя бы одной роли нельзя использовать в слоте (валидатор предупреждает при создании рецепта/плана).
 - AC: указание аллергенов продукта обязательно учитывается в HC-1/HC-2.
@@ -169,7 +214,11 @@ prepared_food_group_g = planned_input_qty_g
 
 > Как едок, я прошу план на 3 дня и получаю набор компонентов под мои БЖУ и constraints.
 
-- Вход: даты, дни (по умолч. 3), `novelty_level` 0–3 и непустой список per-eater targets (`eater_id` + явные `generated_meal_types`). Одинаковое расписание не делает едоков одним профилем.
+- Вход: `start_date`, положительное число дней (по умолч. 3), optional `cook_date`
+  (по умолч. равен `start_date`), `novelty_level` 0–3 и непустой список уникальных
+  per-eater targets (`eater_id` + явные `generated_meal_types`). Расписание target
+  разворачивается в отдельный persisted `plan_eater_day` на каждую дату вместе с
+  действующим `macro_goal_id`; одинаковое расписание не делает едоков одним профилем.
 - Логика (§12 Q2 — **переиспользование**):
   1. Солвер ищет матчи среди `permanent`-рецептов под constraints.
   2. LLM вызывается **только** если permanent-кандидаты не дали допустимый план

@@ -18,4 +18,3 @@ func float32Pointer(value *float64) *float32 {
 
 func boolPointer(value bool) *bool       { return &value }
 func stringPointer(value string) *string { return &value }
-func dereferenceBool(value *bool) bool   { return value != nil && *value }

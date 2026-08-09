@@ -59,7 +59,7 @@ func updateProductParams(product catalogdom.Product) sqlc.UpdateProductParams {
 
 func classificationParams(productID int64, classification catalogdom.FoodClassification) sqlc.UpsertProductFoodClassificationParams {
 	return sqlc.UpsertProductFoodClassificationParams{
-		ProductID: productID, FoodGroup: sqlc.FoodGroup(classification.FoodGroup),
+		ProductID: productID, FoodGroup: foodGroupToRow(classification.FoodGroup),
 		ProcessingLevel:      sqlc.ProcessingLevel(classification.ProcessingLevel),
 		ProcessingConfidence: pgvalue.OptionalNumeric(classification.ProcessingConfidence),
 		CountsToFruitVeg:     classification.CountsToFruitVeg, IsLegume: classification.IsLegume,
@@ -168,7 +168,7 @@ func classificationFromRow(row sqlc.ProductFoodClassification) (catalogdom.FoodC
 		return catalogdom.FoodClassification{}, err
 	}
 	return catalogdom.FoodClassification{
-		FoodGroup: catalogdom.FoodGroup(row.FoodGroup), ProcessingLevel: catalogdom.ProcessingLevel(row.ProcessingLevel),
+		FoodGroup: foodGroupFromRow(row.FoodGroup), ProcessingLevel: catalogdom.ProcessingLevel(row.ProcessingLevel),
 		ProcessingConfidence: confidence, CountsToFruitVeg: row.CountsToFruitVeg, IsLegume: row.IsLegume,
 		IsWholeGrain: row.IsWholeGrain, WholeGrainRatio: ratio, IsRedMeat: row.IsRedMeat,
 		IsProcessedMeat: row.IsProcessedMeat, Source: row.ClassificationSource, Note: row.ClassificationNote,
@@ -214,5 +214,21 @@ func sourceKindFromRow(value *sqlc.SourceKind) *catalogdom.SourceKind {
 		return nil
 	}
 	result := catalogdom.SourceKind(*value)
+	return &result
+}
+
+func foodGroupToRow(value *catalogdom.FoodGroup) *sqlc.FoodGroup {
+	if value == nil {
+		return nil
+	}
+	result := sqlc.FoodGroup(*value)
+	return &result
+}
+
+func foodGroupFromRow(value *sqlc.FoodGroup) *catalogdom.FoodGroup {
+	if value == nil {
+		return nil
+	}
+	result := catalogdom.FoodGroup(*value)
 	return &result
 }
