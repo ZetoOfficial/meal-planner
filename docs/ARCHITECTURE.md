@@ -350,11 +350,8 @@ RuleEvaluationResult
 Quality input собирается из `SlotFill × Product × MealComponentAllocation` и fixed meals. Food-group объёмы используют optional prepared-yield factor слота; его отсутствие снижает per-rule coverage. Percentage-of-kcal правила используют рассчитанные kcal оцениваемого дня, а не midpoint личной kcal goal.
 
 Hard violations возвращаются solver-у отдельными diagnostics и не смешиваются со
-статусами quality evaluation. Каждый soft/analytics result содержит собственный
-coverage `0..1`; nullable classification сохраняет различие unknown и known false.
-Пользовательский score ограничен `0..100`, считается ruleset-ом отдельно от
-aggregate coverage и служит объяснением результата, а не заменой worst-first
-лексикографического сравнения кандидатов.
+статусами quality evaluation. Нормативные inputs, boundaries, coverage и scoring
+описаны в `SPEC.md` §3.2; этот модуль владеет их детерминированным вычислением.
 
 ---
 
@@ -571,45 +568,12 @@ solver accepts openapi.PlanGenerateRequest
 
 Транзакционная граница находится в use case layer. Read snapshot, bounded search и внешний LLM-вызов не держат открытую Postgres-транзакцию. Одна короткая write-транзакция сохраняет план, allocations, planned summaries и rule evaluations.
 
-Примерно:
-
-```go
-func (uc *GeneratePlan) Handle(ctx context.Context, cmd Command) (planning.Plan, error) {
-    input, err := uc.loadSolverInput(ctx, cmd.Targets, cmd.Dates)
-    if err != nil {
-        return planning.Plan{}, err
-    }
-
-    result := uc.solver.BuildPlan(input)
-    if result.NeedsMoreCandidates() || cmd.NoveltyLevel == 3 {
-        drafts, err := uc.recipeGenerator.Generate(ctx, RecipeGenerationInput{...})
-        if err != nil {
-            return planning.Plan{}, err
-        }
-
-        validated := uc.recipeValidator.ValidDrafts(drafts, input.Products)
-        input.Recipes = append(input.Recipes, validated...)
-        result = uc.solver.BuildPlan(input)
-    }
-    if !result.Feasible() {
-        return planning.Plan{}, result.Error()
-    }
-
-    return uc.tx.WithTx(ctx, func(ctx context.Context) (planning.Plan, error) {
-        if err := uc.plans.SaveWithNutritionSnapshots(ctx, result.Plan); err != nil {
-            return planning.Plan{}, err
-        }
-        return result.Plan, nil
-    })
-}
-```
+`GeneratePlan` загружает входной snapshot, вызывает solver, при предусмотренном
+продуктовым контрактом результате может запросить и провалидировать новые recipe
+candidates, повторяет solver и сохраняет допустимый план одной короткой транзакцией.
+Точные условия LLM fallback и search outcomes определены в `SPEC.md` FR-3 и §8.
 
 `solver.BuildPlan` внутри поиска вызывает чистый quality evaluator для ранжирования кандидатов. Пост-фактум evaluation уже выбранного плана не может заменить quality-aware ranking.
-
-`NeedsMoreCandidates` означает исчерпанный permanent-only bounded search. Остановка
-по search budget возвращает `search_limit_reached` и не выдаётся за доказанную
-нехватку кандидатов. `novelty_level=2` выбирает давно не использованный permanent
-component и сам по себе не вызывает LLM.
 
 ---
 

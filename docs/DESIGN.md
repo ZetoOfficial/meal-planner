@@ -120,19 +120,10 @@ Solver — чистый Go-core: не ходит в Postgres, не знает HT
 
 Целевая функция **лексикографическая**: hard safety/feasibility для всех → macro-feasibility для всех → quality худшего едока → средний quality → недельный pattern худшего едока → средний pattern → cost/reuse/storage/novelty → coverage. Это не позволяет улучшить средний результат, «пожертвовав» одним человеком.
 
-Hard violation не является ещё одним quality-статусом: оно отбрасывает кандидата
-и попадает в solver diagnostics. Для оставшихся кандидатов каждое soft/analytics
-правило возвращает `pass|soft_fail|warn|unknown` и собственный coverage `0..1`.
-Unknown classification хранится как NULL, отдельно от известных `false` и `other`.
-
-Показываемый пользователю `quality_score` лежит в диапазоне `0..100` и не заменяет
-лексикографическую целевую. Ruleset задаёт вес и нормализованную функцию каждого
-soft-правила; для обычных пороговых правил базовые вклады равны `pass=1`,
-`warn=0.5`, `soft_fail=0`, `unknown=0`. Analytics-only правила в score не входят,
-а thresholdless `upf_share` использует непрерывный вклад `1 - share`. Score плана —
-минимальный score среди eater/day; среднее используется только следующим
-fairness tie-break. Aggregate coverage считается отдельно как взвешенное среднее
-per-rule coverage и никогда не повышает score неизвестных данных.
+Hard violations относятся к solver feasibility diagnostics, а quality evaluation
+объясняет и ранжирует только допустимых кандидатов. Нормативные статусы, coverage
+и scoring определены в `SPEC.md` §3.2; неизвестные данные не подменяются известным
+нулём или `false`.
 
 ### LLM (4 точечные места)
 
