@@ -97,6 +97,10 @@ func (l ProcessingLevel) Valid() bool {
 	}
 }
 
+func (l ProcessingLevel) Known() bool {
+	return l.Valid() && l != ProcessingLevelUnknown
+}
+
 type FoodClassification struct {
 	FoodGroup            *FoodGroup
 	ProcessingLevel      ProcessingLevel
