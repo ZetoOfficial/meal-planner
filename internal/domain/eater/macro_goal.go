@@ -1,6 +1,11 @@
 package eater
 
-import "time"
+import (
+	"math"
+	"time"
+
+	"github.com/ZetoOfficial/meal-planner/internal/domain/nutrition"
+)
 
 const dayDuration = 24 * time.Hour
 
@@ -9,6 +14,27 @@ type MacroRange struct {
 	FatMinG, FatMaxG         float64
 	CarbMinG, CarbMaxG       float64
 	KcalMin, KcalMax         int
+}
+
+func (r MacroRange) Valid() bool {
+	return validRange(r.ProteinMinG, r.ProteinMaxG) &&
+		validRange(r.FatMinG, r.FatMaxG) &&
+		validRange(r.CarbMinG, r.CarbMaxG) &&
+		r.KcalMin >= 0 && r.KcalMin <= r.KcalMax
+}
+
+func (r MacroRange) Contains(macros nutrition.Macros) bool {
+	return r.Valid() && macros.Valid() &&
+		macros.ProteinG >= r.ProteinMinG && macros.ProteinG <= r.ProteinMaxG &&
+		macros.FatG >= r.FatMinG && macros.FatG <= r.FatMaxG &&
+		macros.CarbG >= r.CarbMinG && macros.CarbG <= r.CarbMaxG &&
+		macros.Kcal >= r.KcalMin && macros.Kcal <= r.KcalMax
+}
+
+func validRange(minimum, maximum float64) bool {
+	return !math.IsNaN(minimum) && !math.IsInf(minimum, 0) &&
+		!math.IsNaN(maximum) && !math.IsInf(maximum, 0) &&
+		minimum >= 0 && minimum <= maximum
 }
 
 type MacroGoalID int64
