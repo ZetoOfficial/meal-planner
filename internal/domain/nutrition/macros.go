@@ -59,8 +59,9 @@ func (m Macros) Scale(factor float64) (Macros, error) {
 }
 
 const (
-	mgPerG = 1000
-	maxInt = int(^uint(0) >> 1)
+	mgPerG  = 1000
+	maxInt  = int(^uint(0) >> 1)
+	per100g = 100.0
 )
 
 func validGrams(value float64) bool {
@@ -68,3 +69,40 @@ func validGrams(value float64) bool {
 }
 
 func SodiumMgFromSaltG(saltG float64) float64 { return saltG / 2.54 * mgPerG }
+
+// MacrosPer100G represents macro nutrients per 100 g of product.
+type MacrosPer100G struct {
+	ProteinG float64
+	FatG     float64
+	CarbG    float64
+	Kcal     float64
+}
+
+func (m MacrosPer100G) Valid() bool {
+	return validGrams(m.ProteinG) && validGrams(m.FatG) && validGrams(m.CarbG) &&
+		!math.IsNaN(m.Kcal) && !math.IsInf(m.Kcal, 0) && m.Kcal >= 0
+}
+
+// Scale converts per-100 g values to the amount present in grams of product.
+func (m MacrosPer100G) Scale(grams float64) (Macros, error) {
+	if !m.Valid() {
+		return Macros{}, errors.New("macros per 100 g must be finite and nonnegative")
+	}
+	if math.IsNaN(grams) || math.IsInf(grams, 0) || grams < 0 {
+		return Macros{}, errors.New("scale grams must be finite and nonnegative")
+	}
+	kcal := m.Kcal * grams / per100g
+	if kcal > float64(maxInt) {
+		return Macros{}, errors.New("macro kcal overflow")
+	}
+	result := Macros{
+		ProteinG: m.ProteinG * grams / per100g,
+		FatG:     m.FatG * grams / per100g,
+		CarbG:    m.CarbG * grams / per100g,
+		Kcal:     int(math.Round(kcal)),
+	}
+	if !result.Valid() {
+		return Macros{}, errors.New("macro value overflow")
+	}
+	return result, nil
+}
