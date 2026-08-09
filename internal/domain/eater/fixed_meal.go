@@ -1,6 +1,9 @@
 package eater
 
-import "github.com/ZetoOfficial/meal-planner/internal/domain/meal"
+import (
+	"github.com/ZetoOfficial/meal-planner/internal/domain/meal"
+	"github.com/ZetoOfficial/meal-planner/internal/domain/nutrition"
+)
 
 type FixedMealID int64
 
@@ -13,12 +16,7 @@ const (
 	MealTypeSnack     = meal.TypeSnack
 )
 
-type Macros struct {
-	ProteinG float64
-	FatG     float64
-	CarbG    float64
-	Kcal     int
-}
+type Macros = nutrition.Macros
 
 type FixedMealQuality struct {
 	SaturatedFatG    *float64
