@@ -1,9 +1,12 @@
 package planning
 
-import "github.com/ZetoOfficial/meal-planner/internal/domain/catalog"
+import (
+	"github.com/ZetoOfficial/meal-planner/internal/domain/catalog"
+	"github.com/ZetoOfficial/meal-planner/internal/domain/recipe"
+)
 
 type SlotFill struct {
-	SlotID    int64
-	ProductID catalog.ProductID
-	QtyG      float64
+	SlotID           recipe.SlotID
+	ProductID        catalog.ProductID
+	PlannedInputQtyG float64
 }
