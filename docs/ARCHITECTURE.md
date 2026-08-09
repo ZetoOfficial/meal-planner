@@ -19,7 +19,7 @@
 
 ## 2. Почему именно так
 
-Проект выглядит маленьким по deployment-модели: owner-only, два едока, один Go-сервис, HTTP API, Postgres. Но внутри это не простой CRUD.
+Проект выглядит маленьким по deployment-модели: owner-only household planner, один Go-сервис, HTTP API, Postgres. Стартовые сиды содержат двух едоков, но домен и solver принимают любой непустой набор профилей. Внутри это не простой CRUD.
 
 Ключевая сложность живёт в домене:
 
@@ -87,6 +87,8 @@ internal/
       analytics_mapping.go
 
   domain/
+    meal/
+      type.go
     eater/
       eater.go
       macro_goal.go
@@ -102,7 +104,9 @@ internal/
       storage.go
     planning/
       plan.go
+      plan_eater_day.go
       meal.go
+      component_allocation.go
       slot_fill.go
       swap.go
       prep_dependency.go
@@ -233,6 +237,7 @@ NutritionFacts
 RecipeTemplate
 RecipeSlot
 RecipeStatus
+ComponentKind
 StorageProfile
 Equipment
 Cuisine
@@ -241,7 +246,9 @@ CookingMethod
 
 Основные правила:
 
-- рецепт состоит из слотов;
+- рецепт описывает одну отдельно дозируемую партию, а не целую тарелку;
+- рецепт явно задаёт `component_kind`, `allowed_meal_types`, `base_servings` и optional expected output;
+- рецепт состоит из слотов с нормализованными граммами и optional prepared-yield factor;
 - слот требует `role_tag`;
 - заполнение слота конкретным продуктом происходит уже в плане;
 - `draft` рецепт после готовки и одобрения может стать `permanent`;
@@ -252,6 +259,10 @@ CookingMethod
 ### 5.3 `eater`
 
 Профили едоков, макро-цели, аллергены, fixed meals, quality profile.
+
+Общий value type приёма пищи (`breakfast|lunch|dinner|snack`) живёт в
+`domain/meal`, чтобы `eater`, `recipe` и будущий `planning` использовали один тип
+без циклических зависимостей между capability packages.
 
 Типичные сущности:
 
@@ -280,10 +291,11 @@ QualityProfile
 
 ```text
 Plan
+PlanEaterDay
 PlanRecipe
 SlotFill
 Meal
-Portion
+MealComponentAllocation
 SwapPreview
 PrepDependency
 ```
@@ -291,7 +303,8 @@ PrepDependency
 Здесь живут:
 
 - генерация плана;
-- раскладка по датам, приёмам пищи и едокам;
+- снимок per-eater/day meal targets и версии macro goal;
+- раскладка одной или нескольких партий по generated meal через `portion_factor`;
 - planned vs actual на уровне meal;
 - preview swap;
 - apply swap;
@@ -334,6 +347,8 @@ RuleEvaluationResult
 
 Правила в MVP живут в коде/конфиге, а не в generic guideline engine. В БД хранятся profile binding, overrides, summaries и evaluation results.
 
+Quality input собирается из `SlotFill × Product × MealComponentAllocation` и fixed meals. Food-group объёмы используют optional prepared-yield factor слота; его отсутствие снижает per-rule coverage. Percentage-of-kcal правила используют рассчитанные kcal оцениваемого дня, а не midpoint личной kcal goal.
+
 ---
 
 ### 5.7 `solver`
@@ -363,13 +378,15 @@ llm/provider-specific packages
 Целевая функция — лексикографическая:
 
 ```text
-1. hard safety / feasibility
-2. macro feasibility
-3. strongest quality rules
-4. rolling weekly pattern
+1. hard safety / feasibility for every eater
+2. macro feasibility for every eater/day
+3. strongest quality rules: worst eater first, then mean
+4. rolling weekly pattern: worst eater first, then mean
 5. cost / reuse / storage / novelty
-6. coverage
+6. per-rule coverage
 ```
+
+MVP использует bounded deterministic search по сетке serving multipliers. Для каждого набора партий порции eater/day решаются независимо, после чего агрегируются в `PlanRecipe.scale_factor` и `MealComponentAllocation`. Алгоритм отличает полное исчерпание конечного поиска от остановки по search budget.
 
 ---
 
@@ -545,62 +562,42 @@ solver accepts openapi.PlanGenerateRequest
 
 ## 11. Транзакции
 
-Транзакционная граница находится в use case layer.
+Транзакционная граница находится в use case layer. Read snapshot, bounded search и внешний LLM-вызов не держат открытую Postgres-транзакцию. Одна короткая write-транзакция сохраняет план, allocations, planned summaries и rule evaluations.
 
 Примерно:
 
 ```go
 func (uc *GeneratePlan) Handle(ctx context.Context, cmd Command) (planning.Plan, error) {
+    input, err := uc.loadSolverInput(ctx, cmd.Targets, cmd.Dates)
+    if err != nil {
+        return planning.Plan{}, err
+    }
+
+    result := uc.solver.BuildPlan(input)
+    if result.NeedsMoreCandidates() || cmd.NoveltyLevel >= 2 {
+        drafts, err := uc.recipeGenerator.Generate(ctx, RecipeGenerationInput{...})
+        if err != nil {
+            return planning.Plan{}, err
+        }
+
+        validated := uc.recipeValidator.ValidDrafts(drafts, input.Products)
+        input.Recipes = append(input.Recipes, validated...)
+        result = uc.solver.BuildPlan(input)
+    }
+    if !result.Feasible() {
+        return planning.Plan{}, result.Error()
+    }
+
     return uc.tx.WithTx(ctx, func(ctx context.Context) (planning.Plan, error) {
-        eaters, err := uc.eaters.GetMany(ctx, cmd.EaterIDs)
-        if err != nil {
+        if err := uc.plans.SaveWithNutritionSnapshots(ctx, result.Plan); err != nil {
             return planning.Plan{}, err
         }
-
-        products, err := uc.products.ListUsable(ctx)
-        if err != nil {
-            return planning.Plan{}, err
-        }
-
-        recipes, err := uc.recipes.ListPermanentCandidates(ctx)
-        if err != nil {
-            return planning.Plan{}, err
-        }
-
-        candidates := recipes
-
-        if uc.needLLM(candidates, cmd.NoveltyLevel) {
-            drafts, err := uc.recipeGenerator.Generate(ctx, RecipeGenerationInput{...})
-            if err != nil {
-                return planning.Plan{}, err
-            }
-
-            validated := uc.recipeValidator.ValidDrafts(drafts, products)
-            candidates = append(candidates, validated...)
-        }
-
-        result, err := uc.solver.BuildPlan(ctx, solver.Input{
-            Eaters:   eaters,
-            Products: products,
-            Recipes:  candidates,
-            Dates:    cmd.Dates,
-            Novelty:  cmd.NoveltyLevel,
-        })
-        if err != nil {
-            return planning.Plan{}, err
-        }
-
-        quality := uc.qualityEvaluator.EvaluatePlan(ctx, result.Plan)
-        result.Plan.AttachQuality(quality)
-
-        if err := uc.plans.Save(ctx, result.Plan); err != nil {
-            return planning.Plan{}, err
-        }
-
         return result.Plan, nil
     })
 }
 ```
+
+`solver.BuildPlan` внутри поиска вызывает чистый quality evaluator для ранжирования кандидатов. Пост-фактум evaluation уже выбранного плана не может заменить quality-aware ranking.
 
 ---
 
@@ -736,9 +733,15 @@ Quality tests
   - macro-pass + quality-fail returns warning, not hard block
 
 Solver tests
-  - feasible plan generation
-  - impossible constraints return diagnostic 422-level error
+  - feasible plan generation for one, two, and four eaters
+  - different generated meal types and goal versions by eater/day
+  - independent component allocations and proportional mixed_main allocation
+  - portion factors never over-allocate a batch; residual is visible reserve
+  - impossible constraints return per-eater/day diagnostic 422-level error
+  - search limit is distinct from exhaustive infeasibility
   - fixed meals included in macros and quality
+  - worst-eater-first fairness beats a higher but uneven mean score
+  - identical ordered input produces an identical plan
   - novelty level affects candidate selection
 
 Swap tests

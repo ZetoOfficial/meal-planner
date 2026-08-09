@@ -13,6 +13,7 @@ import (
 	"github.com/ZetoOfficial/meal-planner/internal/api/http/mocks"
 	"github.com/ZetoOfficial/meal-planner/internal/api/openapi"
 	catalogdom "github.com/ZetoOfficial/meal-planner/internal/domain/catalog"
+	"github.com/ZetoOfficial/meal-planner/internal/domain/meal"
 	recipedom "github.com/ZetoOfficial/meal-planner/internal/domain/recipe"
 	apperr "github.com/ZetoOfficial/meal-planner/internal/errors"
 	usecasecatalog "github.com/ZetoOfficial/meal-planner/internal/usecase/catalog"
@@ -129,45 +130,60 @@ func TestMalformedRequestHTTPContract(t *testing.T) {
 func TestCreateRecipeHTTPContract(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	recipes := mocks.NewMockRecipeUseCases(ctrl)
+	expectedOutput := 720.0
+	preparedFactor := 0.75
 	command := usecaserecipe.CreateRecipeCommand{
-		Name:    "Chicken bowl",
-		Storage: recipedom.StorageKeeps3dReheat,
+		Name:             "Roasted chicken",
+		ComponentKind:    recipedom.ComponentKindProtein,
+		AllowedMealTypes: []meal.Type{meal.TypeLunch, meal.TypeDinner},
+		BaseServings:     4,
+		ExpectedOutputG:  &expectedOutput,
+		Storage:          recipedom.StorageKeeps3dReheat,
 		Slots: []usecaserecipe.SlotCommand{{
-			RoleTagCode: "protein:lean",
-			Label:       "Protein",
-			Qty:         180,
-			Unit:        "g",
-			Position:    0,
+			RoleTagCode:       "protein:lean",
+			Label:             "Protein",
+			QtyG:              960,
+			PreparedQtyFactor: &preparedFactor,
+			Position:          0,
 		}},
 	}
 	recipes.EXPECT().
 		CreateRecipe(gomock.Any(), command).
 		Return(recipedom.Template{
-			ID:        42,
-			Name:      command.Name,
-			Status:    recipedom.StatusDraft,
-			Source:    recipedom.SourceManual,
-			Storage:   recipedom.StorageKeeps3dReheat,
-			Weight:    1,
-			Equipment: []string{},
+			ID:               42,
+			Name:             command.Name,
+			Status:           recipedom.StatusDraft,
+			Source:           recipedom.SourceManual,
+			ComponentKind:    command.ComponentKind,
+			AllowedMealTypes: command.AllowedMealTypes,
+			BaseServings:     command.BaseServings,
+			ExpectedOutputG:  command.ExpectedOutputG,
+			Storage:          recipedom.StorageKeeps3dReheat,
+			Weight:           1,
+			Equipment:        []string{},
 			Slots: []recipedom.Slot{{
-				ID:          9,
-				RoleTagCode: "protein:lean",
-				Label:       "Protein",
-				Qty:         180,
-				Unit:        "g",
-				Position:    0,
+				ID:                9,
+				RoleTagCode:       "protein:lean",
+				Label:             "Protein",
+				QtyG:              960,
+				PreparedQtyFactor: &preparedFactor,
+				Position:          0,
 			}},
 		}, nil)
 
 	handler := httpapi.New(httpapi.Deps{APIToken: "secret", Recipe: recipes})
 	req := httptest.NewRequest(http.MethodPost, "/recipes", strings.NewReader(`{
-		"name":"Chicken bowl",
+		"name":"Roasted chicken",
+		"component_kind":"protein",
+		"allowed_meal_types":["lunch","dinner"],
+		"base_servings":4,
+		"expected_output_g":720,
 		"storage":"keeps_3d_reheat",
 		"slots":[{
 			"role_tag":"protein:lean",
 			"label":"Protein",
-			"qty":180,
+			"qty_g":960,
+			"prepared_qty_factor":0.75,
 			"position":0
 		}]
 	}`))
@@ -184,7 +200,18 @@ func TestCreateRecipeHTTPContract(t *testing.T) {
 	if err := json.NewDecoder(rec.Body).Decode(&response); err != nil {
 		t.Fatalf("decode recipe: %v", err)
 	}
-	if response.Id != 42 || response.Status != openapi.Draft || len(response.Slots) != 1 || response.Slots[0].RoleTag != "protein:lean" {
+	if response.Id != 42 ||
+		response.Status != openapi.Draft ||
+		response.ComponentKind != openapi.ComponentKindProtein ||
+		response.BaseServings != 4 ||
+		len(response.AllowedMealTypes) != 2 ||
+		response.ExpectedOutputG == nil ||
+		*response.ExpectedOutputG != 720 ||
+		len(response.Slots) != 1 ||
+		response.Slots[0].RoleTag != "protein:lean" ||
+		response.Slots[0].QtyG != 960 ||
+		response.Slots[0].PreparedQtyFactor == nil ||
+		*response.Slots[0].PreparedQtyFactor != 0.75 {
 		t.Fatalf("recipe = %#v", response)
 	}
 	if response.Equipment == nil || len(*response.Equipment) != 0 {

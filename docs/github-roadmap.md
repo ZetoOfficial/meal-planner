@@ -394,14 +394,73 @@ Out of Scope:
 - LLM fallback.
 - Solver feasibility.
 
-## Milestone M4: Nutrition Quality Core
+## Milestone M4: Nutrition and Solver Foundations
 
-Goal: implement deterministic nutrition and quality logic before plan generation
-depends on it.
+Goal: establish the deterministic macro-feasible planning path and the pure nutrition
+quality logic it consumes, before persistence and HTTP orchestration.
+
+Implementation order:
+
+1. Issue 43 locks the shared planning and nutrition-quality contracts.
+2. Issue 14 implements macro arithmetic.
+3. Issue 18 defines solver inputs and hard filtering.
+4. Issue 19 proves macro-feasible deterministic search.
+5. Issues 15 and 16 add uncertainty handling and pure quality evaluation.
+6. Issue 17 adds pure day and rolling-7d projections.
+
+### Issue 43: Lock planning and nutrition-quality contracts
+
+Labels: `type:docs`, `area:domain`, `area:quality`, `area:planning`, `area:db`, `priority:p0`
+
+Context:
+- `docs/DESIGN.md`
+- `docs/SPEC.md`
+- `docs/ARCHITECTURE.md`
+- `docs/schema.sql`
+- `api/openapi.yaml`
+
+Scope:
+- Resolve the shared contracts that block deterministic planning and quality evaluation.
+- Make eater count dynamic and store explicit generated meal types plus the effective
+  macro-goal version for each eater/day.
+- Model each recipe template as one independently prepared batch component with an
+  explicit kind, base serving count, normalized gram inputs, and optional prepared yield.
+- Define how a meal references multiple prepared components and records each eater's
+  canonical `portion_factor`; keep unallocated batch share as visible reserve.
+- Define bounded deterministic search semantics, worst-eater-first fairness, and the
+  distinction between exhaustive infeasibility and a search-budget stop.
+- Define the units and aggregation semantics for cooked-equivalent red meat,
+  whole-grain ratios, legume components/servings, and percentage-of-kcal rules.
+- Define per-rule coverage, aggregate coverage, hard violations, soft statuses,
+  quality scoring, and summary identity/idempotency.
+- Update the source-of-truth documents and contracts consistently before application
+  implementation starts.
+
+Acceptance Criteria:
+- The contracts support one, two, or more eaters without named-user branches, and
+  different eaters may request different generated meal types.
+- Persisted plan data can reconstruct per-eater/day macro and quality inputs without
+  guessing a share of a recipe batch.
+- Separate components can receive independent portions; a `mixed_main` scales
+  proportionally as one component.
+- Unknown nutrient and classification data remains distinguishable from known zero
+  or known false values.
+- Every MVP quality rule has a computable input, unit, boundary, and coverage policy.
+- Hard rejection is represented separately from soft evaluation outcomes.
+- Planned summary snapshots have an unambiguous identity and idempotent replacement
+  behavior when plans are regenerated.
+- `DESIGN.md`, `SPEC.md`, `ARCHITECTURE.md`, `schema.sql`, and `openapi.yaml` agree.
+
+Out of Scope:
+- Implementing solver search, repositories, handlers, or analytics.
+- Adding v2 rule overrides or a generic nutrient engine.
 
 ### Issue 14: Implement macro arithmetic and macro goal checks
 
 Labels: `type:feature`, `area:domain`, `area:quality`, `priority:p0`
+
+Dependencies:
+- Follows the numeric and percentage-base decisions in Issue 43.
 
 Context:
 - `docs/SPEC.md` HC-8
@@ -412,101 +471,26 @@ Context:
 Scope:
 - Complete macro value objects and arithmetic.
 - Add range checks for protein, fat, carbs, and kcal.
-- Keep macro calculations deterministic and independent of persistence.
+- Define deterministic scaling, rounding, and boundary behavior.
+- Keep macro calculations independent of persistence.
 
 Acceptance Criteria:
 - Macros can be added, scaled, and compared to goal ranges.
 - Boundary values equal to min or max pass.
-- Negative macro values are rejected before planning use.
-- Unit tests cover arithmetic, scaling, and range checks.
+- Negative macro values and negative scale factors are rejected before planning use.
+- Scaling and kcal rounding follow one documented deterministic policy.
+- Unit tests cover arithmetic, scaling, rounding, and range checks.
 
 Out of Scope:
 - Quality nutrients.
 - Solver search.
 
-### Issue 15: Implement nutrition facts coverage and unknown handling
-
-Labels: `type:feature`, `area:quality`, `area:catalog`, `priority:p0`
-
-Context:
-- `docs/SPEC.md` sections 3.2 and FR-1
-- `docs/deep-research-report.md`
-- `internal/domain/catalog/nutrition_facts.go`
-- `internal/domain/nutrition/coverage.go`
-
-Scope:
-- Model hot-path quality nutrients and food classification in domain types.
-- Implement coverage scoring rules for known vs unknown fields.
-- Preserve the invariant `unknown != 0`.
-
-Acceptance Criteria:
-- Missing fiber does not count as zero fiber credit.
-- Missing sodium does not count as safe sodium.
-- Coverage score reflects the known hot-path nutrient set.
-- Tests cover known, partially known, and unknown product nutrition.
-
-Out of Scope:
-- Full micronutrient optimizer.
-- Generic nutrient table.
-
-### Issue 16: Implement MVP quality rules evaluator
-
-Labels: `type:feature`, `area:quality`, `priority:p0`
-
-Context:
-- `docs/SPEC.md` section 3.2
-- `docs/ARCHITECTURE.md` sections 5.6 and 16
-- `internal/quality/ruleset.go`
-- `internal/quality/evaluator.go`
-
-Scope:
-- Implement the MVP quality ruleset for fiber, sodium, added sugar, saturated fat,
-  industrial trans fat, fruit/veg, whole grains, legumes, red/processed meat, and UPF.
-- Return rule statuses, scores, and warning explanations.
-
-Acceptance Criteria:
-- Rules return `pass`, `soft_fail`, `warn`, or `unknown` as appropriate.
-- Industrial trans fat/PHO can be represented as a hard rejection input for solver use.
-- Macro-pass with quality-fail returns warnings rather than a hard block.
-- Tests cover representative pass, soft fail, warn, and unknown cases.
-
-Out of Scope:
-- Per-eater public rule override API.
-- Data-driven guideline engine.
-
-### Issue 17: Implement rolling-7d quality summaries and persistence
-
-Labels: `type:feature`, `area:quality`, `area:analytics`, `area:db`, `priority:p1`
-
-Context:
-- `docs/SPEC.md` FR-3, FR-6, FR-8
-- `docs/schema.sql`: `day_nutrition_summary`,
-  `rolling_nutrition_summary`, `rule_evaluation_result`
-- `docs/ARCHITECTURE.md` section 13
-
-Scope:
-- Compute day-level and rolling-7d summaries for the quality rules that need history.
-- Persist summaries and rule evaluation results.
-- Support planned and actual bases where the schema requires it.
-
-Acceptance Criteria:
-- Red meat, processed meat, and legumes can be evaluated over rolling 7-day windows.
-- Day summaries store macro and hot-path quality aggregates.
-- Rule evaluation results can be queried by entity and eater.
-- Tests cover rolling windows that include prior logged meals and current plan meals.
-
-Out of Scope:
-- Full analytics API responses.
-- Background jobs.
-
-## Milestone M5: Deterministic Plan Generation
-
-Goal: generate and persist a feasible 3-day plan using existing products and
-permanent recipes, without LLM.
-
 ### Issue 18: Implement solver input model and hard-constraint filtering
 
 Labels: `type:feature`, `area:solver`, `area:planning`, `priority:p0`
+
+Dependencies:
+- Blocked by Issues 14 and 43.
 
 Context:
 - `docs/SPEC.md` HC-1 through HC-10
@@ -518,22 +502,28 @@ Scope:
 - Define solver input structures for eaters, macro goals, products, recipes,
   fixed meals, exclusions, dates, and novelty.
 - Filter unusable candidates for allergens, hard exclusions, storage, equipment,
-  role compatibility, and industrial trans fat.
+  role compatibility, and explicit industrial trans fat.
+- Keep soft quality scoring outside this issue.
 
 Acceptance Criteria:
 - Products violating eater allergens are filtered out for that eater.
 - Hard preference exclusions are applied separately from allergens.
 - Recipes with incompatible storage profiles are excluded from multi-day planning.
 - Fixed meals are present in solver input but are not swappable candidates.
+- Explicit PHO or industrial trans fat produces a typed hard rejection.
 - Unit tests cover each hard constraint.
 
 Out of Scope:
 - Search/objective implementation.
+- Soft quality ranking.
 - LLM candidate generation.
 
-### Issue 19: Implement deterministic feasible plan search
+### Issue 19: Implement macro-feasible deterministic plan search
 
-Labels: `type:feature`, `area:solver`, `area:quality`, `priority:p0`
+Labels: `type:feature`, `area:solver`, `area:planning`, `priority:p0`
+
+Dependencies:
+- Blocked by Issues 14 and 18.
 
 Context:
 - `docs/SPEC.md` FR-3
@@ -544,23 +534,236 @@ Context:
 Scope:
 - Implement a pragmatic deterministic search that can assemble a 3-day plan from
   permanent recipe candidates and products.
-- Enforce macro feasibility as a hard requirement.
-- Rank feasible plans using the documented lexicographic objective.
+- Enforce hard filtering and daily macro feasibility, including fixed meals.
+- Use stable deterministic tie-breaking until quality-aware ranking is added.
 
 Acceptance Criteria:
 - Solver can produce a plan for a small controlled fixture.
 - Daily eater macros, including fixed meals, land inside target ranges.
-- Quality warnings affect ranking but do not block macro-feasible plans unless a
-  hard rule is violated.
-- Tests cover feasible and infeasible fixtures.
+- Repeated search over the same ordered input returns the same result.
+- Infeasible fixtures return a typed solver result suitable for later diagnostics.
+- Tests cover feasible, infeasible, and deterministic fixtures.
 
 Out of Scope:
+- Quality, rolling-pattern, cost, novelty, and coverage ranking.
+- Persistence and HTTP orchestration.
 - LLM fallback.
 - Advanced optimization algorithms beyond MVP needs.
+
+### Issue 15: Implement nutrition facts coverage and unknown handling
+
+Labels: `type:feature`, `area:quality`, `area:catalog`, `priority:p0`
+
+Dependencies:
+- Blocked by Issue 43.
+
+Context:
+- `docs/SPEC.md` sections 3.2 and FR-1
+- `docs/deep-research-report.md`
+- `internal/domain/catalog/nutrition_facts.go`
+- `internal/domain/nutrition/coverage.go`
+
+Scope:
+- Model effective hot-path facts and classification knownness in domain types.
+- Implement per-rule coverage in addition to the derived aggregate product score.
+- Normalize alternative sources such as sodium versus converted salt without
+  double-counting coverage.
+- Preserve the invariant `unknown != 0`.
+
+Acceptance Criteria:
+- Missing fiber does not count as zero fiber credit.
+- Missing sodium does not count as safe sodium.
+- Sodium and salt contribute one effective sodium fact.
+- A known rule input remains evaluable even when unrelated product fields are missing.
+- Unknown classification is distinguishable from a known negative classification.
+- Aggregate coverage is derived by the server and cannot produce a false rule pass.
+- Tests cover known, partially known, alternative-source, and unknown facts.
+
+Out of Scope:
+- Full micronutrient optimizer.
+- Generic nutrient table.
+- Rule threshold evaluation.
+
+### Issue 16: Implement MVP quality rules evaluator
+
+Labels: `type:feature`, `area:quality`, `priority:p0`
+
+Dependencies:
+- Blocked by Issues 15 and 43.
+
+Context:
+- `docs/SPEC.md` section 3.2
+- `docs/ARCHITECTURE.md` sections 5.6 and 16
+- `internal/quality/ruleset.go`
+- `internal/quality/evaluator.go`
+
+Scope:
+- Implement the pure MVP ruleset for fiber, sodium, added sugar, saturated fat,
+  industrial trans fat, fruit/veg, whole grains, legumes, red/processed meat, and UPF.
+- Evaluate daily, plan, and supplied rolling inputs without Postgres or HTTP.
+- Return per-rule status, severity, coverage, score contribution, and explanation.
+- Represent explicit industrial trans fat/PHO as a typed hard violation separate from
+  soft rule outcomes.
+
+Acceptance Criteria:
+- Soft rules return `pass`, `soft_fail`, `warn`, or `unknown` according to their
+  documented boundaries and per-rule coverage.
+- Explicit industrial trans fat/PHO returns a hard violation suitable for solver use.
+- Macro-pass with a soft quality failure returns warnings rather than a hard block.
+- The aggregate score is deterministic and does not replace the lexicographic
+  objective used by the solver.
+- Tests cover each rule family plus representative hard, soft-fail, warn, and unknown cases.
+
+Out of Scope:
+- Solver integration and plan ranking.
+- Persistence.
+- Per-eater public rule override API.
+- Data-driven guideline engine.
+
+### Issue 17: Implement pure day and rolling-7d quality summaries
+
+Labels: `type:feature`, `area:quality`, `area:domain`, `priority:p0`
+
+Dependencies:
+- Blocked by Issues 15, 16, and 43.
+
+Context:
+- `docs/SPEC.md` FR-3
+- `docs/ARCHITECTURE.md` sections 5.6, 13, and 16
+- `internal/domain/nutrition/summary.go`
+- `internal/quality/rolling.go`
+
+Scope:
+- Compute day-level summaries from per-eater meal component allocations and fixed meals.
+- Project rolling-7d summaries from supplied historical day facts plus a candidate plan.
+- Keep calculations pure and independent of Postgres, actual meal logging, and analytics APIs.
+
+Acceptance Criteria:
+- Red meat, processed meat, and legumes can be evaluated over rolling 7-day windows.
+- Day summaries contain macro and hot-path quality aggregates with per-rule coverage.
+- Fixed meals respect `include_in_analytics` and `include_in_warnings`.
+- Tests cover a supplied six-day history plus the current candidate plan.
+- Tests cover missing historical facts without treating them as zero or safe.
+
+Out of Scope:
+- Summary and rule-result persistence.
+- Actual-basis recomputation.
+- Analytics API responses.
+- Background jobs.
+
+## Milestone M5: Deterministic Plan Generation
+
+Goal: complete quality-aware plan selection, persist the plan and its planned quality
+snapshots, and expose reuse-first generation without LLM.
+
+Implementation order:
+
+1. Issue 44 integrates quality into the solver objective.
+2. Issue 21 persists plans and per-eater meal component allocations.
+3. Issue 45 persists planned summaries and rule evaluations.
+4. Issue 20 exposes the transactional `GeneratePlan` use case and endpoint.
+5. Issue 22 can proceed after Issue 19 and must be complete before the endpoint is final.
+
+### Issue 44: Integrate quality evaluation into solver ranking
+
+Labels: `type:feature`, `area:solver`, `area:quality`, `area:planning`, `priority:p0`
+
+Dependencies:
+- Blocked by Issues 16, 17, and 19.
+
+Context:
+- `docs/SPEC.md` FR-3
+- `docs/ARCHITECTURE.md` sections 5.6 and 5.7
+- `internal/solver/objective.go`
+- `internal/quality/evaluator.go`
+
+Scope:
+- Evaluate candidate plans during search, not only after a plan has been selected.
+- Implement the documented lexicographic objective: hard safety, macro feasibility,
+  strongest daily quality rules, rolling weekly pattern, secondary preferences, coverage.
+- Reuse the same evaluation result for returned explanations so ranking and response
+  cannot disagree.
+
+Acceptance Criteria:
+- Between macro-feasible candidates, stronger daily quality rules affect selection.
+- Rolling red/processed meat and legume projections affect selection after daily quality.
+- Soft quality failures lower rank but do not make a macro-feasible plan impossible.
+- Hard violations remain infeasible.
+- Coverage is compared at the documented final lexicographic level.
+- Tests prove each objective level without collapsing the hierarchy into one score.
+
+Out of Scope:
+- Persistence and HTTP mapping.
+- LLM fallback.
+- Advanced optimization algorithms beyond MVP needs.
+
+### Issue 21: Persist plans, meals, component allocations, and slot fills
+
+Labels: `type:feature`, `area:planning`, `area:db`, `priority:p0`
+
+Dependencies:
+- Blocked by Issues 19 and 43.
+
+Context:
+- `docs/schema.sql`: `plan`, `plan_recipe`, `slot_fill`, `meal` and the
+  meal-component allocation defined by Issue 43
+- `docs/SPEC.md` FR-3 and FR-6
+- `docs/ARCHITECTURE.md` sections 10 and 11
+
+Scope:
+- Implement persistence for generated plans and all records needed to retrieve them.
+- Store planned macros and each eater's component portions on meals.
+- Keep transaction boundaries at the usecase layer.
+
+Acceptance Criteria:
+- A generated plan can be saved and retrieved by id.
+- Meals include eater, date, type, planned macros, and one or more component allocations.
+- Persisted allocations can reconstruct per-eater planned quality inputs.
+- Slot fills retain product quantities and role-slot relationships.
+- Partial persistence rolls back when any save step fails.
+- Repository tests cover save and get.
+
+Out of Scope:
+- Planned summary and rule-result persistence.
+- Actual meal logging.
+- Shopping list generation.
+
+### Issue 45: Persist planned nutrition summaries and rule evaluations
+
+Labels: `type:feature`, `area:quality`, `area:planning`, `area:analytics`, `area:db`, `priority:p0`
+
+Dependencies:
+- Blocked by Issues 17, 21, and 44.
+
+Context:
+- `docs/SPEC.md` FR-3
+- `docs/schema.sql`: `day_nutrition_summary`,
+  `rolling_nutrition_summary`, `rule_evaluation_result`
+- `docs/ARCHITECTURE.md` sections 11 and 13
+
+Scope:
+- Persist planned day and rolling summaries plus rule evaluation results when a plan is saved.
+- Use the snapshot identity and replacement semantics defined by Issue 43.
+- Keep summary writes in the same usecase transaction as plan persistence.
+
+Acceptance Criteria:
+- Planned summaries and rule results can be queried by plan, entity, and eater.
+- Regenerating or reevaluating the same plan does not create duplicate rule results.
+- Multiple plans covering the same eater/date do not overwrite each other's snapshots.
+- A failed summary write rolls back the generated plan transaction.
+- Repository integration tests cover save, replacement, and collision boundaries.
+
+Out of Scope:
+- Actual-basis summaries.
+- Analytics API responses.
+- Background jobs.
 
 ### Issue 20: Implement GeneratePlan reuse-first use case without LLM
 
 Labels: `type:feature`, `area:planning`, `area:solver`, `area:api`, `priority:p0`
+
+Dependencies:
+- Blocked by Issues 21, 22, 44, and 45.
 
 Context:
 - `docs/SPEC.md` FR-3
@@ -569,48 +772,28 @@ Context:
 - `internal/usecase/planning/generate_plan.go`
 
 Scope:
-- Implement `GeneratePlan` using permanent recipe candidates first.
-- Call solver and quality evaluator.
-- Return application-level result suitable for OpenAPI mapping.
+- Implement transactional `GeneratePlan` using permanent recipe candidates first.
+- Call the quality-aware solver and persist the selected plan, allocations, summaries,
+  and rule evaluations.
+- Return an application-level result suitable for OpenAPI mapping.
 
 Acceptance Criteria:
-- `POST /plans` can create a plan without calling LLM.
+- `POST /plans` creates a persisted plan without calling LLM.
 - Plan response includes macro totals and quality evaluation data required by OpenAPI.
 - `novelty_level` is accepted and passed through even if only deterministic behavior is implemented.
-- Tests cover successful generate and validation failure.
+- A persistence failure does not leave a partial plan.
+- Tests cover successful generation, validation failure, and transactional rollback.
 
 Out of Scope:
 - LLM fallback.
 - Swap behavior.
 
-### Issue 21: Persist plans, meals, plan recipes, and slot fills
-
-Labels: `type:feature`, `area:planning`, `area:db`, `priority:p0`
-
-Context:
-- `docs/schema.sql`: `plan`, `plan_recipe`, `slot_fill`, `meal`
-- `docs/SPEC.md` FR-3 and FR-6
-- `docs/ARCHITECTURE.md` sections 10 and 11
-
-Scope:
-- Implement persistence for generated plans and all records needed to retrieve them.
-- Store planned macros on meals.
-- Keep transaction boundaries at the usecase layer.
-
-Acceptance Criteria:
-- A generated plan can be saved and retrieved by id.
-- Meals include eater, date, type, planned macros, and plan recipe references.
-- Slot fills retain product quantities and role-slot relationships.
-- Partial persistence rolls back when any save step fails.
-- Repository tests cover save and get.
-
-Out of Scope:
-- Actual meal logging.
-- Shopping list generation.
-
 ### Issue 22: Return useful impossible-plan diagnostics
 
 Labels: `type:feature`, `area:solver`, `area:api`, `priority:p1`
+
+Dependencies:
+- Blocked by Issue 19.
 
 Context:
 - `docs/SPEC.md` section 6
@@ -698,12 +881,13 @@ Context:
 - `internal/usecase/planning/generate_plan.go`
 
 Scope:
-- Call LLM only when permanent candidates are insufficient or novelty requires it.
+- Call LLM only when permanent candidates are insufficient or `novelty_level = 3`
+  explicitly requests a new draft candidate.
 - Validate LLM drafts against products, slots, roles, storage, equipment, and macros.
 - Save valid candidates as draft recipes and pass them to the solver as candidates.
 
 Acceptance Criteria:
-- LLM is not called when reuse-first candidates are enough and novelty does not require it.
+- LLM is not called when reuse-first candidates are enough and `novelty_level < 3`.
 - LLM output containing products outside the database is rejected.
 - Valid LLM drafts are persisted as `draft`, not `permanent`.
 - Solver still chooses the final plan.
@@ -716,7 +900,8 @@ Out of Scope:
 ## Milestone M7: Plan Operations
 
 Goal: support the core post-generation operations: swap preview, confirmed swap,
-prep dependency effects, and shopping list regeneration.
+planned batch quantity adjustments, prep dependency effects, and shopping list
+regeneration.
 
 ### Issue 26: Implement swap preview with macro and quality diff
 
@@ -794,6 +979,49 @@ Acceptance Criteria:
 Out of Scope:
 - Inventory tracking.
 - Store-specific purchasing integrations.
+
+### Issue 46: Implement planned batch quantity adjustment preview and apply
+
+Labels: `type:feature`, `area:planning`, `area:solver`, `area:quality`,
+`area:shopping`, `area:api`, `area:db`, `priority:p1`
+
+Context:
+- `docs/SPEC.md` FR-3, FR-4, and FR-5
+- `docs/DESIGN.md` section 6
+- `docs/schema.sql`: `slot_fill` and planned nutrition snapshots
+- `api/openapi.yaml`: existing plan-operation preview patterns
+- Blocked by Issues 20, 21, 26, 28, and 45.
+
+Scope:
+- Define the API/use-case contract for previewing and applying a planned slot-fill
+  quantity change before cooking.
+- Treat the entered quantity as a locked planning input and ask the solver to rebalance
+  the affected plan with the smallest practical blast radius.
+- Recalculate component allocations, eater/day macros, nutrition-quality results, and
+  shopping-list quantities.
+- Return affected meals, portion changes, macro and quality diffs, shopping-list diff,
+  warnings, and infeasibility diagnostics in preview.
+- Apply the accepted preview transactionally after explicit confirmation.
+
+Acceptance Criteria:
+- Previewing a quantity change does not mutate the plan.
+- A change such as chicken `1,200 g -> 988 g` shows the resulting per-eater portion,
+  macro, quality, and shopping-list changes.
+- When the existing plan can remain feasible, the solver returns a deterministic
+  rebalanced preview.
+- When it cannot remain feasible, the API returns typed 422 diagnostics explaining the
+  unsatisfied constraints and possible repair directions.
+- Applying a confirmed preview atomically updates the planned slot-fill quantity,
+  component allocations, planned nutrition summaries/rule evaluations, and shopping
+  list state.
+- Tests cover feasible rebalance, infeasible preview, non-mutating preview, and
+  transaction rollback.
+
+Out of Scope:
+- Household inventory or package catalogs.
+- Store integrations or automatic package-size selection.
+- Actual ingredient usage, cooked yield, container weighing, or meal logging.
+- Background replanning without explicit owner confirmation.
 
 ## Milestone M8: Reality Loop and Analytics
 
@@ -878,6 +1106,9 @@ Out of Scope:
 
 Labels: `type:feature`, `area:analytics`, `area:quality`, `area:recipe`, `priority:p1`
 
+Dependencies:
+- Blocked by Issues 17, 29, and 45.
+
 Context:
 - `docs/SPEC.md` FR-8
 - `api/openapi.yaml`: `/analytics/nutrition-quality`,
@@ -886,11 +1117,17 @@ Context:
   `rolling_nutrition_summary`, `recipe_template`, `meal`
 
 Scope:
+- Recompute and persist actual-basis day and rolling summaries from meal log state.
+- Treat modified meals without a structured replacement as unknown quality rather
+  than copying planned facts.
 - Implement nutrition-quality analytics with coverage and rule results.
 - Implement top recipes and product frequency analytics.
 - Include fixed meal quality load where the data is available.
 
 Acceptance Criteria:
+- Actual summaries use known structured facts and reduce per-rule coverage when a
+  modified meal's quality is unknown.
+- Recomputing the same actual period replaces summaries and rule results idempotently.
 - Quality analytics returns hot-path averages, rule statuses, and coverage.
 - Rolling meat/legume exposure can be reported for a period.
 - Top recipes sort by cooked count or meal usage according to OpenAPI behavior.
@@ -955,4 +1192,3 @@ Acceptance Criteria:
 Out of Scope:
 - Performance testing.
 - Public deployment automation.
-

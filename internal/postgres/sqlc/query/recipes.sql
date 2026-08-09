@@ -3,6 +3,10 @@ INSERT INTO recipe_template (
     name,
     status,
     source,
+    component_kind,
+    allowed_meal_types,
+    base_servings,
+    expected_output_g,
     cuisine,
     cooking_method,
     storage,
@@ -15,6 +19,10 @@ INSERT INTO recipe_template (
     sqlc.arg(name),
     sqlc.arg(status),
     sqlc.arg(source),
+    sqlc.arg(component_kind),
+    sqlc.arg(allowed_meal_types),
+    sqlc.arg(base_servings),
+    sqlc.arg(expected_output_g),
     sqlc.arg(cuisine),
     sqlc.arg(cooking_method),
     sqlc.arg(storage),
@@ -31,16 +39,16 @@ INSERT INTO recipe_slot (
     template_id,
     role_tag_id,
     label,
-    qty,
-    unit,
+    qty_g,
+    prepared_qty_factor,
     position,
     optional
 ) VALUES (
     sqlc.arg(template_id),
     sqlc.arg(role_tag_id),
     sqlc.arg(label),
-    sqlc.arg(qty),
-    sqlc.arg(unit),
+    sqlc.arg(qty_g),
+    sqlc.arg(prepared_qty_factor),
     sqlc.arg(position),
     sqlc.arg(optional)
 )
@@ -69,8 +77,8 @@ SELECT
     rs.role_tag_id,
     rt.code AS role_code,
     rs.label,
-    rs.qty,
-    rs.unit,
+    rs.qty_g,
+    rs.prepared_qty_factor,
     rs.position,
     rs.optional
 FROM recipe_slot rs

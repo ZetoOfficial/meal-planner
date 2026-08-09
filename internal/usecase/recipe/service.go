@@ -4,6 +4,7 @@ import (
 	"context"
 	"strings"
 
+	"github.com/ZetoOfficial/meal-planner/internal/domain/meal"
 	recipedom "github.com/ZetoOfficial/meal-planner/internal/domain/recipe"
 	apperr "github.com/ZetoOfficial/meal-planner/internal/errors"
 )
@@ -22,23 +23,27 @@ func NewService(recipes RecipeRepository, transactions TxRunner, clock Clock) *S
 }
 
 type SlotCommand struct {
-	RoleTagCode string
-	Label       string
-	Qty         float64
-	Unit        string
-	Position    int
-	Optional    bool
+	RoleTagCode       string
+	Label             string
+	QtyG              float64
+	PreparedQtyFactor *float64
+	Position          int
+	Optional          bool
 }
 
 type CreateRecipeCommand struct {
-	Name          string
-	Cuisine       *string
-	CookingMethod *string
-	Storage       recipedom.StorageProfile
-	StorageNotes  *string
-	Equipment     []string
-	Instructions  *string
-	Slots         []SlotCommand
+	Name             string
+	ComponentKind    recipedom.ComponentKind
+	AllowedMealTypes []meal.Type
+	BaseServings     int
+	ExpectedOutputG  *float64
+	Cuisine          *string
+	CookingMethod    *string
+	Storage          recipedom.StorageProfile
+	StorageNotes     *string
+	Equipment        []string
+	Instructions     *string
+	Slots            []SlotCommand
 }
 
 func (s *Service) CreateRecipe(ctx context.Context, command CreateRecipeCommand) (recipedom.Template, error) {
@@ -110,17 +115,21 @@ func (s *Service) ListPermanentCandidates(ctx context.Context) ([]recipedom.Temp
 
 func (command CreateRecipeCommand) template() recipedom.Template {
 	template := recipedom.Template{
-		Name:          strings.TrimSpace(command.Name),
-		Status:        recipedom.StatusDraft,
-		Source:        recipedom.SourceManual,
-		Cuisine:       normalizedOptional(command.Cuisine),
-		CookingMethod: normalizedOptional(command.CookingMethod),
-		Storage:       command.Storage,
-		StorageNotes:  normalizedOptional(command.StorageNotes),
-		Equipment:     normalizedEquipment(command.Equipment),
-		Instructions:  normalizedOptional(command.Instructions),
-		Weight:        1,
-		Slots:         make([]recipedom.Slot, len(command.Slots)),
+		Name:             strings.TrimSpace(command.Name),
+		Status:           recipedom.StatusDraft,
+		Source:           recipedom.SourceManual,
+		ComponentKind:    command.ComponentKind,
+		AllowedMealTypes: append([]meal.Type(nil), command.AllowedMealTypes...),
+		BaseServings:     command.BaseServings,
+		ExpectedOutputG:  float64Pointer(command.ExpectedOutputG),
+		Cuisine:          normalizedOptional(command.Cuisine),
+		CookingMethod:    normalizedOptional(command.CookingMethod),
+		Storage:          command.Storage,
+		StorageNotes:     normalizedOptional(command.StorageNotes),
+		Equipment:        normalizedEquipment(command.Equipment),
+		Instructions:     normalizedOptional(command.Instructions),
+		Weight:           1,
+		Slots:            make([]recipedom.Slot, len(command.Slots)),
 	}
 	for i, slot := range command.Slots {
 		template.Slots[i] = slot.slot()
@@ -129,18 +138,22 @@ func (command CreateRecipeCommand) template() recipedom.Template {
 }
 
 func (command SlotCommand) slot() recipedom.Slot {
-	unit := strings.TrimSpace(command.Unit)
-	if unit == "" {
-		unit = "g"
-	}
 	return recipedom.Slot{
-		RoleTagCode: strings.TrimSpace(command.RoleTagCode),
-		Label:       strings.TrimSpace(command.Label),
-		Qty:         command.Qty,
-		Unit:        unit,
-		Position:    command.Position,
-		Optional:    command.Optional,
+		RoleTagCode:       strings.TrimSpace(command.RoleTagCode),
+		Label:             strings.TrimSpace(command.Label),
+		QtyG:              command.QtyG,
+		PreparedQtyFactor: float64Pointer(command.PreparedQtyFactor),
+		Position:          command.Position,
+		Optional:          command.Optional,
 	}
+}
+
+func float64Pointer(value *float64) *float64 {
+	if value == nil {
+		return nil
+	}
+	cloned := *value
+	return &cloned
 }
 
 func normalizedOptional(value *string) *string {

@@ -28,6 +28,33 @@ const (
 	ApiTokenScopes apiTokenContextKey = "apiToken.Scopes"
 )
 
+// Defines values for ComponentKind.
+const (
+	ComponentKindCarbSide      ComponentKind = "carb_side"
+	ComponentKindMixedMain     ComponentKind = "mixed_main"
+	ComponentKindProtein       ComponentKind = "protein"
+	ComponentKindSauce         ComponentKind = "sauce"
+	ComponentKindVegetableSide ComponentKind = "vegetable_side"
+)
+
+// Valid indicates whether the value is a known member of the ComponentKind enum.
+func (e ComponentKind) Valid() bool {
+	switch e {
+	case ComponentKindCarbSide:
+		return true
+	case ComponentKindMixedMain:
+		return true
+	case ComponentKindProtein:
+		return true
+	case ComponentKindSauce:
+		return true
+	case ComponentKindVegetableSide:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ExclusionSeverity.
 const (
 	ExclusionSeverityHard ExclusionSeverity = "hard"
@@ -108,64 +135,64 @@ func (e ExclusionInputTargetKind) Valid() bool {
 
 // Defines values for FoodClassificationFoodGroup.
 const (
-	FoodClassificationFoodGroupBeverage       FoodClassificationFoodGroup = "beverage"
-	FoodClassificationFoodGroupConfectionery  FoodClassificationFoodGroup = "confectionery"
-	FoodClassificationFoodGroupDairy          FoodClassificationFoodGroup = "dairy"
-	FoodClassificationFoodGroupDairyAlt       FoodClassificationFoodGroup = "dairy_alt"
-	FoodClassificationFoodGroupEgg            FoodClassificationFoodGroup = "egg"
-	FoodClassificationFoodGroupFishSeafood    FoodClassificationFoodGroup = "fish_seafood"
-	FoodClassificationFoodGroupFruit          FoodClassificationFoodGroup = "fruit"
-	FoodClassificationFoodGroupGrain          FoodClassificationFoodGroup = "grain"
-	FoodClassificationFoodGroupLegume         FoodClassificationFoodGroup = "legume"
-	FoodClassificationFoodGroupMixed          FoodClassificationFoodGroup = "mixed"
-	FoodClassificationFoodGroupNutsSeeds      FoodClassificationFoodGroup = "nuts_seeds"
-	FoodClassificationFoodGroupOther          FoodClassificationFoodGroup = "other"
-	FoodClassificationFoodGroupPotato         FoodClassificationFoodGroup = "potato"
-	FoodClassificationFoodGroupProcessedMeat  FoodClassificationFoodGroup = "processed_meat"
-	FoodClassificationFoodGroupRedMeat        FoodClassificationFoodGroup = "red_meat"
-	FoodClassificationFoodGroupSauceCondiment FoodClassificationFoodGroup = "sauce_condiment"
-	FoodClassificationFoodGroupVegetable      FoodClassificationFoodGroup = "vegetable"
-	FoodClassificationFoodGroupWhiteMeat      FoodClassificationFoodGroup = "white_meat"
+	Beverage       FoodClassificationFoodGroup = "beverage"
+	Confectionery  FoodClassificationFoodGroup = "confectionery"
+	Dairy          FoodClassificationFoodGroup = "dairy"
+	DairyAlt       FoodClassificationFoodGroup = "dairy_alt"
+	Egg            FoodClassificationFoodGroup = "egg"
+	FishSeafood    FoodClassificationFoodGroup = "fish_seafood"
+	Fruit          FoodClassificationFoodGroup = "fruit"
+	Grain          FoodClassificationFoodGroup = "grain"
+	Legume         FoodClassificationFoodGroup = "legume"
+	Mixed          FoodClassificationFoodGroup = "mixed"
+	NutsSeeds      FoodClassificationFoodGroup = "nuts_seeds"
+	Other          FoodClassificationFoodGroup = "other"
+	Potato         FoodClassificationFoodGroup = "potato"
+	ProcessedMeat  FoodClassificationFoodGroup = "processed_meat"
+	RedMeat        FoodClassificationFoodGroup = "red_meat"
+	SauceCondiment FoodClassificationFoodGroup = "sauce_condiment"
+	Vegetable      FoodClassificationFoodGroup = "vegetable"
+	WhiteMeat      FoodClassificationFoodGroup = "white_meat"
 )
 
 // Valid indicates whether the value is a known member of the FoodClassificationFoodGroup enum.
 func (e FoodClassificationFoodGroup) Valid() bool {
 	switch e {
-	case FoodClassificationFoodGroupBeverage:
+	case Beverage:
 		return true
-	case FoodClassificationFoodGroupConfectionery:
+	case Confectionery:
 		return true
-	case FoodClassificationFoodGroupDairy:
+	case Dairy:
 		return true
-	case FoodClassificationFoodGroupDairyAlt:
+	case DairyAlt:
 		return true
-	case FoodClassificationFoodGroupEgg:
+	case Egg:
 		return true
-	case FoodClassificationFoodGroupFishSeafood:
+	case FishSeafood:
 		return true
-	case FoodClassificationFoodGroupFruit:
+	case Fruit:
 		return true
-	case FoodClassificationFoodGroupGrain:
+	case Grain:
 		return true
-	case FoodClassificationFoodGroupLegume:
+	case Legume:
 		return true
-	case FoodClassificationFoodGroupMixed:
+	case Mixed:
 		return true
-	case FoodClassificationFoodGroupNutsSeeds:
+	case NutsSeeds:
 		return true
-	case FoodClassificationFoodGroupOther:
+	case Other:
 		return true
-	case FoodClassificationFoodGroupPotato:
+	case Potato:
 		return true
-	case FoodClassificationFoodGroupProcessedMeat:
+	case ProcessedMeat:
 		return true
-	case FoodClassificationFoodGroupRedMeat:
+	case RedMeat:
 		return true
-	case FoodClassificationFoodGroupSauceCondiment:
+	case SauceCondiment:
 		return true
-	case FoodClassificationFoodGroupVegetable:
+	case Vegetable:
 		return true
-	case FoodClassificationFoodGroupWhiteMeat:
+	case WhiteMeat:
 		return true
 	default:
 		return false
@@ -384,6 +411,9 @@ func (e StorageProfile) Valid() bool {
 		return false
 	}
 }
+
+// ComponentKind Роль независимо приготовленной партии при сборке приёма пищи
+type ComponentKind string
 
 // Eater defines model for Eater.
 type Eater struct {
@@ -657,19 +687,27 @@ type RecipeStatus string
 
 // RecipeTemplate defines model for RecipeTemplate.
 type RecipeTemplate struct {
-	CookedCount   *int                  `json:"cooked_count,omitempty"`
-	CookingMethod *string               `json:"cooking_method,omitempty"`
-	Cuisine       *string               `json:"cuisine,omitempty"`
-	Equipment     *[]string             `json:"equipment,omitempty"`
-	Id            int64                 `json:"id"`
-	Instructions  *string               `json:"instructions,omitempty"`
-	Name          string                `json:"name"`
-	Slots         []Slot                `json:"slots"`
-	Source        *RecipeTemplateSource `json:"source,omitempty"`
-	Status        RecipeStatus          `json:"status"`
-	Storage       StorageProfile        `json:"storage"`
-	StorageNotes  *string               `json:"storage_notes,omitempty"`
-	Weight        *float32              `json:"weight,omitempty"`
+	AllowedMealTypes []MealType `json:"allowed_meal_types"`
+	BaseServings     int        `json:"base_servings"`
+
+	// ComponentKind Роль независимо приготовленной партии при сборке приёма пищи
+	ComponentKind ComponentKind `json:"component_kind"`
+	CookedCount   *int          `json:"cooked_count,omitempty"`
+	CookingMethod *string       `json:"cooking_method,omitempty"`
+	Cuisine       *string       `json:"cuisine,omitempty"`
+	Equipment     *[]string     `json:"equipment,omitempty"`
+
+	// ExpectedOutputG Ожидаемый выход базовой партии; NULL означает неизвестный yield
+	ExpectedOutputG *float32             `json:"expected_output_g,omitempty"`
+	Id              int64                `json:"id"`
+	Instructions    *string              `json:"instructions,omitempty"`
+	Name            string               `json:"name"`
+	Slots           []Slot               `json:"slots"`
+	Source          RecipeTemplateSource `json:"source"`
+	Status          RecipeStatus         `json:"status"`
+	Storage         StorageProfile       `json:"storage"`
+	StorageNotes    *string              `json:"storage_notes,omitempty"`
+	Weight          *float32             `json:"weight,omitempty"`
 }
 
 // RecipeTemplateSource defines model for RecipeTemplate.Source.
@@ -677,18 +715,24 @@ type RecipeTemplateSource string
 
 // RecipeTemplateInput defines model for RecipeTemplateInput.
 type RecipeTemplateInput struct {
-	CookingMethod *string   `json:"cooking_method,omitempty"`
-	Cuisine       *string   `json:"cuisine,omitempty"`
-	Equipment     *[]string `json:"equipment,omitempty"`
-	Instructions  *string   `json:"instructions,omitempty"`
-	Name          string    `json:"name"`
-	Slots         []struct {
-		Label    string  `json:"label"`
-		Optional *bool   `json:"optional,omitempty"`
-		Position int     `json:"position"`
-		Qty      float32 `json:"qty"`
-		RoleTag  string  `json:"role_tag"`
-		Unit     *string `json:"unit,omitempty"`
+	AllowedMealTypes []MealType `json:"allowed_meal_types"`
+	BaseServings     int        `json:"base_servings"`
+
+	// ComponentKind Роль независимо приготовленной партии при сборке приёма пищи
+	ComponentKind   ComponentKind `json:"component_kind"`
+	CookingMethod   *string       `json:"cooking_method,omitempty"`
+	Cuisine         *string       `json:"cuisine,omitempty"`
+	Equipment       *[]string     `json:"equipment,omitempty"`
+	ExpectedOutputG *float32      `json:"expected_output_g,omitempty"`
+	Instructions    *string       `json:"instructions,omitempty"`
+	Name            string        `json:"name"`
+	Slots           []struct {
+		Label             string   `json:"label"`
+		Optional          *bool    `json:"optional,omitempty"`
+		Position          int      `json:"position"`
+		PreparedQtyFactor *float32 `json:"prepared_qty_factor,omitempty"`
+		QtyG              float32  `json:"qty_g"`
+		RoleTag           string   `json:"role_tag"`
 	} `json:"slots"`
 	Storage      StorageProfile `json:"storage"`
 	StorageNotes *string        `json:"storage_notes,omitempty"`
@@ -709,17 +753,19 @@ type RoleTag struct {
 // Sex Только для sex-specific дефолта клетчатки (25 ж / 35 м)
 type Sex string
 
-// Slot defines model for Slot.
+// Slot Вход продукта в базовую партию recipe template; расчёты ведутся в граммах
 type Slot struct {
-	Id       *int64  `json:"id,omitempty"`
-	Label    string  `json:"label"`
-	Optional *bool   `json:"optional,omitempty"`
-	Position int     `json:"position"`
-	Qty      float32 `json:"qty"`
+	Id       *int64 `json:"id,omitempty"`
+	Label    string `json:"label"`
+	Optional *bool  `json:"optional,omitempty"`
+	Position int    `json:"position"`
+
+	// PreparedQtyFactor optional input→prepared factor для food-group правил; NULL снижает coverage
+	PreparedQtyFactor *float32 `json:"prepared_qty_factor,omitempty"`
+	QtyG              float32  `json:"qty_g"`
 
 	// RoleTag код роли, который ловит слот
 	RoleTag string `json:"role_tag"`
-	Unit    string `json:"unit"`
 }
 
 // StorageProfile defines model for StorageProfile.
@@ -3288,94 +3334,100 @@ func (sh *strictHandler) ListRoleTags(w http.ResponseWriter, r *http.Request) {
 // const string: with thousands of chunks the chained `+` fold is several
 // times slower for the Go compiler than parsing a slice literal.
 var swaggerSpec = []string{
-	"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",
-	"6RBd5kEarMw8G90funlt8/8CAAD//w==",
+	"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",
+	"//8=",
 }
 
 // decodeSpec returns the embedded OpenAPI spec as raw JSON bytes,

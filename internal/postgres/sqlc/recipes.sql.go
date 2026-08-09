@@ -16,8 +16,8 @@ INSERT INTO recipe_slot (
     template_id,
     role_tag_id,
     label,
-    qty,
-    unit,
+    qty_g,
+    prepared_qty_factor,
     position,
     optional
 ) VALUES (
@@ -29,17 +29,17 @@ INSERT INTO recipe_slot (
     $6,
     $7
 )
-RETURNING id, template_id, role_tag_id, label, qty, unit, position, optional
+RETURNING id, template_id, role_tag_id, label, qty_g, prepared_qty_factor, position, optional
 `
 
 type CreateRecipeSlotParams struct {
-	TemplateID int64          `json:"template_id"`
-	RoleTagID  int64          `json:"role_tag_id"`
-	Label      string         `json:"label"`
-	Qty        pgtype.Numeric `json:"qty"`
-	Unit       string         `json:"unit"`
-	Position   int32          `json:"position"`
-	Optional   bool           `json:"optional"`
+	TemplateID        int64          `json:"template_id"`
+	RoleTagID         int64          `json:"role_tag_id"`
+	Label             string         `json:"label"`
+	QtyG              pgtype.Numeric `json:"qty_g"`
+	PreparedQtyFactor pgtype.Numeric `json:"prepared_qty_factor"`
+	Position          int32          `json:"position"`
+	Optional          bool           `json:"optional"`
 }
 
 func (q *Queries) CreateRecipeSlot(ctx context.Context, arg CreateRecipeSlotParams) (RecipeSlot, error) {
@@ -47,8 +47,8 @@ func (q *Queries) CreateRecipeSlot(ctx context.Context, arg CreateRecipeSlotPara
 		arg.TemplateID,
 		arg.RoleTagID,
 		arg.Label,
-		arg.Qty,
-		arg.Unit,
+		arg.QtyG,
+		arg.PreparedQtyFactor,
 		arg.Position,
 		arg.Optional,
 	)
@@ -58,8 +58,8 @@ func (q *Queries) CreateRecipeSlot(ctx context.Context, arg CreateRecipeSlotPara
 		&i.TemplateID,
 		&i.RoleTagID,
 		&i.Label,
-		&i.Qty,
-		&i.Unit,
+		&i.QtyG,
+		&i.PreparedQtyFactor,
 		&i.Position,
 		&i.Optional,
 	)
@@ -71,6 +71,10 @@ INSERT INTO recipe_template (
     name,
     status,
     source,
+    component_kind,
+    allowed_meal_types,
+    base_servings,
+    expected_output_g,
     cuisine,
     cooking_method,
     storage,
@@ -90,23 +94,31 @@ INSERT INTO recipe_template (
     $8,
     $9,
     $10,
-    $11
+    $11,
+    $12,
+    $13,
+    $14,
+    $15
 )
-RETURNING id, name, status, source, cuisine, cooking_method, storage, storage_notes, equipment, instructions, weight, cooked_count, promoted_at, created_at, updated_at
+RETURNING id, name, status, source, component_kind, allowed_meal_types, base_servings, expected_output_g, cuisine, cooking_method, storage, storage_notes, equipment, instructions, weight, cooked_count, promoted_at, created_at, updated_at
 `
 
 type CreateRecipeTemplateParams struct {
-	Name          string         `json:"name"`
-	Status        RecipeStatus   `json:"status"`
-	Source        RecipeSource   `json:"source"`
-	Cuisine       *string        `json:"cuisine"`
-	CookingMethod *string        `json:"cooking_method"`
-	Storage       StorageProfile `json:"storage"`
-	StorageNotes  *string        `json:"storage_notes"`
-	Equipment     []string       `json:"equipment"`
-	Instructions  *string        `json:"instructions"`
-	Weight        pgtype.Numeric `json:"weight"`
-	CookedCount   int32          `json:"cooked_count"`
+	Name             string         `json:"name"`
+	Status           RecipeStatus   `json:"status"`
+	Source           RecipeSource   `json:"source"`
+	ComponentKind    ComponentKind  `json:"component_kind"`
+	AllowedMealTypes []string       `json:"allowed_meal_types"`
+	BaseServings     int32          `json:"base_servings"`
+	ExpectedOutputG  pgtype.Numeric `json:"expected_output_g"`
+	Cuisine          *string        `json:"cuisine"`
+	CookingMethod    *string        `json:"cooking_method"`
+	Storage          StorageProfile `json:"storage"`
+	StorageNotes     *string        `json:"storage_notes"`
+	Equipment        []string       `json:"equipment"`
+	Instructions     *string        `json:"instructions"`
+	Weight           pgtype.Numeric `json:"weight"`
+	CookedCount      int32          `json:"cooked_count"`
 }
 
 func (q *Queries) CreateRecipeTemplate(ctx context.Context, arg CreateRecipeTemplateParams) (RecipeTemplate, error) {
@@ -114,6 +126,10 @@ func (q *Queries) CreateRecipeTemplate(ctx context.Context, arg CreateRecipeTemp
 		arg.Name,
 		arg.Status,
 		arg.Source,
+		arg.ComponentKind,
+		arg.AllowedMealTypes,
+		arg.BaseServings,
+		arg.ExpectedOutputG,
 		arg.Cuisine,
 		arg.CookingMethod,
 		arg.Storage,
@@ -129,6 +145,10 @@ func (q *Queries) CreateRecipeTemplate(ctx context.Context, arg CreateRecipeTemp
 		&i.Name,
 		&i.Status,
 		&i.Source,
+		&i.ComponentKind,
+		&i.AllowedMealTypes,
+		&i.BaseServings,
+		&i.ExpectedOutputG,
 		&i.Cuisine,
 		&i.CookingMethod,
 		&i.Storage,
@@ -145,7 +165,7 @@ func (q *Queries) CreateRecipeTemplate(ctx context.Context, arg CreateRecipeTemp
 }
 
 const getRecipeTemplate = `-- name: GetRecipeTemplate :one
-SELECT id, name, status, source, cuisine, cooking_method, storage, storage_notes, equipment, instructions, weight, cooked_count, promoted_at, created_at, updated_at
+SELECT id, name, status, source, component_kind, allowed_meal_types, base_servings, expected_output_g, cuisine, cooking_method, storage, storage_notes, equipment, instructions, weight, cooked_count, promoted_at, created_at, updated_at
 FROM recipe_template
 WHERE id = $1
 `
@@ -158,6 +178,10 @@ func (q *Queries) GetRecipeTemplate(ctx context.Context, id int64) (RecipeTempla
 		&i.Name,
 		&i.Status,
 		&i.Source,
+		&i.ComponentKind,
+		&i.AllowedMealTypes,
+		&i.BaseServings,
+		&i.ExpectedOutputG,
 		&i.Cuisine,
 		&i.CookingMethod,
 		&i.Storage,
@@ -180,8 +204,8 @@ SELECT
     rs.role_tag_id,
     rt.code AS role_code,
     rs.label,
-    rs.qty,
-    rs.unit,
+    rs.qty_g,
+    rs.prepared_qty_factor,
     rs.position,
     rs.optional
 FROM recipe_slot rs
@@ -191,15 +215,15 @@ ORDER BY rs.position
 `
 
 type ListRecipeSlotsByTemplateRow struct {
-	ID         int64          `json:"id"`
-	TemplateID int64          `json:"template_id"`
-	RoleTagID  int64          `json:"role_tag_id"`
-	RoleCode   string         `json:"role_code"`
-	Label      string         `json:"label"`
-	Qty        pgtype.Numeric `json:"qty"`
-	Unit       string         `json:"unit"`
-	Position   int32          `json:"position"`
-	Optional   bool           `json:"optional"`
+	ID                int64          `json:"id"`
+	TemplateID        int64          `json:"template_id"`
+	RoleTagID         int64          `json:"role_tag_id"`
+	RoleCode          string         `json:"role_code"`
+	Label             string         `json:"label"`
+	QtyG              pgtype.Numeric `json:"qty_g"`
+	PreparedQtyFactor pgtype.Numeric `json:"prepared_qty_factor"`
+	Position          int32          `json:"position"`
+	Optional          bool           `json:"optional"`
 }
 
 func (q *Queries) ListRecipeSlotsByTemplate(ctx context.Context, templateID int64) ([]ListRecipeSlotsByTemplateRow, error) {
@@ -217,8 +241,8 @@ func (q *Queries) ListRecipeSlotsByTemplate(ctx context.Context, templateID int6
 			&i.RoleTagID,
 			&i.RoleCode,
 			&i.Label,
-			&i.Qty,
-			&i.Unit,
+			&i.QtyG,
+			&i.PreparedQtyFactor,
 			&i.Position,
 			&i.Optional,
 		); err != nil {
@@ -233,7 +257,7 @@ func (q *Queries) ListRecipeSlotsByTemplate(ctx context.Context, templateID int6
 }
 
 const listRecipeTemplates = `-- name: ListRecipeTemplates :many
-SELECT id, name, status, source, cuisine, cooking_method, storage, storage_notes, equipment, instructions, weight, cooked_count, promoted_at, created_at, updated_at
+SELECT id, name, status, source, component_kind, allowed_meal_types, base_servings, expected_output_g, cuisine, cooking_method, storage, storage_notes, equipment, instructions, weight, cooked_count, promoted_at, created_at, updated_at
 FROM recipe_template
 ORDER BY id
 `
@@ -252,6 +276,10 @@ func (q *Queries) ListRecipeTemplates(ctx context.Context) ([]RecipeTemplate, er
 			&i.Name,
 			&i.Status,
 			&i.Source,
+			&i.ComponentKind,
+			&i.AllowedMealTypes,
+			&i.BaseServings,
+			&i.ExpectedOutputG,
 			&i.Cuisine,
 			&i.CookingMethod,
 			&i.Storage,
@@ -275,7 +303,7 @@ func (q *Queries) ListRecipeTemplates(ctx context.Context) ([]RecipeTemplate, er
 }
 
 const listRecipeTemplatesByStatus = `-- name: ListRecipeTemplatesByStatus :many
-SELECT id, name, status, source, cuisine, cooking_method, storage, storage_notes, equipment, instructions, weight, cooked_count, promoted_at, created_at, updated_at
+SELECT id, name, status, source, component_kind, allowed_meal_types, base_servings, expected_output_g, cuisine, cooking_method, storage, storage_notes, equipment, instructions, weight, cooked_count, promoted_at, created_at, updated_at
 FROM recipe_template
 WHERE status = $1
 ORDER BY id
@@ -295,6 +323,10 @@ func (q *Queries) ListRecipeTemplatesByStatus(ctx context.Context, status Recipe
 			&i.Name,
 			&i.Status,
 			&i.Source,
+			&i.ComponentKind,
+			&i.AllowedMealTypes,
+			&i.BaseServings,
+			&i.ExpectedOutputG,
 			&i.Cuisine,
 			&i.CookingMethod,
 			&i.Storage,
@@ -326,7 +358,7 @@ SET
     updated_at = $1
 WHERE id = $2
   AND status = 'draft'
-RETURNING id, name, status, source, cuisine, cooking_method, storage, storage_notes, equipment, instructions, weight, cooked_count, promoted_at, created_at, updated_at
+RETURNING id, name, status, source, component_kind, allowed_meal_types, base_servings, expected_output_g, cuisine, cooking_method, storage, storage_notes, equipment, instructions, weight, cooked_count, promoted_at, created_at, updated_at
 `
 
 type PromoteRecipeTemplateParams struct {
@@ -342,6 +374,10 @@ func (q *Queries) PromoteRecipeTemplate(ctx context.Context, arg PromoteRecipeTe
 		&i.Name,
 		&i.Status,
 		&i.Source,
+		&i.ComponentKind,
+		&i.AllowedMealTypes,
+		&i.BaseServings,
+		&i.ExpectedOutputG,
 		&i.Cuisine,
 		&i.CookingMethod,
 		&i.Storage,

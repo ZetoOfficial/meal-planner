@@ -3,6 +3,7 @@ package recipe
 import (
 	"context"
 	"errors"
+	"reflect"
 	"slices"
 	"testing"
 	"time"
@@ -10,10 +11,32 @@ import (
 	"go.uber.org/mock/gomock"
 
 	"github.com/ZetoOfficial/meal-planner/internal/domain/catalog"
+	"github.com/ZetoOfficial/meal-planner/internal/domain/meal"
 	recipedom "github.com/ZetoOfficial/meal-planner/internal/domain/recipe"
 	apperr "github.com/ZetoOfficial/meal-planner/internal/errors"
 	"github.com/ZetoOfficial/meal-planner/internal/usecase/recipe/mocks"
 )
+
+func TestCreateRecipeCommandBatchContractShape(t *testing.T) {
+	commandType := reflect.TypeOf(CreateRecipeCommand{})
+	for _, name := range []string{"ComponentKind", "AllowedMealTypes", "BaseServings", "ExpectedOutputG"} {
+		if _, ok := commandType.FieldByName(name); !ok {
+			t.Errorf("CreateRecipeCommand is missing %s", name)
+		}
+	}
+
+	slotType := reflect.TypeOf(SlotCommand{})
+	for _, name := range []string{"QtyG", "PreparedQtyFactor"} {
+		if _, ok := slotType.FieldByName(name); !ok {
+			t.Errorf("SlotCommand is missing %s", name)
+		}
+	}
+	for _, name := range []string{"Qty", "Unit"} {
+		if _, ok := slotType.FieldByName(name); ok {
+			t.Errorf("SlotCommand still exposes legacy %s", name)
+		}
+	}
+}
 
 func TestCreateRecipeDefaultsAndPersistsValidManualDraft(t *testing.T) {
 	service, repository, transactions, _ := newMockService(t)
@@ -33,13 +56,16 @@ func TestCreateRecipeDefaultsAndPersistsValidManualDraft(t *testing.T) {
 		})
 
 	created, err := service.CreateRecipe(t.Context(), CreateRecipeCommand{
-		Name:      " Chicken bowl ",
-		Storage:   recipedom.StorageKeeps3dReheat,
-		Equipment: []string{" oven ", "oven"},
+		Name:             " Chicken bowl ",
+		ComponentKind:    recipedom.ComponentKindProtein,
+		AllowedMealTypes: []meal.Type{meal.TypeLunch, meal.TypeDinner},
+		BaseServings:     4,
+		Storage:          recipedom.StorageKeeps3dReheat,
+		Equipment:        []string{" oven ", "oven"},
 		Slots: []SlotCommand{{
 			RoleTagCode: " protein:lean ",
 			Label:       " Protein ",
-			Qty:         180,
+			QtyG:        180,
 			Position:    0,
 		}},
 	})
@@ -52,22 +78,29 @@ func TestCreateRecipeDefaultsAndPersistsValidManualDraft(t *testing.T) {
 	if stored.Name != "Chicken bowl" || stored.Weight != 1 || stored.CookedCount != 0 {
 		t.Fatalf("stored template = %#v, want normalized defaults", stored)
 	}
-	if !slices.Equal(stored.Equipment, []string{"oven"}) || stored.Slots[0].Unit != "g" {
+	if !slices.Equal(stored.Equipment, []string{"oven"}) || stored.Slots[0].QtyG != 180 {
 		t.Fatalf("stored equipment/slots = %#v/%#v, want normalized values", stored.Equipment, stored.Slots)
+	}
+	if stored.ComponentKind != recipedom.ComponentKindProtein || stored.BaseServings != 4 ||
+		!slices.Equal(stored.AllowedMealTypes, []meal.Type{meal.TypeLunch, meal.TypeDinner}) {
+		t.Fatalf("stored batch metadata = %#v", stored)
 	}
 }
 
 func TestCreateRecipeCommandTemplateMapsNormalizedSlots(t *testing.T) {
 	cuisine := " Italian "
 	command := CreateRecipeCommand{
-		Name:      " Chicken bowl ",
-		Cuisine:   &cuisine,
-		Storage:   recipedom.StorageKeeps3d,
-		Equipment: []string{" oven ", "oven"},
+		Name:             " Chicken bowl ",
+		ComponentKind:    recipedom.ComponentKindProtein,
+		AllowedMealTypes: []meal.Type{meal.TypeLunch},
+		BaseServings:     4,
+		Cuisine:          &cuisine,
+		Storage:          recipedom.StorageKeeps3d,
+		Equipment:        []string{" oven ", "oven"},
 		Slots: []SlotCommand{{
 			RoleTagCode: " protein:lean ",
 			Label:       " Protein ",
-			Qty:         180,
+			QtyG:        180,
 		}},
 	}
 
@@ -82,7 +115,7 @@ func TestCreateRecipeCommandTemplateMapsNormalizedSlots(t *testing.T) {
 	if !slices.Equal(template.Equipment, []string{"oven"}) || len(template.Slots) != 1 {
 		t.Fatalf("CreateRecipeCommand.template() equipment/slots = %#v/%#v", template.Equipment, template.Slots)
 	}
-	if template.Slots[0].RoleTagCode != "protein:lean" || template.Slots[0].Label != "Protein" || template.Slots[0].Unit != "g" {
+	if template.Slots[0].RoleTagCode != "protein:lean" || template.Slots[0].Label != "Protein" || template.Slots[0].QtyG != 180 {
 		t.Fatalf("SlotCommand.slot() = %#v, want normalized slot defaults", template.Slots[0])
 	}
 }
@@ -95,12 +128,15 @@ func TestCreateRecipeRejectsMissingRole(t *testing.T) {
 		Return(map[string]catalog.RoleTag{}, nil)
 
 	_, err := service.CreateRecipe(t.Context(), CreateRecipeCommand{
-		Name:    "Chicken bowl",
-		Storage: recipedom.StorageKeeps3d,
+		Name:             "Chicken bowl",
+		ComponentKind:    recipedom.ComponentKindProtein,
+		AllowedMealTypes: []meal.Type{meal.TypeLunch},
+		BaseServings:     1,
+		Storage:          recipedom.StorageKeeps3d,
 		Slots: []SlotCommand{{
 			RoleTagCode: "protein:lean",
 			Label:       "Protein",
-			Qty:         180,
+			QtyG:        180,
 			Position:    0,
 		}},
 	})
@@ -217,17 +253,19 @@ func expectPassthroughTx(transactions *mocks.MockTxRunner) {
 
 func validTemplate() recipedom.Template {
 	return recipedom.Template{
-		Name:        "Chicken bowl",
-		Status:      recipedom.StatusDraft,
-		Source:      recipedom.SourceManual,
-		Storage:     recipedom.StorageKeeps3d,
-		Weight:      1,
-		CookedCount: 0,
+		Name:             "Chicken bowl",
+		Status:           recipedom.StatusDraft,
+		Source:           recipedom.SourceManual,
+		ComponentKind:    recipedom.ComponentKindProtein,
+		AllowedMealTypes: []meal.Type{meal.TypeLunch},
+		BaseServings:     1,
+		Storage:          recipedom.StorageKeeps3d,
+		Weight:           1,
+		CookedCount:      0,
 		Slots: []recipedom.Slot{{
 			RoleTagCode: "protein:lean",
 			Label:       "Protein",
-			Qty:         180,
-			Unit:        "g",
+			QtyG:        180,
 			Position:    0,
 		}},
 	}
