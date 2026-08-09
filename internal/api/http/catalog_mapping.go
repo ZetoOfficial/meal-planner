@@ -63,13 +63,14 @@ func classificationCommand(input *openapi.FoodClassification) catalogdom.FoodCla
 		return catalogdom.FoodClassification{}
 	}
 	result := catalogdom.FoodClassification{
-		ProcessingConfidence: float64Pointer(input.ProcessingConfidence), CountsToFruitVeg: dereferenceBool(input.CountsToFruitVeg),
-		IsLegume: dereferenceBool(input.IsLegume), IsWholeGrain: dereferenceBool(input.IsWholeGrain),
-		WholeGrainRatio: float64Pointer(input.WholeGrainRatio), IsRedMeat: dereferenceBool(input.IsRedMeat),
-		IsProcessedMeat: dereferenceBool(input.IsProcessedMeat), Note: input.ClassificationNote,
+		ProcessingConfidence: float64Pointer(input.ProcessingConfidence), CountsToFruitVeg: input.CountsToFruitVeg,
+		IsLegume: input.IsLegume, IsWholeGrain: input.IsWholeGrain,
+		WholeGrainRatio: float64Pointer(input.WholeGrainRatio), IsRedMeat: input.IsRedMeat,
+		IsProcessedMeat: input.IsProcessedMeat, Source: input.ClassificationSource, Note: input.ClassificationNote,
 	}
 	if input.FoodGroup != nil {
-		result.FoodGroup = catalogdom.FoodGroup(*input.FoodGroup)
+		value := catalogdom.FoodGroup(*input.FoodGroup)
+		result.FoodGroup = &value
 	}
 	if input.ProcessingLevel != nil {
 		result.ProcessingLevel = catalogdom.ProcessingLevel(*input.ProcessingLevel)
@@ -125,14 +126,18 @@ func nutritionDataResponse(value catalogdom.NutritionData) *openapi.NutritionDat
 }
 
 func classificationResponse(value catalogdom.FoodClassification) *openapi.FoodClassification {
-	foodGroup := openapi.FoodClassificationFoodGroup(value.FoodGroup)
 	processingLevel := openapi.FoodClassificationProcessingLevel(value.ProcessingLevel)
-	return &openapi.FoodClassification{
-		FoodGroup: &foodGroup, ProcessingLevel: &processingLevel, ProcessingConfidence: float32Pointer(value.ProcessingConfidence),
-		CountsToFruitVeg: boolPointer(value.CountsToFruitVeg), IsLegume: boolPointer(value.IsLegume), IsWholeGrain: boolPointer(value.IsWholeGrain),
-		WholeGrainRatio: float32Pointer(value.WholeGrainRatio), IsRedMeat: boolPointer(value.IsRedMeat), IsProcessedMeat: boolPointer(value.IsProcessedMeat),
-		ClassificationNote: value.Note,
+	result := &openapi.FoodClassification{
+		ProcessingLevel: &processingLevel, ProcessingConfidence: float32Pointer(value.ProcessingConfidence),
+		CountsToFruitVeg: value.CountsToFruitVeg, IsLegume: value.IsLegume, IsWholeGrain: value.IsWholeGrain,
+		WholeGrainRatio: float32Pointer(value.WholeGrainRatio), IsRedMeat: value.IsRedMeat, IsProcessedMeat: value.IsProcessedMeat,
+		ClassificationSource: value.Source, ClassificationNote: value.Note,
 	}
+	if value.FoodGroup != nil {
+		foodGroup := openapi.FoodClassificationFoodGroup(*value.FoodGroup)
+		result.FoodGroup = &foodGroup
+	}
+	return result
 }
 
 func roleTagResponse(value catalogdom.RoleTag) openapi.RoleTag {

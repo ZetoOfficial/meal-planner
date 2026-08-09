@@ -52,11 +52,13 @@ INSERT INTO fixed_meal (
     eater_id, meal_type, label, protein_g, fat_g, carb_g, kcal,
     saturated_fat_g, trans_fat_g, fiber_g, sodium_mg, added_sugars_g,
     free_sugars_g, processed_meat_g, red_meat_g, whole_grain_g_equiv,
-    fruit_veg_g, include_in_analytics, include_in_warnings, active
+    grain_g_equiv, legume_g, fruit_veg_g, upf_kcal,
+    include_in_analytics, include_in_warnings, active
 )
 VALUES (
     $1, $2, $3, $4, $5, $6, $7,
-    $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20
+    $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20,
+    $21, $22, $23
 )
 RETURNING *;
 

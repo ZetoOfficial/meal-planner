@@ -433,6 +433,10 @@ Scope:
   whole-grain ratios, legume components/servings, and percentage-of-kcal rules.
 - Define per-rule coverage, aggregate coverage, hard violations, soft statuses,
   quality scoring, and summary identity/idempotency.
+- Keep fixed-meal inputs sufficient for grain ratio, legumes, UPF share, and
+  rolling meat rules instead of treating fixed meals as an opaque macro baseline.
+- Keep cumulative migrations aligned with the canonical schema; an upgrade must
+  reject legacy rows whose batch shares cannot be reconstructed without guessing.
 - Update the source-of-truth documents and contracts consistently before application
   implementation starts.
 
@@ -447,8 +451,12 @@ Acceptance Criteria:
   or known false values.
 - Every MVP quality rule has a computable input, unit, boundary, and coverage policy.
 - Hard rejection is represented separately from soft evaluation outcomes.
+- Quality score is bounded to 0..100 and aggregate coverage remains a separate 0..1
+  signal; unknown data cannot improve either rule status or score.
 - Planned summary snapshots have an unambiguous identity and idempotent replacement
   behavior when plans are regenerated.
+- Fresh-schema DDL and the ordered migrations produce the same planning and quality
+  contract needed by later M4 issues.
 - `DESIGN.md`, `SPEC.md`, `ARCHITECTURE.md`, `schema.sql`, and `openapi.yaml` agree.
 
 Out of Scope:

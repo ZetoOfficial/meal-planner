@@ -90,13 +90,15 @@ INSERT INTO fixed_meal (
     eater_id, meal_type, label, protein_g, fat_g, carb_g, kcal,
     saturated_fat_g, trans_fat_g, fiber_g, sodium_mg, added_sugars_g,
     free_sugars_g, processed_meat_g, red_meat_g, whole_grain_g_equiv,
-    fruit_veg_g, include_in_analytics, include_in_warnings, active
+    grain_g_equiv, legume_g, fruit_veg_g, upf_kcal,
+    include_in_analytics, include_in_warnings, active
 )
 VALUES (
     $1, $2, $3, $4, $5, $6, $7,
-    $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20
+    $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20,
+    $21, $22, $23
 )
-RETURNING id, eater_id, meal_type, label, protein_g, fat_g, carb_g, kcal, saturated_fat_g, trans_fat_g, fiber_g, sodium_mg, added_sugars_g, free_sugars_g, processed_meat_g, red_meat_g, whole_grain_g_equiv, fruit_veg_g, include_in_analytics, include_in_warnings, active
+RETURNING id, eater_id, meal_type, label, protein_g, fat_g, carb_g, kcal, saturated_fat_g, trans_fat_g, fiber_g, sodium_mg, added_sugars_g, free_sugars_g, processed_meat_g, red_meat_g, grain_g_equiv, whole_grain_g_equiv, legume_g, fruit_veg_g, upf_kcal, include_in_analytics, include_in_warnings, active
 `
 
 type CreateFixedMealParams struct {
@@ -116,7 +118,10 @@ type CreateFixedMealParams struct {
 	ProcessedMeatG     pgtype.Numeric `json:"processed_meat_g"`
 	RedMeatG           pgtype.Numeric `json:"red_meat_g"`
 	WholeGrainGEquiv   pgtype.Numeric `json:"whole_grain_g_equiv"`
+	GrainGEquiv        pgtype.Numeric `json:"grain_g_equiv"`
+	LegumeG            pgtype.Numeric `json:"legume_g"`
 	FruitVegG          pgtype.Numeric `json:"fruit_veg_g"`
+	UpfKcal            pgtype.Numeric `json:"upf_kcal"`
 	IncludeInAnalytics bool           `json:"include_in_analytics"`
 	IncludeInWarnings  bool           `json:"include_in_warnings"`
 	Active             bool           `json:"active"`
@@ -140,7 +145,10 @@ func (q *Queries) CreateFixedMeal(ctx context.Context, arg CreateFixedMealParams
 		arg.ProcessedMeatG,
 		arg.RedMeatG,
 		arg.WholeGrainGEquiv,
+		arg.GrainGEquiv,
+		arg.LegumeG,
 		arg.FruitVegG,
+		arg.UpfKcal,
 		arg.IncludeInAnalytics,
 		arg.IncludeInWarnings,
 		arg.Active,
@@ -163,8 +171,11 @@ func (q *Queries) CreateFixedMeal(ctx context.Context, arg CreateFixedMealParams
 		&i.FreeSugarsG,
 		&i.ProcessedMeatG,
 		&i.RedMeatG,
+		&i.GrainGEquiv,
 		&i.WholeGrainGEquiv,
+		&i.LegumeG,
 		&i.FruitVegG,
+		&i.UpfKcal,
 		&i.IncludeInAnalytics,
 		&i.IncludeInWarnings,
 		&i.Active,
@@ -305,7 +316,7 @@ func (q *Queries) GetEater(ctx context.Context, id int64) (Eater, error) {
 }
 
 const listActiveFixedMeals = `-- name: ListActiveFixedMeals :many
-SELECT id, eater_id, meal_type, label, protein_g, fat_g, carb_g, kcal, saturated_fat_g, trans_fat_g, fiber_g, sodium_mg, added_sugars_g, free_sugars_g, processed_meat_g, red_meat_g, whole_grain_g_equiv, fruit_veg_g, include_in_analytics, include_in_warnings, active FROM fixed_meal
+SELECT id, eater_id, meal_type, label, protein_g, fat_g, carb_g, kcal, saturated_fat_g, trans_fat_g, fiber_g, sodium_mg, added_sugars_g, free_sugars_g, processed_meat_g, red_meat_g, grain_g_equiv, whole_grain_g_equiv, legume_g, fruit_veg_g, upf_kcal, include_in_analytics, include_in_warnings, active FROM fixed_meal
 WHERE eater_id = $1 AND active = TRUE
 ORDER BY meal_type
 `
@@ -336,8 +347,11 @@ func (q *Queries) ListActiveFixedMeals(ctx context.Context, eaterID int64) ([]Fi
 			&i.FreeSugarsG,
 			&i.ProcessedMeatG,
 			&i.RedMeatG,
+			&i.GrainGEquiv,
 			&i.WholeGrainGEquiv,
+			&i.LegumeG,
 			&i.FruitVegG,
+			&i.UpfKcal,
 			&i.IncludeInAnalytics,
 			&i.IncludeInWarnings,
 			&i.Active,

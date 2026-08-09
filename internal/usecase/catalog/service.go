@@ -167,9 +167,6 @@ func (command CreateProductCommand) product() (catalogdom.Product, error) {
 	if product.DataQuality.Quality == "" {
 		product.DataQuality.Quality = catalogdom.NutritionDataQualityUnknown
 	}
-	if product.Classification.FoodGroup == "" {
-		product.Classification.FoodGroup = catalogdom.FoodGroupOther
-	}
 	if product.Classification.ProcessingLevel == "" {
 		product.Classification.ProcessingLevel = catalogdom.ProcessingLevelUnknown
 	}
@@ -208,7 +205,7 @@ func validateProduct(product catalogdom.Product) error {
 	if product.DataQuality.SourceKind != nil && !product.DataQuality.SourceKind.Valid() {
 		return apperr.Validation("source_kind is invalid")
 	}
-	if !product.Classification.FoodGroup.Valid() {
+	if product.Classification.FoodGroup != nil && !product.Classification.FoodGroup.Valid() {
 		return apperr.Validation("food_group is invalid")
 	}
 	if !product.Classification.ProcessingLevel.Valid() {

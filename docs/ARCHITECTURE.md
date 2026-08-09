@@ -349,6 +349,13 @@ RuleEvaluationResult
 
 Quality input собирается из `SlotFill × Product × MealComponentAllocation` и fixed meals. Food-group объёмы используют optional prepared-yield factor слота; его отсутствие снижает per-rule coverage. Percentage-of-kcal правила используют рассчитанные kcal оцениваемого дня, а не midpoint личной kcal goal.
 
+Hard violations возвращаются solver-у отдельными diagnostics и не смешиваются со
+статусами quality evaluation. Каждый soft/analytics result содержит собственный
+coverage `0..1`; nullable classification сохраняет различие unknown и known false.
+Пользовательский score ограничен `0..100`, считается ruleset-ом отдельно от
+aggregate coverage и служит объяснением результата, а не заменой worst-first
+лексикографического сравнения кандидатов.
+
 ---
 
 ### 5.7 `solver`
@@ -574,7 +581,7 @@ func (uc *GeneratePlan) Handle(ctx context.Context, cmd Command) (planning.Plan,
     }
 
     result := uc.solver.BuildPlan(input)
-    if result.NeedsMoreCandidates() || cmd.NoveltyLevel >= 2 {
+    if result.NeedsMoreCandidates() || cmd.NoveltyLevel == 3 {
         drafts, err := uc.recipeGenerator.Generate(ctx, RecipeGenerationInput{...})
         if err != nil {
             return planning.Plan{}, err
@@ -598,6 +605,11 @@ func (uc *GeneratePlan) Handle(ctx context.Context, cmd Command) (planning.Plan,
 ```
 
 `solver.BuildPlan` внутри поиска вызывает чистый quality evaluator для ранжирования кандидатов. Пост-фактум evaluation уже выбранного плана не может заменить quality-aware ranking.
+
+`NeedsMoreCandidates` означает исчерпанный permanent-only bounded search. Остановка
+по search budget возвращает `search_limit_reached` и не выдаётся за доказанную
+нехватку кандидатов. `novelty_level=2` выбирает давно не использованный permanent
+component и сам по себе не вызывает LLM.
 
 ---
 

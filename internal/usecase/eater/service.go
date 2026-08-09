@@ -313,7 +313,9 @@ func validateFixedMeal(meal *eaterdom.FixedMeal) error {
 		"fiber_g": {meal.Quality.FiberG, maxNumeric6_1}, "sodium_mg": {meal.Quality.SodiumMg, maxNumeric8_1},
 		"added_sugars_g": {meal.Quality.AddedSugarsG, maxNumeric6_1}, "free_sugars_g": {meal.Quality.FreeSugarsG, maxNumeric6_1},
 		"processed_meat_g": {meal.Quality.ProcessedMeatG, maxNumeric7_1}, "red_meat_g": {meal.Quality.RedMeatG, maxNumeric7_1},
-		"whole_grain_g_equiv": {meal.Quality.WholeGrainGEquiv, maxNumeric7_1}, "fruit_veg_g": {meal.Quality.FruitVegG, maxNumeric7_1},
+		"grain_g_equiv": {meal.Quality.GrainGEquiv, maxNumeric7_1}, "whole_grain_g_equiv": {meal.Quality.WholeGrainGEquiv, maxNumeric7_1},
+		"legume_g": {meal.Quality.LegumeG, maxNumeric7_1}, "fruit_veg_g": {meal.Quality.FruitVegG, maxNumeric7_1},
+		"upf_kcal": {meal.Quality.UPFKcal, maxNumeric7_1},
 	} {
 		if value.value != nil && !validFiniteNumeric(*value.value, value.upperBound) {
 			return apperr.Validation("fixed meal " + name + " must be finite and fit the database column")

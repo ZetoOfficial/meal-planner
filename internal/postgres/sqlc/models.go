@@ -959,6 +959,7 @@ type DayNutritionSummary struct {
 	AddedSugarsG      pgtype.Numeric     `json:"added_sugars_g"`
 	FreeSugarsG       pgtype.Numeric     `json:"free_sugars_g"`
 	FruitVegG         pgtype.Numeric     `json:"fruit_veg_g"`
+	GrainGEquiv       pgtype.Numeric     `json:"grain_g_equiv"`
 	WholeGrainGEquiv  pgtype.Numeric     `json:"whole_grain_g_equiv"`
 	LegumeG           pgtype.Numeric     `json:"legume_g"`
 	RedMeatG          pgtype.Numeric     `json:"red_meat_g"`
@@ -1054,8 +1055,11 @@ type FixedMeal struct {
 	FreeSugarsG        pgtype.Numeric `json:"free_sugars_g"`
 	ProcessedMeatG     pgtype.Numeric `json:"processed_meat_g"`
 	RedMeatG           pgtype.Numeric `json:"red_meat_g"`
+	GrainGEquiv        pgtype.Numeric `json:"grain_g_equiv"`
 	WholeGrainGEquiv   pgtype.Numeric `json:"whole_grain_g_equiv"`
+	LegumeG            pgtype.Numeric `json:"legume_g"`
 	FruitVegG          pgtype.Numeric `json:"fruit_veg_g"`
+	UpfKcal            pgtype.Numeric `json:"upf_kcal"`
 	IncludeInAnalytics bool           `json:"include_in_analytics"`
 	IncludeInWarnings  bool           `json:"include_in_warnings"`
 	Active             bool           `json:"active"`
@@ -1193,15 +1197,15 @@ type ProductAllergen struct {
 
 type ProductFoodClassification struct {
 	ProductID            int64           `json:"product_id"`
-	FoodGroup            FoodGroup       `json:"food_group"`
+	FoodGroup            *FoodGroup      `json:"food_group"`
 	ProcessingLevel      ProcessingLevel `json:"processing_level"`
 	ProcessingConfidence pgtype.Numeric  `json:"processing_confidence"`
-	CountsToFruitVeg     bool            `json:"counts_to_fruit_veg"`
-	IsLegume             bool            `json:"is_legume"`
-	IsWholeGrain         bool            `json:"is_whole_grain"`
+	CountsToFruitVeg     *bool           `json:"counts_to_fruit_veg"`
+	IsLegume             *bool           `json:"is_legume"`
+	IsWholeGrain         *bool           `json:"is_whole_grain"`
 	WholeGrainRatio      pgtype.Numeric  `json:"whole_grain_ratio"`
-	IsRedMeat            bool            `json:"is_red_meat"`
-	IsProcessedMeat      bool            `json:"is_processed_meat"`
+	IsRedMeat            *bool           `json:"is_red_meat"`
+	IsProcessedMeat      *bool           `json:"is_processed_meat"`
 	ClassificationSource *string         `json:"classification_source"`
 	ClassificationNote   *string         `json:"classification_note"`
 }

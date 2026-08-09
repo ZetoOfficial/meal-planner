@@ -288,8 +288,11 @@ CREATE TABLE fixed_meal (
     free_sugars_g       NUMERIC(6,1),
     processed_meat_g    NUMERIC(7,1),                -- граммаж для rolling-правила
     red_meat_g          NUMERIC(7,1),
+    grain_g_equiv       NUMERIC(7,1),                -- все злаки, denominator whole-grain ratio
     whole_grain_g_equiv NUMERIC(7,1),
+    legume_g            NUMERIC(7,1),
     fruit_veg_g         NUMERIC(7,1),
+    upf_kcal            NUMERIC(7,1),                -- вклад UPF в kcal дня
     -- Override-флаги: не генерируется, но участвует в quality-учёте (решение владельца).
     include_in_analytics BOOLEAN NOT NULL DEFAULT TRUE,
     include_in_warnings  BOOLEAN NOT NULL DEFAULT TRUE,
@@ -305,8 +308,11 @@ CREATE TABLE fixed_meal (
         AND (free_sugars_g IS NULL OR free_sugars_g >= 0)
         AND (processed_meat_g IS NULL OR processed_meat_g >= 0)
         AND (red_meat_g IS NULL OR red_meat_g >= 0)
+        AND (grain_g_equiv IS NULL OR grain_g_equiv >= 0)
         AND (whole_grain_g_equiv IS NULL OR whole_grain_g_equiv >= 0)
+        AND (legume_g IS NULL OR legume_g >= 0)
         AND (fruit_veg_g IS NULL OR fruit_veg_g >= 0)
+        AND (upf_kcal IS NULL OR upf_kcal >= 0)
     )
 );
 
@@ -379,15 +385,16 @@ CREATE TABLE product (
 -- картофель НЕ в fruit_veg, сок НЕ как цельный фрукт (deep-research-report.md).
 CREATE TABLE product_food_classification (
     product_id          BIGINT  PRIMARY KEY REFERENCES product(id) ON DELETE CASCADE,
-    food_group          food_group       NOT NULL DEFAULT 'other',
+    -- NULL means unknown. 'other' and FALSE below are explicit known values.
+    food_group          food_group,
     processing_level    processing_level NOT NULL DEFAULT 'unknown',
     processing_confidence NUMERIC(4,3),              -- 0..1, уверенность в классе
-    counts_to_fruit_veg BOOLEAN NOT NULL DEFAULT FALSE, -- идёт ли в зачёт ≥400 г/день
-    is_legume           BOOLEAN NOT NULL DEFAULT FALSE,
-    is_whole_grain      BOOLEAN NOT NULL DEFAULT FALSE,
+    counts_to_fruit_veg BOOLEAN,                     -- идёт ли в зачёт ≥400 г/день
+    is_legume           BOOLEAN,
+    is_whole_grain      BOOLEAN,
     whole_grain_ratio   NUMERIC(4,3),               -- доля цельнозерновой части 0..1
-    is_red_meat         BOOLEAN NOT NULL DEFAULT FALSE,
-    is_processed_meat   BOOLEAN NOT NULL DEFAULT FALSE,
+    is_red_meat         BOOLEAN,
+    is_processed_meat   BOOLEAN,
     classification_source TEXT,
     classification_note TEXT,
     CONSTRAINT proc_conf_range CHECK (
@@ -494,8 +501,12 @@ CREATE TABLE plan (
     -- Список покупок устарел после свопа, изменившего состав продуктов (FR-5).
     shopping_list_stale BOOLEAN NOT NULL DEFAULT FALSE,
     created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
-    CONSTRAINT days_positive CHECK (days > 0),
-    CONSTRAINT novelty_range CHECK (novelty_level BETWEEN 0 AND 3)
+    CONSTRAINT plan_values CHECK (
+        days > 0
+        AND novelty_level BETWEEN 0 AND 3
+        AND (quality_score IS NULL OR quality_score BETWEEN 0 AND 100)
+        AND quality_warnings_count >= 0
+    )
 );
 
 -- Нормализованный снимок planning target на каждый день и едока.
@@ -751,12 +762,13 @@ CREATE TABLE day_nutrition_summary (
     free_sugars_g   NUMERIC(7,1),
     -- food-group объёмы
     fruit_veg_g     NUMERIC(8,1),                   -- без картофеля и соков
+    grain_g_equiv   NUMERIC(8,1),                   -- denominator whole-grain ratio
     whole_grain_g_equiv NUMERIC(8,1),
     legume_g        NUMERIC(8,1),
     red_meat_g      NUMERIC(8,1),
     processed_meat_g NUMERIC(8,1),
     upf_kcal_share_est NUMERIC(4,3),                -- 0..1, доля ккал из UPF (оценка)
-    data_coverage_score NUMERIC(4,3),              -- 0..1, насколько данным можно верить
+    data_coverage_score NUMERIC(4,3) NOT NULL,     -- 0..1, насколько данным можно верить
     created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
     UNIQUE (plan_id, eater_id, summary_date, basis),
     CONSTRAINT day_summary_shares CHECK (
@@ -769,7 +781,8 @@ CREATE TABLE day_nutrition_summary (
         AND COALESCE(trans_fat_g,0) >= 0 AND COALESCE(fiber_g,0) >= 0
         AND COALESCE(sodium_mg,0) >= 0 AND COALESCE(added_sugars_g,0) >= 0
         AND COALESCE(free_sugars_g,0) >= 0 AND COALESCE(fruit_veg_g,0) >= 0
-        AND COALESCE(whole_grain_g_equiv,0) >= 0 AND COALESCE(legume_g,0) >= 0
+        AND COALESCE(grain_g_equiv,0) >= 0 AND COALESCE(whole_grain_g_equiv,0) >= 0
+        AND COALESCE(legume_g,0) >= 0
         AND COALESCE(red_meat_g,0) >= 0 AND COALESCE(processed_meat_g,0) >= 0
     )
 );
@@ -791,7 +804,7 @@ CREATE TABLE rolling_nutrition_summary (
     saturated_fat_g_avg NUMERIC(7,1),
     added_sugars_g_avg NUMERIC(7,1),
     fruit_veg_g_avg NUMERIC(8,1),
-    data_coverage_score NUMERIC(4,3),
+    data_coverage_score NUMERIC(4,3) NOT NULL,
     created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
     UNIQUE (plan_id, eater_id, as_of_date, window_days, basis),
     CONSTRAINT rolling_window_ok CHECK (window_days > 0),
@@ -824,12 +837,12 @@ CREATE TABLE rule_evaluation_result (
     eval_date       DATE,                           -- для entity_type='day'/'meal'
     window_start    DATE,                           -- для entity_type='rolling_window'
     window_end      DATE,
-    coverage_score  NUMERIC(4,3),                   -- доверие к этой оценке (unknown ≠ 0)
+    coverage_score  NUMERIC(4,3) NOT NULL,          -- доверие к этой оценке (unknown ≠ 0)
     message         TEXT,                           -- человекочитаемое объяснение/warning
     evaluated_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
     UNIQUE NULLS NOT DISTINCT (entity_type, entity_id, eater_id, rule_code, basis),
     CONSTRAINT rule_eval_coverage_ok CHECK (
-        coverage_score IS NULL OR coverage_score BETWEEN 0 AND 1
+        coverage_score BETWEEN 0 AND 1
     )
 );
 

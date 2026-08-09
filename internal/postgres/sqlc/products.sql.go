@@ -713,15 +713,15 @@ RETURNING product_id, food_group, processing_level, processing_confidence, count
 
 type UpsertProductFoodClassificationParams struct {
 	ProductID            int64           `json:"product_id"`
-	FoodGroup            FoodGroup       `json:"food_group"`
+	FoodGroup            *FoodGroup      `json:"food_group"`
 	ProcessingLevel      ProcessingLevel `json:"processing_level"`
 	ProcessingConfidence pgtype.Numeric  `json:"processing_confidence"`
-	CountsToFruitVeg     bool            `json:"counts_to_fruit_veg"`
-	IsLegume             bool            `json:"is_legume"`
-	IsWholeGrain         bool            `json:"is_whole_grain"`
+	CountsToFruitVeg     *bool           `json:"counts_to_fruit_veg"`
+	IsLegume             *bool           `json:"is_legume"`
+	IsWholeGrain         *bool           `json:"is_whole_grain"`
 	WholeGrainRatio      pgtype.Numeric  `json:"whole_grain_ratio"`
-	IsRedMeat            bool            `json:"is_red_meat"`
-	IsProcessedMeat      bool            `json:"is_processed_meat"`
+	IsRedMeat            *bool           `json:"is_red_meat"`
+	IsProcessedMeat      *bool           `json:"is_processed_meat"`
 	ClassificationSource *string         `json:"classification_source"`
 	ClassificationNote   *string         `json:"classification_note"`
 }

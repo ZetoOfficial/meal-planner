@@ -33,6 +33,7 @@ func TestCatalogRoundTripReplacesAggregateAndPreservesNullNutrition(t *testing.T
 		t.Fatalf("load carb role: %v", err)
 	}
 	fiber := 2.1
+	whiteMeat := catalogdom.FoodGroupWhiteMeat
 	created, err := repository.Create(ctx, catalogdom.Product{
 		Brand:          "Brand",
 		Name:           "Original",
@@ -50,7 +51,7 @@ func TestCatalogRoundTripReplacesAggregateAndPreservesNullNutrition(t *testing.T
 			Coverage: 0.1,
 		},
 		Classification: catalogdom.FoodClassification{
-			FoodGroup:       catalogdom.FoodGroupWhiteMeat,
+			FoodGroup:       &whiteMeat,
 			ProcessingLevel: catalogdom.ProcessingLevelMinimallyProcessed,
 		},
 		Roles:     []catalogdom.RoleTag{proteinRole},
@@ -59,14 +60,20 @@ func TestCatalogRoundTripReplacesAggregateAndPreservesNullNutrition(t *testing.T
 	if err != nil {
 		t.Fatalf("create product: %v", err)
 	}
+	if created.Classification.IsLegume != nil {
+		t.Fatalf("created legume classification = %v, want unknown", *created.Classification.IsLegume)
+	}
 
 	created.Name = "Replacement"
 	created.Roles = []catalogdom.RoleTag{carbRole}
 	created.Allergens = []catalogdom.Allergen{"gluten"}
 	created.Nutrition.FiberPer100G = nil
+	grain := catalogdom.FoodGroupGrain
+	knownFalse := false
 	created.Classification = catalogdom.FoodClassification{
-		FoodGroup:       catalogdom.FoodGroupGrain,
+		FoodGroup:       &grain,
 		ProcessingLevel: catalogdom.ProcessingLevelProcessedFood,
+		IsLegume:        &knownFalse,
 	}
 	updated, err := repository.Update(ctx, created)
 	if err != nil {
@@ -82,8 +89,11 @@ func TestCatalogRoundTripReplacesAggregateAndPreservesNullNutrition(t *testing.T
 	if updated.Nutrition.FiberPer100G != nil {
 		t.Fatalf("updated fiber = %v, want nil", *updated.Nutrition.FiberPer100G)
 	}
-	if updated.Classification.FoodGroup != catalogdom.FoodGroupGrain {
-		t.Fatalf("updated classification = %q, want grain", updated.Classification.FoodGroup)
+	if updated.Classification.FoodGroup == nil || *updated.Classification.FoodGroup != catalogdom.FoodGroupGrain {
+		t.Fatalf("updated classification = %v, want grain", updated.Classification.FoodGroup)
+	}
+	if updated.Classification.IsLegume == nil || *updated.Classification.IsLegume {
+		t.Fatalf("updated legume classification = %v, want known false", updated.Classification.IsLegume)
 	}
 
 	row, err := sqlc.New(database.Pool).GetProduct(ctx, int64(updated.ID))
