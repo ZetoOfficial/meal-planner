@@ -16,13 +16,11 @@ const (
 	legumeServingsTarget = 3.0
 )
 
-// HardViolation represents a hard safety rejection, separate from soft outcomes.
 type HardViolation struct {
 	RuleCode string
 	Message  string
 }
 
-// RuleOutcome is the result of evaluating one quality rule.
 type RuleOutcome struct {
 	Code     string
 	Status   nutrition.RuleEvalStatus
@@ -35,22 +33,16 @@ type RuleOutcome struct {
 	Message  string
 }
 
-// Evaluation aggregates soft rule outcomes, the quality score, and coverage.
 type Evaluation struct {
 	Outcomes []RuleOutcome
 	Score    float64
 	Coverage float64
 }
 
-// PlanInput carries plan-level facts needed by the evaluator.
 type PlanInput struct {
 	DistinctLegumeComponents int
 }
 
-// DetectHardViolations scans the raw day input for hard safety rejections.
-// In MVP this covers only explicit industrial trans fats (PHO or a positive
-// industrial_trans_fat_per_100g value). Allergens and hard eater exclusions are
-// solver constraints, not quality-rule hard violations.
 func DetectHardViolations(input DayInput) []HardViolation {
 	var violations []HardViolation
 	for _, meal := range input.Meals {
@@ -82,9 +74,6 @@ func detectSlotHardViolation(slot *SlotInput) *HardViolation {
 	return nil
 }
 
-// Evaluate computes the full MVP quality evaluation for a day, optional rolling
-// window, and optional plan-level input. A nil rolling summary skips the weekly
-// rules; a nil PlanInput skips the distinct-component legume condition.
 func Evaluate(ruleset Ruleset, sex eater.Sex, day nutrition.DaySummary, rolling *nutrition.RollingSummary, plan *PlanInput) Evaluation {
 	ev := Evaluation{}
 

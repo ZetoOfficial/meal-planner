@@ -12,35 +12,27 @@ import (
 
 const per100g = 100.0
 
-// DayInput describes one eater's planned or actual food for a single day.
-// It is intentionally adapter-free: callers map from planning, catalog, and
-// eater domain objects before invoking the quality layer.
 type DayInput struct {
 	Sex   eater.Sex
 	Meals []MealInput
 }
 
-// MealInput groups the contributions of a single meal for summary building.
 type MealInput struct {
 	Type       mealdom.Type
 	Fixed      *FixedMealInput
 	Components []ComponentInput
 }
 
-// FixedMealInput carries the pre-aggregated quality fields of a fixed meal.
 type FixedMealInput struct {
 	Macros  nutrition.Macros
 	Quality eater.FixedMealQuality
 }
 
-// ComponentInput describes one prepared batch allocated to the meal.
 type ComponentInput struct {
-	// PortionFactor is the eater's share of the whole batch (0 < factor <= 1).
 	PortionFactor float64
 	Slots         []SlotInput
 }
 
-// SlotInput carries the resolved product data for one slot fill.
 type SlotInput struct {
 	PlannedInputQtyG  float64
 	PreparedQtyFactor *float64
@@ -49,7 +41,6 @@ type SlotInput struct {
 	Classification    catalog.FoodClassification
 }
 
-// SummaryPurpose selects which fixed-meal quality flags apply to the summary.
 type SummaryPurpose uint8
 
 const (
@@ -57,8 +48,6 @@ const (
 	SummaryPurposeWarnings
 )
 
-// BuildDaySummary aggregates a DayInput into a deterministic DaySummary.
-// Fixed-meal macros always count; purpose only gates their quality facts.
 func BuildDaySummary(input DayInput, purpose SummaryPurpose) (nutrition.DaySummary, error) {
 	if !input.Sex.Valid() {
 		return nutrition.DaySummary{}, errors.New("invalid eater sex")
@@ -118,8 +107,6 @@ func addFixedMeal(summary *nutrition.DaySummary, fixed FixedMealInput, purpose S
 	addFixedNutrient(summary, RuleSatFat, q.SaturatedFatG, kcalWeight, &summary.Totals.SaturatedFatG)
 	addFixedNutrient(summary, RuleFiber, q.FiberG, kcalWeight, &summary.Totals.FiberG)
 
-	// Fixed meals do not carry industrial-trans-fat fields; treat industrial status
-	// as unknown rather than safe.
 	addCoverageKnownWeight(summary, RuleIndustrialTransFat, false, kcalWeight)
 	if q.TransFatG != nil {
 		summary.Totals.TransFatG += *q.TransFatG
@@ -146,7 +133,6 @@ func addFixedMeal(summary *nutrition.DaySummary, fixed FixedMealInput, purpose S
 		summary.Totals.FixedProcessedMeatG += *q.ProcessedMeatG
 	}
 
-	// UPF share from fixed meal: known only when upf_kcal is provided.
 	upfKnown := q.UPFKcal != nil
 	addCoverageKnownWeight(summary, RuleUPF, upfKnown, kcalWeight)
 	if upfKnown {
@@ -366,9 +352,6 @@ func wholeGrainGrams(preparedG float64, class catalog.FoodClassification) float6
 }
 
 func aggregateCoverage(coverages map[string]nutrition.Coverage) nutrition.Coverage {
-	// Aggregate coverage is the equal-weight average of per-rule coverage scores.
-	// Per-rule coverage already encodes known/total weights, so averaging scores
-	// avoids overweighting rules that happen to have larger gram contributions.
 	var sumScores float64
 	for _, cov := range coverages {
 		sumScores += cov.Score()

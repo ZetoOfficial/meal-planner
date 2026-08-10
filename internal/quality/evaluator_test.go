@@ -273,18 +273,15 @@ func TestEvaluateLegumes(t *testing.T) {
 		LegumeServings: 2,
 	}
 
-	// Pass by distinct component.
 	if got := findOutcome(Evaluate(rs, eater.SexFemale, nutrition.DaySummary{}, &rolling, &PlanInput{DistinctLegumeComponents: 1}), RuleLegumes); got.Status != nutrition.StatusPass {
 		t.Fatalf("legumes pass by component status = %s", got.Status)
 	}
 
-	// Pass by servings.
 	rolling.LegumeServings = 4
 	if got := findOutcome(Evaluate(rs, eater.SexFemale, nutrition.DaySummary{}, &rolling, nil), RuleLegumes); got.Status != nutrition.StatusPass {
 		t.Fatalf("legumes pass by servings status = %s", got.Status)
 	}
 
-	// Fail.
 	rolling.LegumeServings = 1
 	if got := findOutcome(Evaluate(rs, eater.SexFemale, nutrition.DaySummary{}, &rolling, nil), RuleLegumes); got.Status != nutrition.StatusSoftFail {
 		t.Fatalf("legumes fail status = %s", got.Status)

@@ -6,10 +6,6 @@ import (
 	"github.com/ZetoOfficial/meal-planner/internal/domain/nutrition"
 )
 
-// BuildRollingSummary aggregates a slice of day summaries into a rolling summary.
-// The caller supplies one entry per day in the window; nil entries represent
-// missing historical facts. Missing days reduce per-rule coverage without
-// imputing zero nutrient values into the totals.
 func BuildRollingSummary(ruleset Ruleset, windowDays int, days []*nutrition.DaySummary) (nutrition.RollingSummary, error) {
 	if windowDays <= 0 {
 		return nutrition.RollingSummary{}, errors.New("window days must be positive")

@@ -2,7 +2,6 @@ package quality
 
 import "github.com/ZetoOfficial/meal-planner/internal/domain/eater"
 
-// MVP guideline thresholds and weights.
 const (
 	fiberMinFemaleG          = 25.0
 	fiberMinMaleG            = 35.0
@@ -18,7 +17,6 @@ const (
 	defaultCoverageThreshold = 0.5
 )
 
-// Rule codes for the MVP nutrition-quality ruleset.
 const (
 	RuleFiber              = "fiber_min_g"
 	RuleSodium             = "sodium_max_daily_mg"
@@ -33,7 +31,6 @@ const (
 	RuleUPF                = "upf_share"
 )
 
-// RuleSeverity describes the rule type. It is separate from the per-evaluation status.
 type RuleSeverity string
 
 const (
@@ -43,10 +40,7 @@ const (
 	SeverityAnalytics RuleSeverity = "analytics"
 )
 
-// Ruleset holds the thresholds, weights, and serving sizes for the MVP evaluator.
-// All rules are deterministic; overrides are out of scope for v1.
 type Ruleset struct {
-	// FiberMinG is sex-specific: 25 g for female/unspecified, 35 g for male.
 	FiberMinG map[eater.Sex]float64
 
 	SodiumMaxDailyMg      float64
@@ -58,17 +52,11 @@ type Ruleset struct {
 	LegumeServingSizeG    float64
 	RedMeatMaxWeeklyG     float64
 
-	// RuleWeights assigns a relative weight to each soft/analytics rule for the
-	// aggregate quality score. Weights are normalized by the evaluator if they do
-	// not sum to one.
 	RuleWeights map[string]float64
 
-	// CoverageThreshold is the minimum per-rule coverage required to make a
-	// boundary decision. Below this value the rule status is unknown.
 	CoverageThreshold float64
 }
 
-// DefaultRuleset returns the WHO/NNR/DGA-based MVP ruleset.
 func DefaultRuleset() Ruleset {
 	return Ruleset{
 		FiberMinG: map[eater.Sex]float64{

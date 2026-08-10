@@ -70,7 +70,6 @@ func validGrams(value float64) bool {
 
 func SodiumMgFromSaltG(saltG float64) float64 { return saltG / 2.54 * mgPerG }
 
-// MacrosPer100G represents macro nutrients per 100 g of product.
 type MacrosPer100G struct {
 	ProteinG float64
 	FatG     float64
@@ -83,7 +82,6 @@ func (m MacrosPer100G) Valid() bool {
 		!math.IsNaN(m.Kcal) && !math.IsInf(m.Kcal, 0) && m.Kcal >= 0
 }
 
-// Scale converts per-100 g values to the amount present in grams of product.
 func (m MacrosPer100G) Scale(grams float64) (Macros, error) {
 	if !m.Valid() {
 		return Macros{}, errors.New("macros per 100 g must be finite and nonnegative")

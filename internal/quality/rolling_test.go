@@ -9,7 +9,6 @@ import (
 
 func TestBuildRollingSummarySevenDays(t *testing.T) {
 	rs := DefaultRuleset()
-	// Six historical days plus current plan day.
 	days := make([]*nutrition.DaySummary, 7)
 	for i := range days {
 		days[i] = &nutrition.DaySummary{
@@ -49,7 +48,6 @@ func TestBuildRollingSummaryRejectsDaysOutsideWindow(t *testing.T) {
 
 func TestBuildRollingSummaryMissingHistoryIsUnknown(t *testing.T) {
 	rs := DefaultRuleset()
-	// Only three known days in a 7-day window.
 	days := []*nutrition.DaySummary{
 		{
 			Macros:       nutrition.Macros{Kcal: 2000},
@@ -74,18 +72,15 @@ func TestBuildRollingSummaryMissingHistoryIsUnknown(t *testing.T) {
 		t.Fatalf("BuildRollingSummary() error = %v", err)
 	}
 
-	// Total is the sum of known days, not imputed zero.
 	if rolling.RedMeatG != 300 {
 		t.Fatalf("red meat = %v, want 300 (no zero imputation)", rolling.RedMeatG)
 	}
 
-	// Coverage is reduced because most of the window is missing.
 	cov := rolling.RuleCoverage[RuleRedMeat].Score()
 	if cov >= 1.0 {
 		t.Fatalf("red meat coverage = %v, should be below 1 with missing history", cov)
 	}
 
-	// Evaluation is unknown due to low coverage.
 	ev := Evaluate(rs, eater.SexFemale, nutrition.DaySummary{}, &rolling, nil)
 	if got := findOutcome(ev, RuleRedMeat); got.Status != nutrition.StatusUnknown {
 		t.Fatalf("red meat status = %s, want unknown due to missing history", got.Status)
@@ -94,7 +89,6 @@ func TestBuildRollingSummaryMissingHistoryIsUnknown(t *testing.T) {
 
 func TestBuildRollingSummaryProcessedMeatFixedVsGenerated(t *testing.T) {
 	rs := DefaultRuleset()
-	// Full window so coverage stays high enough to evaluate the rule.
 	days := make([]*nutrition.DaySummary, 7)
 	for i := range days {
 		days[i] = &nutrition.DaySummary{
