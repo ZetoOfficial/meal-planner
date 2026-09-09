@@ -161,7 +161,7 @@ func TestComputeReportsInvalidatedDependentDishes(t *testing.T) {
 func TestComputeRejectsAnUnknownSlotFill(t *testing.T) {
 	_, err := Compute(swapInput(), Request{SlotFillID: 99, NewProductID: 2})
 
-	if !errors.Is(err, errUnknownFill) {
+	if !errors.Is(err, ErrUnknownFill) {
 		t.Fatalf("Compute() error = %v, want an unknown slot fill error", err)
 	}
 }

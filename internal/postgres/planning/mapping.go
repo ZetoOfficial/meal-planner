@@ -195,6 +195,7 @@ func mealFromRow(row sqlc.Meal) (planningdom.Meal, error) {
 	}
 	return planningdom.Meal{
 		ID:          planningdom.MealID(row.ID),
+		PlanID:      planningdom.PlanID(row.PlanID),
 		LogStatus:   planningdom.MealLogStatus(row.LogStatus),
 		EaterID:     eaterdom.ID(row.EaterID),
 		Date:        row.MealDate.Time,

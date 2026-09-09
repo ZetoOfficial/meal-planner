@@ -12,6 +12,7 @@ import (
 type AnalyticsRepository interface {
 	ListDaySummaries(ctx context.Context, eaterID eaterdom.ID, basis nutrition.SummaryBasis, from, to time.Time) ([]nutrition.DaySummary, error)
 	ListRollingSummaries(ctx context.Context, eaterID eaterdom.ID, basis nutrition.SummaryBasis, from, to time.Time) ([]nutrition.RollingSummary, error)
+	ListRuleEvaluations(ctx context.Context, eaterID eaterdom.ID, basis nutrition.SummaryBasis, from, to time.Time) ([]RuleEvaluation, error)
 	ListTopRecipes(ctx context.Context, limit int) ([]TopRecipe, error)
 }
 

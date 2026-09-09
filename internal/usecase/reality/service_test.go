@@ -3,6 +3,7 @@ package reality
 import (
 	"context"
 	"errors"
+	"math"
 	"testing"
 	"time"
 
@@ -183,6 +184,22 @@ func TestMacroAnalyticsSkipsSkippedMeals(t *testing.T) {
 	}
 }
 
+// Silently dropping a day that does not fit the accumulator would report an
+// average over fewer days than it claims.
+func TestMacroAnalyticsReportsAnArithmeticOverflowInsteadOfSkippingADay(t *testing.T) {
+	deps := newRealityDeps(t)
+	deps.meals.EXPECT().
+		ListEaterMeals(gomock.Any(), eaterdom.ID(1), gomock.Any(), gomock.Any()).
+		Return([]planningdom.Meal{
+			{ID: 1, EaterID: 1, Date: analyticsDay(0), Planned: nutrition.Macros{Kcal: math.MaxInt}},
+			{ID: 2, EaterID: 1, Date: analyticsDay(1), Planned: nutrition.Macros{Kcal: math.MaxInt}},
+		}, nil)
+
+	if _, err := deps.service.MacroAnalytics(t.Context(), analyticsPeriod()); err == nil {
+		t.Fatal("MacroAnalytics() = nil, want the overflow reported")
+	}
+}
+
 func TestMacroAnalyticsHandlesAnEmptyPeriod(t *testing.T) {
 	deps := newRealityDeps(t)
 	deps.meals.EXPECT().
@@ -243,6 +260,39 @@ func TestQualityAnalyticsReportsAveragesAndCoverage(t *testing.T) {
 	}
 	if result.Rolling.RedMeatG != 120 {
 		t.Fatalf("rolling = %#v, want the weekly exposure reported", result.Rolling)
+	}
+}
+
+func TestQualityAnalyticsReportsStoredRuleVerdicts(t *testing.T) {
+	deps := newRealityDeps(t)
+	fullCoverage, err := nutrition.CoverageForInput(true, 1)
+	if err != nil {
+		t.Fatalf("CoverageForInput() error = %v", err)
+	}
+	deps.analytics.days = []nutrition.DaySummary{{Totals: nutrition.DailyTotals{FiberG: 30}, Coverage: fullCoverage}}
+	deps.analytics.evaluations = []RuleEvaluation{
+		{
+			Scope:  RuleScopeDay,
+			Date:   analyticsDay(0),
+			Result: nutrition.RuleEvaluationResult{RuleCode: "fiber", Status: nutrition.StatusPass},
+		},
+		{
+			Scope:       RuleScopeRollingWindow,
+			WindowStart: analyticsDay(0),
+			WindowEnd:   analyticsDay(6),
+			Result:      nutrition.RuleEvaluationResult{RuleCode: "red_meat", Status: nutrition.StatusWarn},
+		},
+	}
+
+	result, err := deps.service.QualityAnalytics(t.Context(), analyticsPeriod(), nutrition.SummaryBasisPlanned)
+	if err != nil {
+		t.Fatalf("QualityAnalytics() error = %v", err)
+	}
+	if len(result.Evaluations) != 2 {
+		t.Fatalf("evaluations = %#v, want the stored day and rolling verdicts", result.Evaluations)
+	}
+	if result.Evaluations[1].Scope != RuleScopeRollingWindow {
+		t.Fatalf("second verdict = %#v, want the rolling window scope preserved", result.Evaluations[1])
 	}
 }
 
@@ -316,11 +366,12 @@ func isValidation(err error) bool {
 // a package-local type, which a generated mock cannot express without importing
 // the package under test.
 type fakeAnalytics struct {
-	days      []nutrition.DaySummary
-	rolling   []nutrition.RollingSummary
-	top       []TopRecipe
-	lastLimit int
-	basis     nutrition.SummaryBasis
+	days        []nutrition.DaySummary
+	rolling     []nutrition.RollingSummary
+	evaluations []RuleEvaluation
+	top         []TopRecipe
+	lastLimit   int
+	basis       nutrition.SummaryBasis
 }
 
 func (a *fakeAnalytics) ListDaySummaries(
@@ -334,6 +385,12 @@ func (a *fakeAnalytics) ListRollingSummaries(
 	_ context.Context, _ eaterdom.ID, _ nutrition.SummaryBasis, _, _ time.Time,
 ) ([]nutrition.RollingSummary, error) {
 	return a.rolling, nil
+}
+
+func (a *fakeAnalytics) ListRuleEvaluations(
+	_ context.Context, _ eaterdom.ID, _ nutrition.SummaryBasis, _, _ time.Time,
+) ([]RuleEvaluation, error) {
+	return a.evaluations, nil
 }
 
 func (a *fakeAnalytics) ListTopRecipes(_ context.Context, limit int) ([]TopRecipe, error) {

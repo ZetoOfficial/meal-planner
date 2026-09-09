@@ -79,14 +79,15 @@ func (e *InfeasibleQuantityError) Error() string {
 	)
 }
 
-var errNonPositiveQuantity = errors.New("planned input quantity must be positive")
+// ErrNonPositiveQuantity is a request-level rejection, like [ErrUnknownFill].
+var ErrNonPositiveQuantity = errors.New("planned input quantity must be positive")
 
 // ComputeQuantity previews a locked quantity change: it rebalances only the
 // shares of the affected batch, keeps every other batch untouched, and reports
 // what moved. It never mutates the supplied plan.
 func ComputeQuantity(input Input, goals []GoalTarget, request QuantityRequest) (QuantityPreview, error) {
 	if request.PlannedInputQtyG <= 0 || math.IsNaN(request.PlannedInputQtyG) || math.IsInf(request.PlannedInputQtyG, 0) {
-		return QuantityPreview{}, errNonPositiveQuantity
+		return QuantityPreview{}, ErrNonPositiveQuantity
 	}
 	recipeIndex, fillIndex, err := locateFill(input.Plan, request.SlotFillID)
 	if err != nil {

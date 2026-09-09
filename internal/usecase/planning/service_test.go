@@ -509,3 +509,64 @@ func (g *fakeGenerator) GenerateCandidates(
 	}
 	return g.candidates, nil
 }
+
+func TestPreviewSwapReportsAnUnknownFillAsAValidationError(t *testing.T) {
+	deps := newDeps(t)
+	deps.plans.EXPECT().Get(gomock.Any(), planningdom.PlanID(7)).Return(swappablePlan(), nil)
+	deps.expectSwapCatalogue()
+
+	_, err := deps.service.PreviewSwap(t.Context(), 7, SwapCommand{SlotFillID: 404, NewProductID: 1})
+	if err == nil {
+		t.Fatal("PreviewSwap() = nil, want a rejection for a fill outside the plan")
+	}
+	if !isValidation(err) {
+		t.Fatalf("PreviewSwap() error = %v, want a validation error", err)
+	}
+}
+
+// A plan that points at a product the catalogue no longer holds is corrupted
+// data, not a bad request: reporting it as 422 would blame the owner.
+func TestPreviewSwapDoesNotBlameTheOwnerForACorruptPlan(t *testing.T) {
+	deps := newDeps(t)
+	plan := swappablePlan()
+	plan.Recipes[0].Fills[0].ProductID = 99
+	deps.plans.EXPECT().Get(gomock.Any(), planningdom.PlanID(7)).Return(plan, nil)
+	deps.expectSwapCatalogue()
+
+	_, err := deps.service.PreviewSwap(t.Context(), 7, SwapCommand{SlotFillID: 11, NewProductID: 1})
+	if err == nil {
+		t.Fatal("PreviewSwap() = nil, want the missing product reported")
+	}
+	if isValidation(err) {
+		t.Fatalf("PreviewSwap() error = %v, want a server-side failure, not a validation error", err)
+	}
+}
+
+func swappablePlan() planningdom.Plan {
+	serving := 100.0
+	return planningdom.Plan{
+		ID: 7, StartDate: planStartDate(), Days: 1, CookDate: planStartDate(),
+		Status: planningdom.PlanStatusDraft,
+		EaterDays: []planningdom.EaterDay{{
+			EaterID: 1, Date: planStartDate(), MacroGoalID: 1,
+			GeneratedMealTypes: []mealdom.Type{mealdom.TypeLunch},
+		}},
+		Recipes: []planningdom.PlanRecipe{{
+			ID: 3, TemplateID: 1, ScaleFactor: 1,
+			Fills: []planningdom.SlotFill{{ID: 11, SlotID: 1, ProductID: 1, PlannedInputQtyG: 100}},
+		}},
+		Meals: []planningdom.Meal{{
+			ID: 21, EaterID: 1, Date: planStartDate(), Type: mealdom.TypeLunch,
+			Components: []planningdom.ComponentAllocation{
+				{PlanRecipeIndex: 0, PortionFactor: 1, PlannedServingG: &serving},
+			},
+		}},
+	}
+}
+
+func (d *deps) expectSwapCatalogue() {
+	d.products.EXPECT().List(gomock.Any(), "").Return([]catalogdom.Product{{ID: 1}}, nil)
+	d.recipes.EXPECT().List(gomock.Any(), nil).Return([]recipedom.Template{{ID: 1}}, nil)
+	d.eaters.EXPECT().Get(gomock.Any(), eaterdom.ID(1)).Return(eaterdom.Eater{ID: 1}, nil)
+	d.eaters.EXPECT().ListFixedMeals(gomock.Any(), eaterdom.ID(1)).Return(nil, nil)
+}

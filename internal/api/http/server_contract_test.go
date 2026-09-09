@@ -3,6 +3,7 @@ package httpapi_test
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -603,6 +604,53 @@ func TestUpdateShoppingListItemHTTPContract(t *testing.T) {
 	}
 }
 
+func TestUpdateShoppingListItemDoesNotHideAFailedRead(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	shopping := mocks.NewMockShoppingUseCases(ctrl)
+	shopping.EXPECT().SetChecked(gomock.Any(), shoppingdom.ItemID(10), true).Return(nil)
+	shopping.EXPECT().
+		GetItem(gomock.Any(), shoppingdom.ItemID(10)).
+		Return(shoppingdom.Item{}, errors.New("connection reset by peer"))
+
+	handler := httpapi.New(httpapi.Deps{APIToken: "secret", Shopping: shopping})
+	response := doRequest(t, handler, http.MethodPatch, "/shopping-list-items/10", `{"checked":true}`)
+
+	if response.Code != http.StatusInternalServerError {
+		t.Fatalf("status = %d, body = %s; want 500, not a 404 that claims the item is gone",
+			response.Code, response.Body.String())
+	}
+}
+
+func TestLogMealReportsThePlanItBelongsTo(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	reality := mocks.NewMockRealityUseCases(ctrl)
+	reality.EXPECT().
+		LogMeal(gomock.Any(), planningdom.MealID(21), gomock.Any()).
+		Return(planningdom.Meal{
+			ID:        21,
+			PlanID:    7,
+			EaterID:   1,
+			Date:      time.Date(2026, time.August, 10, 0, 0, 0, 0, time.UTC),
+			Type:      meal.TypeLunch,
+			LogStatus: planningdom.MealLogStatusEatenAsPlanned,
+		}, nil)
+
+	handler := httpapi.New(httpapi.Deps{APIToken: "secret", Reality: reality})
+	response := doRequest(t, handler, http.MethodPost, "/meals/21/log",
+		`{"log_status":"eaten_as_planned","logged_by":1}`)
+
+	if response.Code != http.StatusOK {
+		t.Fatalf("status = %d, body = %s; want 200", response.Code, response.Body.String())
+	}
+	var logged model.Meal
+	if err := json.Unmarshal(response.Body.Bytes(), &logged); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if logged.PlanId != 7 {
+		t.Fatalf("plan id = %d, want the plan the meal belongs to", logged.PlanId)
+	}
+}
+
 func TestPreviewQuantityAdjustmentHTTPContract(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	planning := mocks.NewMockPlanningUseCases(ctrl)
@@ -812,8 +860,12 @@ func TestNutritionQualityAnalyticsHTTPContract(t *testing.T) {
 			Coverage: 0.4,
 			Averages: nutrition.DailyTotals{FiberG: 18, GrainGEquiv: 200, WholeGrainGEquiv: 50},
 			Rolling:  nutrition.RollingSummary{WindowDays: 7, RedMeatG: 420},
-			Evaluations: []nutrition.RuleEvaluationResult{{
-				RuleCode: "fiber_min_g", Status: nutrition.StatusUnknown, Coverage: 0.4,
+			Evaluations: []usecasereality.RuleEvaluation{{
+				Scope: usecasereality.RuleScopeDay,
+				Date:  from,
+				Result: nutrition.RuleEvaluationResult{
+					RuleCode: "fiber_min_g", Status: nutrition.StatusUnknown, Coverage: 0.4,
+				},
 			}},
 		}, nil)
 

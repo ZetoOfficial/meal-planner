@@ -115,6 +115,9 @@ func TestOwnerWorkflowSmoke(t *testing.T) {
 	if loggedMeal.Actual == nil || loggedMeal.Actual.Kcal != 560 {
 		t.Fatalf("logged meal = %#v, want the actual macros stored", loggedMeal)
 	}
+	if loggedMeal.PlanId != plan.Id {
+		t.Fatalf("logged meal plan id = %d, want the plan %d it belongs to", loggedMeal.PlanId, plan.Id)
+	}
 
 	feedback := call(t, handler, http.MethodPost, "/feedback",
 		`{"eater_id":`+itoa(eaterID)+`,"target_type":"recipe_template","target_id":`+
@@ -132,9 +135,19 @@ func TestOwnerWorkflowSmoke(t *testing.T) {
 		t.Fatal("macro analytics has no actual average, want the logged day counted")
 	}
 
-	quality := call(t, handler, http.MethodGet, "/analytics/nutrition-quality"+period+"&basis=actual", "")
-	if quality.Code != http.StatusOK {
-		t.Fatalf("quality analytics status = %d, body = %s; want 200", quality.Code, quality.Body.String())
+	qualityResponse := call(t, handler, http.MethodGet, "/analytics/nutrition-quality"+period+"&basis=actual", "")
+	if qualityResponse.Code != http.StatusOK {
+		t.Fatalf("quality analytics status = %d, body = %s; want 200",
+			qualityResponse.Code, qualityResponse.Body.String())
+	}
+	var qualityAnalytics struct {
+		RuleEvaluations []model.RuleEvaluation `json:"rule_evaluations"`
+	}
+	if err := json.Unmarshal(qualityResponse.Body.Bytes(), &qualityAnalytics); err != nil {
+		t.Fatalf("decode quality analytics: %v", err)
+	}
+	if len(qualityAnalytics.RuleEvaluations) == 0 {
+		t.Fatalf("quality analytics returned no rule verdicts, body = %s", qualityResponse.Body.String())
 	}
 	top := decodeList[model.TopRecipe](t, call(t, handler, http.MethodGet, "/analytics/top-recipes?limit=5", ""))
 	if len(top) == 0 {

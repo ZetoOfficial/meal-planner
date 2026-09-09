@@ -81,6 +81,73 @@ func (r *Repository) ListRollingSummaries(
 	return summaries, nil
 }
 
+// ListRuleEvaluations reads the stored verdicts a period covers, both the daily
+// ones and the rolling-window ones, so analytics can explain a score instead of
+// only reporting it.
+func (r *Repository) ListRuleEvaluations(
+	ctx context.Context,
+	eaterID eaterdom.ID,
+	basis nutrition.SummaryBasis,
+	from, to time.Time,
+) ([]reality.RuleEvaluation, error) {
+	id := int64(eaterID)
+	rows, err := r.store.Queries(ctx).ListEaterRuleEvaluationsForPeriod(ctx, sqlc.ListEaterRuleEvaluationsForPeriodParams{
+		EaterID:  &id,
+		Basis:    sqlc.SummaryBasis(basis),
+		FromDate: dateValue(from),
+		ToDate:   dateValue(to),
+	})
+	if err != nil {
+		return nil, dberror.Map(err, "rule evaluation result")
+	}
+	evaluations := make([]reality.RuleEvaluation, 0, len(rows))
+	for i := range rows {
+		evaluation, err := ruleEvaluationFromRow(rows[i])
+		if err != nil {
+			return nil, err
+		}
+		evaluations = append(evaluations, evaluation)
+	}
+	return evaluations, nil
+}
+
+func ruleEvaluationFromRow(row sqlc.RuleEvaluationResult) (reality.RuleEvaluation, error) {
+	values, err := numericFields(map[string]pgtype.Numeric{"coverage": row.CoverageScore})
+	if err != nil {
+		return reality.RuleEvaluation{}, err
+	}
+	actual, err := pgvalue.OptionalFloat64(row.ActualValue)
+	if err != nil {
+		return reality.RuleEvaluation{}, err
+	}
+	target, err := pgvalue.OptionalFloat64(row.TargetValue)
+	if err != nil {
+		return reality.RuleEvaluation{}, err
+	}
+	return reality.RuleEvaluation{
+		Scope:       reality.RuleScope(row.EntityType),
+		Date:        row.EvalDate.Time,
+		WindowStart: row.WindowStart.Time,
+		WindowEnd:   row.WindowEnd.Time,
+		Result: nutrition.RuleEvaluationResult{
+			RuleCode: row.RuleCode,
+			Status:   nutrition.RuleEvalStatus(row.Status),
+			Actual:   actual,
+			Target:   target,
+			Unit:     optionalText(row.Unit),
+			Coverage: values["coverage"],
+			Message:  optionalText(row.Message),
+		},
+	}, nil
+}
+
+func optionalText(value *string) string {
+	if value == nil {
+		return ""
+	}
+	return *value
+}
+
 // ListTopRecipes ranks by how often a template was actually cooked, then by how
 // often plans reached for it, so a new favourite is not hidden behind history.
 func (r *Repository) ListTopRecipes(ctx context.Context, limit int) ([]reality.TopRecipe, error) {

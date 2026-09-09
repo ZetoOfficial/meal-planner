@@ -1,6 +1,10 @@
 package httpapi
 
 import (
+	"time"
+
+	openapi_types "github.com/oapi-codegen/runtime/types"
+
 	"github.com/ZetoOfficial/meal-planner/api/sdk/go/api"
 	"github.com/ZetoOfficial/meal-planner/api/sdk/go/model"
 	eaterdom "github.com/ZetoOfficial/meal-planner/internal/domain/eater"
@@ -30,15 +34,15 @@ func mealLogCommand(body model.MealLogInput) planningdom.MealLog {
 	return log
 }
 
-func mealsResponse(planID planningdom.PlanID, meals []planningdom.Meal) []model.Meal {
+func mealsResponse(meals []planningdom.Meal) []model.Meal {
 	result := make([]model.Meal, 0, len(meals))
 	for i := range meals {
-		result = append(result, mealResponseWithPlan(planID, meals[i]))
+		result = append(result, mealResponse(meals[i]))
 	}
 	return result
 }
 
-func mealResponseWithPlan(planID planningdom.PlanID, meal planningdom.Meal) model.Meal {
+func mealResponse(meal planningdom.Meal) model.Meal {
 	components := make([]model.MealComponentAllocation, 0, len(meal.Components))
 	for _, component := range meal.Components {
 		components = append(components, model.MealComponentAllocation{
@@ -49,7 +53,7 @@ func mealResponseWithPlan(planID planningdom.PlanID, meal planningdom.Meal) mode
 
 	response := model.Meal{
 		Id:         int64(meal.ID),
-		PlanId:     int64(planID),
+		PlanId:     int64(meal.PlanID),
 		EaterId:    int64(meal.EaterID),
 		MealDate:   openapiDate(meal.Date),
 		MealType:   model.MealType(meal.Type),
@@ -156,21 +160,37 @@ func qualityAnalyticsResponse(
 func ruleEvaluationsResponse(analytics usecasereality.QualityAnalytics) []model.RuleEvaluation {
 	eaterID := int64(analytics.Period.EaterID)
 	results := make([]model.RuleEvaluation, 0, len(analytics.Evaluations))
-	for _, rule := range analytics.Evaluations {
-		results = append(results, model.RuleEvaluation{
-			RuleCode:      rule.RuleCode,
-			EntityType:    model.RuleEvaluationEntityType("day"),
+	for i := range analytics.Evaluations {
+		rule := &analytics.Evaluations[i]
+		response := model.RuleEvaluation{
+			RuleCode:      rule.Result.RuleCode,
+			EntityType:    model.RuleEvaluationEntityType(rule.Scope),
 			EaterId:       &eaterID,
 			Basis:         model.RuleEvaluationBasis(analytics.Basis),
-			Status:        model.RuleEvaluationStatus(rule.Status),
-			ActualValue:   float32Pointer(rule.Actual),
-			TargetValue:   float32Pointer(rule.Target),
-			Unit:          optionalString(rule.Unit),
-			CoverageScore: float32(rule.Coverage),
-			Message:       optionalString(rule.Message),
-		})
+			Status:        model.RuleEvaluationStatus(rule.Result.Status),
+			ActualValue:   float32Pointer(rule.Result.Actual),
+			TargetValue:   float32Pointer(rule.Result.Target),
+			Unit:          optionalString(rule.Result.Unit),
+			CoverageScore: float32(rule.Result.Coverage),
+			Message:       optionalString(rule.Result.Message),
+		}
+		if rule.Scope == usecasereality.RuleScopeRollingWindow {
+			response.WindowStart = optionalDate(rule.WindowStart)
+			response.WindowEnd = optionalDate(rule.WindowEnd)
+		} else {
+			response.Date = optionalDate(rule.Date)
+		}
+		results = append(results, response)
 	}
 	return results
+}
+
+func optionalDate(value time.Time) *openapi_types.Date {
+	if value.IsZero() {
+		return nil
+	}
+	date := openapiDate(value)
+	return &date
 }
 
 func topRecipesResponse(recipes []usecasereality.TopRecipe) []model.TopRecipe {

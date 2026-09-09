@@ -87,7 +87,7 @@ func TestComputeQuantityReportsInfeasibilityWithDiagnostics(t *testing.T) {
 func TestComputeQuantityRejectsNonPositiveQuantities(t *testing.T) {
 	_, err := ComputeQuantity(quantityInput(), quantityGoals(), QuantityRequest{SlotFillID: 1, PlannedInputQtyG: 0})
 
-	if !errors.Is(err, errNonPositiveQuantity) {
+	if !errors.Is(err, ErrNonPositiveQuantity) {
 		t.Fatalf("ComputeQuantity() error = %v, want a non-positive quantity error", err)
 	}
 }

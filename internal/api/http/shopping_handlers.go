@@ -6,7 +6,6 @@ import (
 	"github.com/ZetoOfficial/meal-planner/api/sdk/go/api"
 	planningdom "github.com/ZetoOfficial/meal-planner/internal/domain/planning"
 	shoppingdom "github.com/ZetoOfficial/meal-planner/internal/domain/shopping"
-	apperr "github.com/ZetoOfficial/meal-planner/internal/errors"
 )
 
 func (s *server) GetShoppingList(ctx context.Context, request api.GetShoppingListRequestObject) (api.GetShoppingListResponseObject, error) {
@@ -36,7 +35,7 @@ func (s *server) UpdateShoppingListItem(ctx context.Context, request api.UpdateS
 	}
 	item, err := s.shopping.GetItem(ctx, itemID)
 	if err != nil {
-		return nil, apperr.NotFound("shopping list item")
+		return nil, err
 	}
 	return api.UpdateShoppingListItem200JSONResponse(shoppingItemResponse(item)), nil
 }

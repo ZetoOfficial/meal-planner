@@ -2,6 +2,7 @@ package planning
 
 import (
 	"context"
+	"errors"
 
 	catalogdom "github.com/ZetoOfficial/meal-planner/internal/domain/catalog"
 	eaterdom "github.com/ZetoOfficial/meal-planner/internal/domain/eater"
@@ -39,7 +40,7 @@ func (s *Service) PreviewSwap(
 		NewProductID: command.NewProductID,
 	})
 	if err != nil {
-		return swap.Preview{}, apperr.Validation("swap cannot be previewed", err.Error())
+		return swap.Preview{}, swapRequestError("swap cannot be previewed", err)
 	}
 	return preview, nil
 }
@@ -68,7 +69,7 @@ func (s *Service) ApplySwap(
 			NewProductID: command.NewProductID,
 		})
 		if err != nil {
-			return apperr.Validation("swap cannot be applied", err.Error())
+			return swapRequestError("swap cannot be applied", err)
 		}
 		if !confirmed {
 			return &UnconfirmedSwapError{Preview: preview}
@@ -92,6 +93,20 @@ func (s *Service) ApplySwap(
 		return PlanResult{}, err
 	}
 	return result, nil
+}
+
+// swapRequestError reports only the rejections that describe a bad request as
+// validation failures. A plan that no longer matches the catalogue is corrupt
+// data: turning it into 422 would blame the owner for a storage problem.
+func swapRequestError(message string, err error) error {
+	switch {
+	case errors.Is(err, swap.ErrUnknownFill),
+		errors.Is(err, swap.ErrUnknownProduct),
+		errors.Is(err, swap.ErrNonPositiveQuantity):
+		return apperr.Validation(message, err.Error())
+	default:
+		return err
+	}
 }
 
 // UnconfirmedSwapError carries the preview the owner still has to accept.

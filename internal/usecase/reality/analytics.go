@@ -83,26 +83,26 @@ func (s *Service) MacroAnalytics(ctx context.Context, period Period) (MacroAnaly
 	if result.Days == 0 {
 		return result, nil
 	}
-	result.AvgPlanned = averageMacros(planned, result.Days)
-	result.AvgActual = averageMacros(actual, result.Days)
+	if result.AvgPlanned, err = averageMacros(planned, result.Days); err != nil {
+		return MacroAnalytics{}, err
+	}
+	if result.AvgActual, err = averageMacros(actual, result.Days); err != nil {
+		return MacroAnalytics{}, err
+	}
 	result.HasActual = len(actual) > 0
 	return result, nil
 }
 
-func averageMacros(byDay map[string]nutrition.Macros, days int) nutrition.Macros {
+func averageMacros(byDay map[string]nutrition.Macros, days int) (nutrition.Macros, error) {
 	total := nutrition.Macros{}
 	for _, macros := range byDay {
 		sum, err := total.Add(macros)
 		if err != nil {
-			continue
+			return nutrition.Macros{}, err
 		}
 		total = sum
 	}
-	average, err := total.Scale(1 / float64(days))
-	if err != nil {
-		return nutrition.Macros{}
-	}
-	return average
+	return total.Scale(1 / float64(days))
 }
 
 // QualityAnalytics reports the stored hot-path averages, rule verdicts and
@@ -114,7 +114,25 @@ type QualityAnalytics struct {
 	Averages    nutrition.DailyTotals
 	Coverage    float64
 	Rolling     nutrition.RollingSummary
-	Evaluations []nutrition.RuleEvaluationResult
+	Evaluations []RuleEvaluation
+}
+
+// RuleScope says whether a stored verdict covers one day or a rolling window.
+// The two are read back together but describe different periods.
+type RuleScope string
+
+const (
+	RuleScopeDay           RuleScope = "day"
+	RuleScopeRollingWindow RuleScope = "rolling_window"
+)
+
+// RuleEvaluation is one persisted verdict together with the period it covers.
+type RuleEvaluation struct {
+	Scope       RuleScope
+	Date        time.Time
+	WindowStart time.Time
+	WindowEnd   time.Time
+	Result      nutrition.RuleEvaluationResult
 }
 
 func (s *Service) QualityAnalytics(
@@ -149,7 +167,13 @@ func (s *Service) QualityAnalytics(
 	if len(days) == 0 {
 		return result, nil
 	}
+	evaluations, err := s.analytics.ListRuleEvaluations(ctx, period.EaterID, basis, period.From, period.To)
+	if err != nil {
+		return QualityAnalytics{}, err
+	}
+
 	result.Averages, result.Coverage = averageTotals(days)
+	result.Evaluations = evaluations
 	if len(rolling) > 0 {
 		result.Rolling = rolling[len(rolling)-1]
 	}

@@ -54,6 +54,9 @@ type Querier interface {
 	ListEaterDaySummariesForPeriod(ctx context.Context, arg ListEaterDaySummariesForPeriodParams) ([]DayNutritionSummary, error)
 	ListEaterExclusions(ctx context.Context, eaterID int64) ([]EaterExclusion, error)
 	ListEaterRollingSummariesForPeriod(ctx context.Context, arg ListEaterRollingSummariesForPeriodParams) ([]RollingNutritionSummary, error)
+	// Day verdicts are dated, rolling-window verdicts are keyed by the window they
+	// close, so both kinds are selected by the date the owner asked about.
+	ListEaterRuleEvaluationsForPeriod(ctx context.Context, arg ListEaterRuleEvaluationsForPeriodParams) ([]RuleEvaluationResult, error)
 	ListEaters(ctx context.Context) ([]Eater, error)
 	ListLLMCalls(ctx context.Context, rowLimit int32) ([]LlmCall, error)
 	ListMacroGoals(ctx context.Context, eaterID int64) ([]EaterMacroGoal, error)
