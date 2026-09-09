@@ -9,6 +9,7 @@ import (
 	eaterdom "github.com/ZetoOfficial/meal-planner/internal/domain/eater"
 	mealdom "github.com/ZetoOfficial/meal-planner/internal/domain/meal"
 	"github.com/ZetoOfficial/meal-planner/internal/domain/nutrition"
+	planningdom "github.com/ZetoOfficial/meal-planner/internal/domain/planning"
 	recipedom "github.com/ZetoOfficial/meal-planner/internal/domain/recipe"
 )
 
@@ -186,4 +187,100 @@ func macrosForDate(t *testing.T, result Result, date time.Time) nutrition.Macros
 		}
 	}
 	return total
+}
+
+func TestBuildPlanFindsAPlanForARealisticLibraryWithinTheDefaultBudget(t *testing.T) {
+	result, err := New().BuildPlan(t.Context(), twoMealLibraryInput())
+	if err != nil {
+		t.Fatalf("BuildPlan() error = %v", err)
+	}
+	if result.Failure != nil {
+		t.Fatalf("BuildPlan() failure = %#v, want a plan for a library this size", result.Failure)
+	}
+	for _, mealType := range []mealdom.Type{mealdom.TypeLunch, mealdom.TypeDinner} {
+		if !hasMeal(result.Plan, mealType) {
+			t.Fatalf("plan = %#v, want every requested meal populated", result.Plan.Meals)
+		}
+	}
+}
+
+func hasMeal(plan planningdom.Plan, mealType mealdom.Type) bool {
+	for i := range plan.Meals {
+		if plan.Meals[i].Type == mealType && len(plan.Meals[i].Components) > 0 {
+			return true
+		}
+	}
+	return false
+}
+
+// twoMealLibraryInput mirrors the shape of the seeded demo library: two meals a
+// day drawing on several batches, which is where a search that cannot prune
+// unreachable meals runs out of budget.
+func twoMealLibraryInput() Input {
+	start := time.Date(2026, time.August, 10, 0, 0, 0, 0, time.UTC)
+	products := []catalogdom.Product{
+		libraryProduct(1, "protein:lean", 23, 2, 0, 110),
+		libraryProduct(2, "protein:lean", 20, 13, 0, 200),
+		libraryProduct(3, "carb:grain", 7.5, 2.2, 72, 350),
+		libraryProduct(4, "carb:grain", 8, 3, 50, 270),
+		libraryProduct(5, "veg:green", 2.8, 0.4, 5, 34),
+		libraryProduct(6, "veg:green", 0.9, 0.2, 9.6, 41),
+		libraryProduct(7, "fat", 0, 100, 0, 884),
+	}
+	recipes := []recipedom.Template{
+		libraryRecipe(1, "protein:lean", 1000, "fat", 60),
+		libraryRecipe(2, "carb:grain", 320, "", 0),
+		libraryRecipe(3, "veg:green", 800, "fat", 60),
+		libraryRecipe(4, "protein:lean", 900, "", 0),
+	}
+
+	return Input{
+		StartDate:          start,
+		Days:               1,
+		CookDate:           start,
+		AvailableEquipment: []string{"oven", "stove"},
+		Eaters: []EaterInput{{
+			Eater: eaterdom.Eater{ID: 1, Sex: eaterdom.SexMale},
+			Days: []EaterDayInput{{
+				Date: start,
+				Goal: eaterdom.MacroGoal{
+					ID: 1, EaterID: 1, EffectiveFrom: start,
+					Range: eaterdom.MacroRange{
+						ProteinMinG: 150, ProteinMaxG: 210,
+						FatMinG: 60, FatMaxG: 100,
+						CarbMinG: 200, CarbMaxG: 320,
+						KcalMin: 2200, KcalMax: 2800,
+					},
+				},
+				GeneratedMealTypes: []mealdom.Type{mealdom.TypeLunch, mealdom.TypeDinner},
+			}},
+		}},
+		Products: products,
+		Recipes:  recipes,
+	}
+}
+
+func libraryProduct(id catalogdom.ProductID, role string, protein, fat, carb, kcal float64) catalogdom.Product {
+	return catalogdom.Product{
+		ID: id, Name: "product", DefaultUnit: "g",
+		ProteinPer100G: protein, FatPer100G: fat, CarbPer100G: carb, KcalPer100G: kcal,
+		Roles: []catalogdom.RoleTag{{Code: role}},
+	}
+}
+
+func libraryRecipe(id recipedom.ID, role string, qtyG float64, optionalRole string, optionalQtyG float64) recipedom.Template {
+	output := qtyG
+	slots := []recipedom.Slot{{ID: recipedom.SlotID(id * 10), RoleTagCode: role, QtyG: qtyG, Position: 0}}
+	if optionalRole != "" {
+		slots = append(slots, recipedom.Slot{
+			ID: recipedom.SlotID(id*10 + 1), RoleTagCode: optionalRole,
+			QtyG: optionalQtyG, Position: 1, Optional: true,
+		})
+	}
+	return recipedom.Template{
+		ID: id, Status: recipedom.StatusPermanent, ComponentKind: recipedom.ComponentKindMixedMain,
+		AllowedMealTypes: []mealdom.Type{mealdom.TypeLunch, mealdom.TypeDinner},
+		BaseServings:     4, ExpectedOutputG: &output, Storage: recipedom.StorageKeeps3d,
+		Equipment: []string{"oven"}, Slots: slots,
+	}
 }

@@ -1,7 +1,7 @@
 # GitHub Roadmap
 
 Backlog for turning the current scaffold into the MVP described in `docs/SPEC.md`,
-`docs/ARCHITECTURE.md`, `docs/schema.sql`, and `api/openapi.yaml`.
+`docs/ARCHITECTURE.md`, `docs/schema.sql`, and `api/openapi/api/api.yaml`.
 
 The intended issue size is 0.5-2 focused engineering days. Issues are grouped by
 capability milestones, not by individual files or endpoints, so each closed issue
@@ -59,7 +59,7 @@ consistent errors, repository plumbing, and repeatable local verification.
 Labels: `type:feature`, `area:api`, `priority:p0`
 
 Context:
-- `api/openapi.yaml`
+- `api/openapi/api/api.yaml`
 - `internal/api/openapi/generated.go`
 - `internal/api/http/server.go`
 - `docs/ARCHITECTURE.md` sections 9 and 12
@@ -172,7 +172,7 @@ Context:
 - `docs/SPEC.md` FR-1
 - `docs/schema.sql`: `product`, `product_food_classification`,
   `product_role`, `product_allergen`
-- `api/openapi.yaml`: `/products`, `/products/{productId}`
+- `api/openapi/api/api.yaml`: `/products`, `/products/{productId}`
 
 Scope:
 - Implement create, list, get, update, and delete for products.
@@ -198,7 +198,7 @@ Labels: `type:feature`, `area:catalog`, `area:db`, `priority:p0`
 Context:
 - `docs/SPEC.md` section 4
 - `docs/schema.sql`: `role_tag`
-- `api/openapi.yaml`: `/role-tags`
+- `api/openapi/api/api.yaml`: `/role-tags`
 
 Scope:
 - Seed the initial role taxonomy needed by MVP recipes and products.
@@ -222,7 +222,7 @@ Labels: `type:feature`, `area:eater`, `area:api`, `area:db`, `priority:p0`
 Context:
 - `docs/SPEC.md` FR-2 and HC-1/HC-2
 - `docs/schema.sql`: `eater`, `eater_allergen`
-- `api/openapi.yaml`: `/eaters`, `/eaters/{eaterId}`
+- `api/openapi/api/api.yaml`: `/eaters`, `/eaters/{eaterId}`
 
 Scope:
 - Implement create, list, get, and update for eaters.
@@ -247,7 +247,7 @@ Labels: `type:feature`, `area:eater`, `area:api`, `area:db`, `priority:p0`
 Context:
 - `docs/SPEC.md` FR-2 and HC-8
 - `docs/schema.sql`: `eater_macro_goal`
-- `api/openapi.yaml`: `/eaters/{eaterId}/goals`
+- `api/openapi/api/api.yaml`: `/eaters/{eaterId}/goals`
 
 Scope:
 - Implement listing macro goals from newest to oldest.
@@ -272,7 +272,7 @@ Labels: `type:feature`, `area:eater`, `area:api`, `area:db`, `priority:p0`
 Context:
 - `docs/SPEC.md` FR-2, HC-5, HC-10
 - `docs/schema.sql`: `fixed_meal`, `eater_exclusion`
-- `api/openapi.yaml`: `/eaters/{eaterId}/fixed-meals`,
+- `api/openapi/api/api.yaml`: `/eaters/{eaterId}/fixed-meals`,
   `/eaters/{eaterId}/exclusions`, `/exclusions/{exclusionId}`
 
 Scope:
@@ -303,7 +303,7 @@ Labels: `type:feature`, `area:recipe`, `area:api`, `area:db`, `priority:p0`
 Context:
 - `docs/SPEC.md` sections 4 and FR-9
 - `docs/schema.sql`: `recipe_template`, `recipe_slot`
-- `api/openapi.yaml`: `/recipes`, `/recipes/{recipeId}`
+- `api/openapi/api/api.yaml`: `/recipes`, `/recipes/{recipeId}`
 
 Scope:
 - Implement create, list, get, update, and delete for recipe templates.
@@ -352,7 +352,7 @@ Labels: `type:feature`, `area:recipe`, `area:api`, `area:db`, `priority:p1`
 Context:
 - `docs/SPEC.md` FR-9
 - `docs/schema.sql`: `recipe_template`
-- `api/openapi.yaml`: `/recipes/{recipeId}/promote`
+- `api/openapi/api/api.yaml`: `/recipes/{recipeId}/promote`
 
 Scope:
 - Implement the promotion endpoint and use case.
@@ -417,7 +417,7 @@ Context:
 - `docs/SPEC.md`
 - `docs/ARCHITECTURE.md`
 - `docs/schema.sql`
-- `api/openapi.yaml`
+- `api/openapi/api/api.yaml`
 
 Scope:
 - Resolve the shared contracts that block deterministic planning and quality evaluation.
@@ -768,7 +768,7 @@ Dependencies:
 Context:
 - `docs/SPEC.md` FR-3
 - `docs/ARCHITECTURE.md` section 11
-- `api/openapi.yaml`: `/plans`
+- `api/openapi/api/api.yaml`: `/plans`
 - `internal/usecase/planning/generate_plan.go`
 
 Scope:
@@ -910,7 +910,7 @@ Labels: `type:feature`, `area:planning`, `area:quality`, `area:api`, `priority:p
 Context:
 - `docs/SPEC.md` FR-4
 - `docs/DESIGN.md` section 6
-- `api/openapi.yaml`: `/plans/{planId}/swap/preview`
+- `api/openapi/api/api.yaml`: `/plans/{planId}/swap/preview`
 - `internal/usecase/planning/preview_swap.go`
 
 Scope:
@@ -960,7 +960,7 @@ Labels: `type:feature`, `area:shopping`, `area:planning`, `area:api`, `priority:
 Context:
 - `docs/SPEC.md` FR-5
 - `docs/schema.sql`: `shopping_list`, `shopping_list_item`
-- `api/openapi.yaml`: `/plans/{planId}/shopping-list`,
+- `api/openapi/api/api.yaml`: `/plans/{planId}/shopping-list`,
   `/shopping-list-items/{itemId}`
 
 Scope:
@@ -989,7 +989,7 @@ Context:
 - `docs/SPEC.md` FR-3, FR-4, and FR-5
 - `docs/DESIGN.md` section 6
 - `docs/schema.sql`: `slot_fill` and planned nutrition snapshots
-- `api/openapi.yaml`: existing plan-operation preview patterns
+- `api/openapi/api/api.yaml`: existing plan-operation preview patterns
 - Blocked by Issues 20, 21, 26, 28, and 45.
 
 Scope:
@@ -1035,7 +1035,7 @@ Labels: `type:feature`, `area:meals`, `area:api`, `area:db`, `priority:p1`
 Context:
 - `docs/SPEC.md` FR-6
 - `docs/schema.sql`: `meal`
-- `api/openapi.yaml`: `/plans/{planId}/meals`, `/meals/{mealId}/log`
+- `api/openapi/api/api.yaml`: `/plans/{planId}/meals`, `/meals/{mealId}/log`
 
 Scope:
 - List meals for a plan.
@@ -1061,7 +1061,7 @@ Labels: `type:feature`, `area:feedback`, `area:recipe`, `area:catalog`, `priorit
 Context:
 - `docs/SPEC.md` FR-7
 - `docs/schema.sql`: `feedback_event`, `recipe_template`
-- `api/openapi.yaml`: `/feedback`
+- `api/openapi/api/api.yaml`: `/feedback`
 
 Scope:
 - Persist feedback events for recipe templates, products, meals, and slot fills.
@@ -1084,7 +1084,7 @@ Labels: `type:feature`, `area:analytics`, `area:api`, `area:db`, `priority:p1`
 
 Context:
 - `docs/SPEC.md` FR-8
-- `api/openapi.yaml`: `/analytics/macros`
+- `api/openapi/api/api.yaml`: `/analytics/macros`
 - `docs/schema.sql`: `meal`, `day_nutrition_summary`
 
 Scope:
@@ -1111,7 +1111,7 @@ Dependencies:
 
 Context:
 - `docs/SPEC.md` FR-8
-- `api/openapi.yaml`: `/analytics/nutrition-quality`,
+- `api/openapi/api/api.yaml`: `/analytics/nutrition-quality`,
   `/analytics/top-recipes`
 - `docs/schema.sql`: `rule_evaluation_result`, `day_nutrition_summary`,
   `rolling_nutrition_summary`, `recipe_template`, `meal`
@@ -1175,7 +1175,7 @@ Context:
 - `README.md`
 - `docs/SPEC.md`
 - `docs/ARCHITECTURE.md`
-- `api/openapi.yaml`
+- `api/openapi/api/api.yaml`
 
 Scope:
 - Add an end-to-end smoke test covering the MVP path:

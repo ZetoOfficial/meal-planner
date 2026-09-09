@@ -334,3 +334,9 @@ func outcome(code string, status nutrition.RuleEvalStatus, severity RuleSeverity
 		Message:  explainOutcome(code, status, actual, target, unit),
 	}
 }
+
+// AggregateOutcomes exposes the weighted score and coverage of an arbitrary
+// subset of outcomes so callers can rank lexicographic levels separately.
+func AggregateOutcomes(ruleset Ruleset, outcomes []RuleOutcome) (score, coverage float64) {
+	return aggregateScore(ruleset, outcomes)
+}

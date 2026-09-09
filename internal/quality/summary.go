@@ -21,6 +21,15 @@ type MealInput struct {
 	Type       mealdom.Type
 	Fixed      *FixedMealInput
 	Components []ComponentInput
+	// Unknown marks a meal whose macros are known but whose quality data is
+	// not, so it lowers per-rule coverage instead of being silently skipped.
+	Unknown *UnknownMealInput
+}
+
+// UnknownMealInput is a meal eaten differently than planned: the owner entered
+// macros by hand and no structured quality data exists for it.
+type UnknownMealInput struct {
+	Macros nutrition.Macros
 }
 
 type FixedMealInput struct {
@@ -72,6 +81,9 @@ func BuildDaySummary(input DayInput, purpose SummaryPurpose) (nutrition.DaySumma
 }
 
 func addMealToSummary(summary *nutrition.DaySummary, meal MealInput, purpose SummaryPurpose) error {
+	if meal.Unknown != nil {
+		return addUnknownMeal(summary, *meal.Unknown)
+	}
 	if meal.Fixed != nil {
 		return addFixedMeal(summary, *meal.Fixed, purpose)
 	}
@@ -79,6 +91,26 @@ func addMealToSummary(summary *nutrition.DaySummary, meal MealInput, purpose Sum
 		if err := addComponent(summary, comp); err != nil {
 			return err
 		}
+	}
+	return nil
+}
+
+// addUnknownMeal counts the macros and marks every rule as uncovered for this
+// meal's share of the day, so unknown quality lowers confidence rather than
+// reading as "fine".
+func addUnknownMeal(summary *nutrition.DaySummary, meal UnknownMealInput) error {
+	if !meal.Macros.Valid() {
+		return errors.New("logged meal macros must be finite and nonnegative")
+	}
+	updated, err := summary.Macros.Add(meal.Macros)
+	if err != nil {
+		return err
+	}
+	summary.Macros = updated
+
+	weight := float64(meal.Macros.Kcal)
+	for _, rule := range AllRules() {
+		addCoverageSlot(summary, rule, false, weight)
 	}
 	return nil
 }

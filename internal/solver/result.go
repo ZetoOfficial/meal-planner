@@ -7,6 +7,7 @@ import (
 	eaterdom "github.com/ZetoOfficial/meal-planner/internal/domain/eater"
 	"github.com/ZetoOfficial/meal-planner/internal/domain/nutrition"
 	planningdom "github.com/ZetoOfficial/meal-planner/internal/domain/planning"
+	"github.com/ZetoOfficial/meal-planner/internal/quality"
 )
 
 type FailureCode string
@@ -22,10 +23,23 @@ type Failure struct {
 	Date       time.Time
 	Exhaustive bool
 	Rejections []HardRejection
+	// MacroConstraints lists target bounds the candidates cannot reach at all.
+	MacroConstraints []MacroConstraint
+}
+
+// EaterDayQuality is the evaluation that ranked the selected plan, reused
+// verbatim for API explanations.
+type EaterDayQuality struct {
+	EaterID    eaterdom.ID
+	Date       time.Time
+	Day        nutrition.DaySummary
+	Rolling    nutrition.RollingSummary
+	Evaluation quality.Evaluation
 }
 
 type Result struct {
 	Plan    planningdom.Plan
+	Quality []EaterDayQuality
 	Failure *Failure
 }
 
@@ -173,4 +187,36 @@ func cloneFloat(value *float64) *float64 {
 	}
 	result := *value
 	return &result
+}
+
+// DayRules returns the verdicts of the daily rules behind this evaluation.
+func (q EaterDayQuality) DayRules() []nutrition.RuleEvaluationResult {
+	return q.rules(false)
+}
+
+// RollingRules returns the verdicts of the weekly rules behind this evaluation.
+func (q EaterDayQuality) RollingRules() []nutrition.RuleEvaluationResult {
+	return q.rules(true)
+}
+
+func (q EaterDayQuality) rules(rolling bool) []nutrition.RuleEvaluationResult {
+	results := make([]nutrition.RuleEvaluationResult, 0, len(q.Evaluation.Outcomes))
+	for _, outcome := range q.Evaluation.Outcomes {
+		if isRollingRule(outcome.Code) != rolling {
+			continue
+		}
+		results = append(results, outcome.Result())
+	}
+	return results
+}
+
+// Warnings counts the outcomes the owner should read: soft failures and warns.
+func (q EaterDayQuality) Warnings() int {
+	count := 0
+	for _, outcome := range q.Evaluation.Outcomes {
+		if outcome.Status == nutrition.StatusSoftFail || outcome.Status == nutrition.StatusWarn {
+			count++
+		}
+	}
+	return count
 }

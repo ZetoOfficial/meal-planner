@@ -490,6 +490,67 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
         '501': { $ref: '#/components/responses/NotImplemented' }
 
+  /plans/{planId}/quantity/preview:
+    parameters:
+      - $ref: '../model/api.yaml#/components/parameters/PlanId'
+    post:
+      operationId: previewQuantityAdjustment
+      tags: [plans]
+      summary: Предпросмотр фиксации планового количества продукта (FR-3/FR-5)
+      description: >
+        Введённое количество считается заблокированным планировочным входом.
+        Солвер пересобирает доли только затронутой партии, пересчитывает БЖУ,
+        качество и количества в списке покупок. Ничего не меняет.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '../model/api.yaml#/components/schemas/QuantityAdjustmentInput' }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '../model/api.yaml#/components/schemas/QuantityAdjustmentPreview' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422':
+          description: При этом количестве план не остаётся допустимым
+          content:
+            application/json:
+              schema: { $ref: '../model/api.yaml#/components/schemas/SolverError' }
+        '501': { $ref: '#/components/responses/NotImplemented' }
+
+  /plans/{planId}/quantity:
+    parameters:
+      - $ref: '../model/api.yaml#/components/parameters/PlanId'
+    post:
+      operationId: applyQuantityAdjustment
+      tags: [plans]
+      summary: Применить зафиксированное количество (после подтверждения)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '../model/api.yaml#/components/schemas/QuantityAdjustmentInput' }
+      responses:
+        '200':
+          description: Применено; в ответе обновлённый план
+          content:
+            application/json:
+              schema: { $ref: '../model/api.yaml#/components/schemas/Plan' }
+        '409':
+          description: confirm != true
+          content:
+            application/json:
+              schema: { $ref: '../model/api.yaml#/components/schemas/QuantityAdjustmentPreview' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422':
+          description: При этом количестве план не остаётся допустимым
+          content:
+            application/json:
+              schema: { $ref: '../model/api.yaml#/components/schemas/SolverError' }
+        '501': { $ref: '#/components/responses/NotImplemented' }
+
   # ---------------------------------------------------------------- shopping
   /plans/{planId}/shopping-list:
     parameters:

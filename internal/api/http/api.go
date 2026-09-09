@@ -7,9 +7,16 @@ import (
 
 	catalogdom "github.com/ZetoOfficial/meal-planner/internal/domain/catalog"
 	eaterdom "github.com/ZetoOfficial/meal-planner/internal/domain/eater"
+	feedbackdom "github.com/ZetoOfficial/meal-planner/internal/domain/feedback"
+	"github.com/ZetoOfficial/meal-planner/internal/domain/nutrition"
+	planningdom "github.com/ZetoOfficial/meal-planner/internal/domain/planning"
 	recipedom "github.com/ZetoOfficial/meal-planner/internal/domain/recipe"
+	shoppingdom "github.com/ZetoOfficial/meal-planner/internal/domain/shopping"
+	"github.com/ZetoOfficial/meal-planner/internal/swap"
 	usecasecatalog "github.com/ZetoOfficial/meal-planner/internal/usecase/catalog"
 	usecaseeater "github.com/ZetoOfficial/meal-planner/internal/usecase/eater"
+	usecaseplanning "github.com/ZetoOfficial/meal-planner/internal/usecase/planning"
+	usecasereality "github.com/ZetoOfficial/meal-planner/internal/usecase/reality"
 	usecaserecipe "github.com/ZetoOfficial/meal-planner/internal/usecase/recipe"
 )
 
@@ -43,12 +50,56 @@ type RecipeUseCases interface {
 	PromoteRecipe(context.Context, recipedom.ID) (recipedom.Template, error)
 }
 
-type server struct {
-	catalog CatalogUseCases
-	eater   EaterUseCases
-	recipe  RecipeUseCases
+type PlanningUseCases interface {
+	GeneratePlan(context.Context, usecaseplanning.GeneratePlanCommand) (usecaseplanning.PlanResult, error)
+	GetPlan(context.Context, planningdom.PlanID) (usecaseplanning.PlanResult, error)
+	ListPlans(context.Context) ([]planningdom.Plan, error)
+	ArchivePlan(context.Context, planningdom.PlanID) error
+	PreviewSwap(context.Context, planningdom.PlanID, usecaseplanning.SwapCommand) (swap.Preview, error)
+	ApplySwap(context.Context, planningdom.PlanID, usecaseplanning.SwapCommand, bool) (usecaseplanning.PlanResult, error)
+	PreviewQuantityAdjustment(context.Context, planningdom.PlanID, usecaseplanning.QuantityCommand) (swap.QuantityPreview, error)
+	ApplyQuantityAdjustment(context.Context, planningdom.PlanID, usecaseplanning.QuantityCommand, bool) (usecaseplanning.PlanResult, error)
 }
 
-func newServer(catalog CatalogUseCases, eater EaterUseCases, recipe RecipeUseCases) *server {
-	return &server{catalog: catalog, eater: eater, recipe: recipe}
+type RealityUseCases interface {
+	ListPlanMeals(context.Context, planningdom.PlanID, *eaterdom.ID) ([]planningdom.Meal, error)
+	LogMeal(context.Context, planningdom.MealID, planningdom.MealLog) (planningdom.Meal, error)
+	CreateFeedback(context.Context, feedbackdom.Event) (feedbackdom.Event, error)
+	MacroAnalytics(context.Context, usecasereality.Period) (usecasereality.MacroAnalytics, error)
+	QualityAnalytics(context.Context, usecasereality.Period, nutrition.SummaryBasis) (usecasereality.QualityAnalytics, error)
+	TopRecipes(context.Context, int) ([]usecasereality.TopRecipe, error)
+}
+
+type ShoppingUseCases interface {
+	GetList(context.Context, planningdom.PlanID) (shoppingdom.List, error)
+	Regenerate(context.Context, planningdom.PlanID) (shoppingdom.List, error)
+	SetChecked(context.Context, shoppingdom.ItemID, bool) error
+	GetItem(context.Context, shoppingdom.ItemID) (shoppingdom.Item, error)
+}
+
+type server struct {
+	catalog  CatalogUseCases
+	eater    EaterUseCases
+	recipe   RecipeUseCases
+	planning PlanningUseCases
+	shopping ShoppingUseCases
+	reality  RealityUseCases
+}
+
+func newServer(
+	catalog CatalogUseCases,
+	eater EaterUseCases,
+	recipe RecipeUseCases,
+	planning PlanningUseCases,
+	shopping ShoppingUseCases,
+	reality RealityUseCases,
+) *server {
+	return &server{
+		catalog:  catalog,
+		eater:    eater,
+		recipe:   recipe,
+		planning: planning,
+		shopping: shopping,
+		reality:  reality,
+	}
 }

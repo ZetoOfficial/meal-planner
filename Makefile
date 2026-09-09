@@ -36,6 +36,10 @@ mocks: ## Сгенерировать GoMock-моки из go:generate-дирек
 migrate: ## Применить tern-миграции (использует DB_* из .env)
 	$(TERN) migrate --migrations ./migrations --config ./migrations/tern.conf
 
+.PHONY: seed
+seed: ## Загрузить локальные демо-данные (только для разработки)
+	psql "$$DATABASE_URL" -v ON_ERROR_STOP=1 -f migrations/seed/dev_seed.sql
+
 .PHONY: migrate-status
 migrate-status: ## Показать статус миграций
 	$(TERN) status --migrations ./migrations --config ./migrations/tern.conf

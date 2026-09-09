@@ -164,3 +164,25 @@ func applyMigrations(ctx context.Context, pool *pgxpool.Pool, projectRoot string
 
 	return nil
 }
+
+// ApplySeed loads the local demo fixture into the isolated test schema. It is
+// the same file `make seed` applies, so a drift between the seed and the schema
+// fails a test instead of a developer's first run.
+func ApplySeed(t *testing.T, database Database) {
+	t.Helper()
+
+	projectRoot, err := findProjectRoot()
+	if err != nil {
+		t.Fatalf("find project root: %v", err)
+	}
+	seed, err := os.ReadFile(filepath.Join(projectRoot, "migrations", "seed", "dev_seed.sql"))
+	if err != nil {
+		t.Fatalf("read dev seed: %v", err)
+	}
+
+	ctx, cancel := context.WithTimeout(t.Context(), setupTimeout)
+	defer cancel()
+	if _, err := database.Pool.Exec(ctx, string(seed)); err != nil {
+		t.Fatalf("apply dev seed: %v", err)
+	}
+}

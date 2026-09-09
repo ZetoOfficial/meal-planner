@@ -18,6 +18,9 @@ type Deps struct {
 	Catalog  CatalogUseCases
 	Eater    EaterUseCases
 	Recipe   RecipeUseCases
+	Planning PlanningUseCases
+	Shopping ShoppingUseCases
+	Reality  RealityUseCases
 }
 
 func New(d Deps) http.Handler {
@@ -35,7 +38,7 @@ func New(d Deps) http.Handler {
 	swagger.Servers = nil
 	swagger.Security = nil
 
-	strict := api.NewStrictHandlerWithOptions(newServer(d.Catalog, d.Eater, d.Recipe), nil, api.StrictHTTPServerOptions{
+	strict := api.NewStrictHandlerWithOptions(newServer(d.Catalog, d.Eater, d.Recipe, d.Planning, d.Shopping, d.Reality), nil, api.StrictHTTPServerOptions{
 		RequestErrorHandlerFunc: func(w http.ResponseWriter, r *http.Request, err error) {
 			requestError(w, r, err, http.StatusBadRequest)
 		},

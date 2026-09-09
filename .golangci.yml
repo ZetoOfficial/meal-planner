@@ -194,6 +194,12 @@ linters:
         linters:
           - gochecknoinits
           - gochecknoglobals
+      # HTTP mapping mirrors the anonymous structs oapi-codegen generates, so
+      # their field names are fixed by the contract rather than by us.
+      - path: internal/api/http/
+        linters:
+          - revive
+        text: "var-naming: struct field"
 
 formatters:
   enable:
