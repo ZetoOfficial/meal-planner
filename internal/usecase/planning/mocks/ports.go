@@ -13,8 +13,12 @@ import (
 	context "context"
 	reflect "reflect"
 
+	catalog "github.com/ZetoOfficial/meal-planner/internal/domain/catalog"
+	eater "github.com/ZetoOfficial/meal-planner/internal/domain/eater"
 	nutrition "github.com/ZetoOfficial/meal-planner/internal/domain/nutrition"
 	planning "github.com/ZetoOfficial/meal-planner/internal/domain/planning"
+	recipe "github.com/ZetoOfficial/meal-planner/internal/domain/recipe"
+	solver "github.com/ZetoOfficial/meal-planner/internal/solver"
 	gomock "go.uber.org/mock/gomock"
 )
 
@@ -80,6 +84,20 @@ func (m *MockPlanRepository) EXPECT() *MockPlanRepositoryMockRecorder {
 	return m.recorder
 }
 
+// Archive mocks base method.
+func (m *MockPlanRepository) Archive(ctx context.Context, id planning.PlanID) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Archive", ctx, id)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Archive indicates an expected call of Archive.
+func (mr *MockPlanRepositoryMockRecorder) Archive(ctx, id any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Archive", reflect.TypeOf((*MockPlanRepository)(nil).Archive), ctx, id)
+}
+
 // Get mocks base method.
 func (m *MockPlanRepository) Get(ctx context.Context, id planning.PlanID) (planning.Plan, error) {
 	m.ctrl.T.Helper()
@@ -93,6 +111,21 @@ func (m *MockPlanRepository) Get(ctx context.Context, id planning.PlanID) (plann
 func (mr *MockPlanRepositoryMockRecorder) Get(ctx, id any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockPlanRepository)(nil).Get), ctx, id)
+}
+
+// List mocks base method.
+func (m *MockPlanRepository) List(ctx context.Context) ([]planning.Plan, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "List", ctx)
+	ret0, _ := ret[0].([]planning.Plan)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// List indicates an expected call of List.
+func (mr *MockPlanRepositoryMockRecorder) List(ctx any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockPlanRepository)(nil).List), ctx)
 }
 
 // ListQualitySnapshots mocks base method.
@@ -137,4 +170,190 @@ func (m *MockPlanRepository) SaveQualitySnapshots(ctx context.Context, planID pl
 func (mr *MockPlanRepositoryMockRecorder) SaveQualitySnapshots(ctx, planID, snapshots any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SaveQualitySnapshots", reflect.TypeOf((*MockPlanRepository)(nil).SaveQualitySnapshots), ctx, planID, snapshots)
+}
+
+// MockEaterRepository is a mock of EaterRepository interface.
+type MockEaterRepository struct {
+	ctrl     *gomock.Controller
+	recorder *MockEaterRepositoryMockRecorder
+	isgomock struct{}
+}
+
+// MockEaterRepositoryMockRecorder is the mock recorder for MockEaterRepository.
+type MockEaterRepositoryMockRecorder struct {
+	mock *MockEaterRepository
+}
+
+// NewMockEaterRepository creates a new mock instance.
+func NewMockEaterRepository(ctrl *gomock.Controller) *MockEaterRepository {
+	mock := &MockEaterRepository{ctrl: ctrl}
+	mock.recorder = &MockEaterRepositoryMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockEaterRepository) EXPECT() *MockEaterRepositoryMockRecorder {
+	return m.recorder
+}
+
+// Get mocks base method.
+func (m *MockEaterRepository) Get(ctx context.Context, id eater.ID) (eater.Eater, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Get", ctx, id)
+	ret0, _ := ret[0].(eater.Eater)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Get indicates an expected call of Get.
+func (mr *MockEaterRepositoryMockRecorder) Get(ctx, id any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockEaterRepository)(nil).Get), ctx, id)
+}
+
+// ListFixedMeals mocks base method.
+func (m *MockEaterRepository) ListFixedMeals(ctx context.Context, eaterID eater.ID) ([]eater.FixedMeal, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListFixedMeals", ctx, eaterID)
+	ret0, _ := ret[0].([]eater.FixedMeal)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListFixedMeals indicates an expected call of ListFixedMeals.
+func (mr *MockEaterRepositoryMockRecorder) ListFixedMeals(ctx, eaterID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListFixedMeals", reflect.TypeOf((*MockEaterRepository)(nil).ListFixedMeals), ctx, eaterID)
+}
+
+// ListGoals mocks base method.
+func (m *MockEaterRepository) ListGoals(ctx context.Context, eaterID eater.ID) ([]eater.MacroGoal, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListGoals", ctx, eaterID)
+	ret0, _ := ret[0].([]eater.MacroGoal)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListGoals indicates an expected call of ListGoals.
+func (mr *MockEaterRepositoryMockRecorder) ListGoals(ctx, eaterID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListGoals", reflect.TypeOf((*MockEaterRepository)(nil).ListGoals), ctx, eaterID)
+}
+
+// MockProductRepository is a mock of ProductRepository interface.
+type MockProductRepository struct {
+	ctrl     *gomock.Controller
+	recorder *MockProductRepositoryMockRecorder
+	isgomock struct{}
+}
+
+// MockProductRepositoryMockRecorder is the mock recorder for MockProductRepository.
+type MockProductRepositoryMockRecorder struct {
+	mock *MockProductRepository
+}
+
+// NewMockProductRepository creates a new mock instance.
+func NewMockProductRepository(ctrl *gomock.Controller) *MockProductRepository {
+	mock := &MockProductRepository{ctrl: ctrl}
+	mock.recorder = &MockProductRepositoryMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockProductRepository) EXPECT() *MockProductRepositoryMockRecorder {
+	return m.recorder
+}
+
+// List mocks base method.
+func (m *MockProductRepository) List(ctx context.Context, roleCode string) ([]catalog.Product, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "List", ctx, roleCode)
+	ret0, _ := ret[0].([]catalog.Product)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// List indicates an expected call of List.
+func (mr *MockProductRepositoryMockRecorder) List(ctx, roleCode any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockProductRepository)(nil).List), ctx, roleCode)
+}
+
+// MockRecipeRepository is a mock of RecipeRepository interface.
+type MockRecipeRepository struct {
+	ctrl     *gomock.Controller
+	recorder *MockRecipeRepositoryMockRecorder
+	isgomock struct{}
+}
+
+// MockRecipeRepositoryMockRecorder is the mock recorder for MockRecipeRepository.
+type MockRecipeRepositoryMockRecorder struct {
+	mock *MockRecipeRepository
+}
+
+// NewMockRecipeRepository creates a new mock instance.
+func NewMockRecipeRepository(ctrl *gomock.Controller) *MockRecipeRepository {
+	mock := &MockRecipeRepository{ctrl: ctrl}
+	mock.recorder = &MockRecipeRepositoryMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockRecipeRepository) EXPECT() *MockRecipeRepositoryMockRecorder {
+	return m.recorder
+}
+
+// ListPermanentCandidates mocks base method.
+func (m *MockRecipeRepository) ListPermanentCandidates(ctx context.Context) ([]recipe.Template, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListPermanentCandidates", ctx)
+	ret0, _ := ret[0].([]recipe.Template)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListPermanentCandidates indicates an expected call of ListPermanentCandidates.
+func (mr *MockRecipeRepositoryMockRecorder) ListPermanentCandidates(ctx any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListPermanentCandidates", reflect.TypeOf((*MockRecipeRepository)(nil).ListPermanentCandidates), ctx)
+}
+
+// MockSolver is a mock of Solver interface.
+type MockSolver struct {
+	ctrl     *gomock.Controller
+	recorder *MockSolverMockRecorder
+	isgomock struct{}
+}
+
+// MockSolverMockRecorder is the mock recorder for MockSolver.
+type MockSolverMockRecorder struct {
+	mock *MockSolver
+}
+
+// NewMockSolver creates a new mock instance.
+func NewMockSolver(ctrl *gomock.Controller) *MockSolver {
+	mock := &MockSolver{ctrl: ctrl}
+	mock.recorder = &MockSolverMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockSolver) EXPECT() *MockSolverMockRecorder {
+	return m.recorder
+}
+
+// BuildPlan mocks base method.
+func (m *MockSolver) BuildPlan(ctx context.Context, input solver.Input) (solver.Result, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "BuildPlan", ctx, input)
+	ret0, _ := ret[0].(solver.Result)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// BuildPlan indicates an expected call of BuildPlan.
+func (mr *MockSolverMockRecorder) BuildPlan(ctx, input any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BuildPlan", reflect.TypeOf((*MockSolver)(nil).BuildPlan), ctx, input)
 }

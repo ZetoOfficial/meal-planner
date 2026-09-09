@@ -1,11 +1,13 @@
 package httpapi_test
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"go.uber.org/mock/gomock"
 
@@ -14,9 +16,13 @@ import (
 	"github.com/ZetoOfficial/meal-planner/internal/api/http/mocks"
 	catalogdom "github.com/ZetoOfficial/meal-planner/internal/domain/catalog"
 	"github.com/ZetoOfficial/meal-planner/internal/domain/meal"
+	"github.com/ZetoOfficial/meal-planner/internal/domain/nutrition"
+	planningdom "github.com/ZetoOfficial/meal-planner/internal/domain/planning"
 	recipedom "github.com/ZetoOfficial/meal-planner/internal/domain/recipe"
 	apperr "github.com/ZetoOfficial/meal-planner/internal/errors"
+	"github.com/ZetoOfficial/meal-planner/internal/solver"
 	usecasecatalog "github.com/ZetoOfficial/meal-planner/internal/usecase/catalog"
+	usecaseplanning "github.com/ZetoOfficial/meal-planner/internal/usecase/planning"
 	usecaserecipe "github.com/ZetoOfficial/meal-planner/internal/usecase/recipe"
 )
 
@@ -236,4 +242,200 @@ func TestPromoteRecipeConflictHTTPContract(t *testing.T) {
 	if rec.Code != http.StatusConflict {
 		t.Fatalf("POST /recipes/7/promote status = %d, want %d: %s", rec.Code, http.StatusConflict, rec.Body.String())
 	}
+}
+
+func TestGeneratePlanHTTPContract(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	planning := mocks.NewMockPlanningUseCases(ctrl)
+	start := time.Date(2026, time.August, 10, 0, 0, 0, 0, time.UTC)
+
+	var command usecaseplanning.GeneratePlanCommand
+	planning.EXPECT().
+		GeneratePlan(gomock.Any(), gomock.Any()).
+		DoAndReturn(func(_ context.Context, cmd usecaseplanning.GeneratePlanCommand) (usecaseplanning.PlanResult, error) {
+			command = cmd
+			score := 82.5
+			servingG := 200.0
+			return usecaseplanning.PlanResult{
+				Plan: planningdom.Plan{
+					ID:                   7,
+					StartDate:            start,
+					Days:                 1,
+					CookDate:             start,
+					Novelty:              2,
+					Status:               planningdom.PlanStatusDraft,
+					QualityScore:         &score,
+					QualityWarningsCount: 1,
+					EaterDays: []planningdom.EaterDay{{
+						EaterID: 1, Date: start, MacroGoalID: 3,
+						GeneratedMealTypes: []meal.Type{meal.TypeLunch},
+					}},
+					Recipes: []planningdom.PlanRecipe{{
+						ID: 11, TemplateID: 5, ScaleFactor: 2,
+						Fills: []planningdom.SlotFill{{SlotID: 9, ProductID: 4, PlannedInputQtyG: 200}},
+					}},
+					Meals: []planningdom.Meal{{
+						ID: 21, EaterID: 1, Date: start, Type: meal.TypeLunch,
+						Planned:    nutrition.Macros{ProteinG: 30, FatG: 10, CarbG: 40, Kcal: 400},
+						Components: []planningdom.ComponentAllocation{{PlanRecipeIndex: 0, PortionFactor: 0.5, PlannedServingG: &servingG}},
+					}},
+				},
+				Snapshots: []planningdom.QualitySnapshot{{
+					EaterID: 1,
+					Date:    start,
+					Basis:   nutrition.SummaryBasisPlanned,
+					Rolling: nutrition.RollingSummary{WindowDays: 7, RedMeatG: 120},
+					DayRules: []nutrition.RuleEvaluationResult{{
+						RuleCode: "fiber_min_g", Status: nutrition.StatusSoftFail,
+						Unit: "g/day", Coverage: 1, Message: "fiber below target",
+					}},
+					RollingRules: []nutrition.RuleEvaluationResult{{
+						RuleCode: "red_meat_max_weekly_g", Status: nutrition.StatusPass,
+						Unit: "g/week", Coverage: 1, Message: "red meat within the weekly cap",
+					}},
+				}},
+			}, nil
+		})
+
+	handler := httpapi.New(httpapi.Deps{APIToken: "secret", Planning: planning})
+	body := `{"start_date":"2026-08-10","days":1,"novelty_level":2,"targets":[{"eater_id":1,"generated_meal_types":["lunch"]}]}`
+	response := doRequest(t, handler, http.MethodPost, "/plans", body)
+
+	if response.Code != http.StatusCreated {
+		t.Fatalf("status = %d, body = %s; want 201", response.Code, response.Body.String())
+	}
+	if command.Novelty != 2 || command.Days != 1 || len(command.Targets) != 1 {
+		t.Fatalf("mapped command = %#v, want the request passed through", command)
+	}
+
+	var plan model.Plan
+	if err := json.Unmarshal(response.Body.Bytes(), &plan); err != nil {
+		t.Fatalf("decode plan: %v", err)
+	}
+	if plan.Id != 7 || plan.NoveltyLevel != 2 || plan.Status != model.PlanStatusDraft {
+		t.Fatalf("plan = %#v, want the persisted draft", plan)
+	}
+	if len(plan.Recipes) != 1 || plan.Recipes[0].Id != 11 {
+		t.Fatalf("plan recipes = %#v, want the stored plan recipe id", plan.Recipes)
+	}
+	if len(plan.Meals) != 1 || len(plan.Meals[0].Components) != 1 || plan.Meals[0].Components[0].PlanRecipeId != 11 {
+		t.Fatalf("plan meals = %#v, want allocations addressed by plan recipe id", plan.Meals)
+	}
+	if plan.QualitySummary == nil {
+		t.Fatal("plan has no quality summary, want the ranking evaluation exposed")
+	}
+	if plan.QualitySummary.QualityScore != 82.5 || plan.QualitySummary.WarningsCount != 1 {
+		t.Fatalf("quality summary = %#v, want the stored score and warning count", plan.QualitySummary)
+	}
+	if len(plan.QualitySummary.RuleEvaluations) != 2 {
+		t.Fatalf("rule evaluations = %#v, want the day and rolling verdicts", plan.QualitySummary.RuleEvaluations)
+	}
+}
+
+func TestGeneratePlanReturnsSolverDiagnosticsAs422(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	planning := mocks.NewMockPlanningUseCases(ctrl)
+	start := time.Date(2026, time.August, 10, 0, 0, 0, 0, time.UTC)
+	planning.EXPECT().
+		GeneratePlan(gomock.Any(), gomock.Any()).
+		Return(usecaseplanning.PlanResult{}, &usecaseplanning.InfeasibleError{Failure: solver.Failure{
+			Code:       solver.FailureMacroInfeasible,
+			EaterID:    1,
+			Date:       start,
+			Exhaustive: true,
+			Rejections: []solver.HardRejection{{
+				Code: solver.RejectionAllergen, EaterID: 1, ProductID: 4, Detail: "milk",
+			}},
+			MacroConstraints: []solver.MacroConstraint{{
+				Code: solver.MacroProtein, TargetMin: 500, TargetMax: 600, ReachableMin: 0, ReachableMax: 60,
+			}},
+		}})
+
+	handler := httpapi.New(httpapi.Deps{APIToken: "secret", Planning: planning})
+	body := `{"start_date":"2026-08-10","targets":[{"eater_id":1,"generated_meal_types":["lunch"]}]}`
+	response := doRequest(t, handler, http.MethodPost, "/plans", body)
+
+	if response.Code != http.StatusUnprocessableEntity {
+		t.Fatalf("status = %d, body = %s; want 422", response.Code, response.Body.String())
+	}
+
+	var solverError model.SolverError
+	if err := json.Unmarshal(response.Body.Bytes(), &solverError); err != nil {
+		t.Fatalf("decode solver error: %v", err)
+	}
+	if solverError.Code != model.MacroInfeasible || !solverError.Exhaustive || solverError.Message == "" {
+		t.Fatalf("solver error = %#v, want an exhaustive macro infeasibility with a message", solverError)
+	}
+	if !hasConstraint(solverError.Diagnostics, model.HardExclusion) {
+		t.Fatalf("diagnostics = %#v, want the allergen conflict reported", solverError.Diagnostics)
+	}
+	protein := findConstraint(solverError.Diagnostics, model.ProteinG)
+	if protein == nil || protein.TargetMin == nil || *protein.TargetMin != 500 {
+		t.Fatalf("diagnostics = %#v, want the unreachable protein bound", solverError.Diagnostics)
+	}
+	if protein.ReachableMax == nil || *protein.ReachableMax != 60 {
+		t.Fatalf("protein diagnostic = %#v, want the reachable ceiling", protein)
+	}
+}
+
+func TestArchivePlanHTTPContract(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	planning := mocks.NewMockPlanningUseCases(ctrl)
+	planning.EXPECT().ArchivePlan(gomock.Any(), planningdom.PlanID(7)).Return(nil)
+
+	handler := httpapi.New(httpapi.Deps{APIToken: "secret", Planning: planning})
+	response := doRequest(t, handler, http.MethodDelete, "/plans/7", "")
+
+	if response.Code != http.StatusNoContent {
+		t.Fatalf("status = %d, body = %s; want 204", response.Code, response.Body.String())
+	}
+}
+
+func TestGetPlanMapsNotFound(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	planning := mocks.NewMockPlanningUseCases(ctrl)
+	planning.EXPECT().
+		GetPlan(gomock.Any(), planningdom.PlanID(7)).
+		Return(usecaseplanning.PlanResult{}, apperr.NotFound("plan"))
+
+	handler := httpapi.New(httpapi.Deps{APIToken: "secret", Planning: planning})
+	response := doRequest(t, handler, http.MethodGet, "/plans/7", "")
+
+	if response.Code != http.StatusNotFound {
+		t.Fatalf("status = %d, body = %s; want 404", response.Code, response.Body.String())
+	}
+}
+
+func hasConstraint(diagnostics []model.SolverDiagnostic, constraint model.SolverDiagnosticConstraint) bool {
+	return findConstraint(diagnostics, constraint) != nil
+}
+
+func findConstraint(
+	diagnostics []model.SolverDiagnostic,
+	constraint model.SolverDiagnosticConstraint,
+) *model.SolverDiagnostic {
+	for i := range diagnostics {
+		if diagnostics[i].Constraint == constraint {
+			return &diagnostics[i]
+		}
+	}
+	return nil
+}
+
+func doRequest(t *testing.T, handler http.Handler, method, target, body string) *httptest.ResponseRecorder {
+	t.Helper()
+	var reader *strings.Reader
+	if body == "" {
+		reader = strings.NewReader("")
+	} else {
+		reader = strings.NewReader(body)
+	}
+	request := httptest.NewRequest(method, target, reader)
+	request.Header.Set("X-API-Token", "secret")
+	if body != "" {
+		request.Header.Set("Content-Type", "application/json")
+	}
+	response := httptest.NewRecorder()
+	handler.ServeHTTP(response, request)
+	return response
 }

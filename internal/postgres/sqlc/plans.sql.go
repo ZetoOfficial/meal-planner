@@ -11,6 +11,32 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const archivePlan = `-- name: ArchivePlan :one
+UPDATE plan
+SET status = 'archived'
+WHERE id = $1
+RETURNING id, label, start_date, days, cook_date, novelty_level, status, quality_score, quality_warnings_count, shopping_list_stale, created_at
+`
+
+func (q *Queries) ArchivePlan(ctx context.Context, id int64) (Plan, error) {
+	row := q.db.QueryRow(ctx, archivePlan, id)
+	var i Plan
+	err := row.Scan(
+		&i.ID,
+		&i.Label,
+		&i.StartDate,
+		&i.Days,
+		&i.CookDate,
+		&i.NoveltyLevel,
+		&i.Status,
+		&i.QualityScore,
+		&i.QualityWarningsCount,
+		&i.ShoppingListStale,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
 const createMeal = `-- name: CreateMeal :one
 INSERT INTO meal (
     plan_id,
@@ -520,6 +546,44 @@ func (q *Queries) ListPlanSlotFills(ctx context.Context, planID int64) ([]SlotFi
 			&i.SlotID,
 			&i.ProductID,
 			&i.PlannedInputQtyG,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listPlans = `-- name: ListPlans :many
+SELECT id, label, start_date, days, cook_date, novelty_level, status, quality_score, quality_warnings_count, shopping_list_stale, created_at
+FROM plan
+ORDER BY id DESC
+`
+
+func (q *Queries) ListPlans(ctx context.Context) ([]Plan, error) {
+	rows, err := q.db.Query(ctx, listPlans)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Plan{}
+	for rows.Next() {
+		var i Plan
+		if err := rows.Scan(
+			&i.ID,
+			&i.Label,
+			&i.StartDate,
+			&i.Days,
+			&i.CookDate,
+			&i.NoveltyLevel,
+			&i.Status,
+			&i.QualityScore,
+			&i.QualityWarningsCount,
+			&i.ShoppingListStale,
+			&i.CreatedAt,
 		); err != nil {
 			return nil, err
 		}

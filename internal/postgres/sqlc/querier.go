@@ -9,6 +9,7 @@ import (
 )
 
 type Querier interface {
+	ArchivePlan(ctx context.Context, id int64) (Plan, error)
 	CreateEater(ctx context.Context, arg CreateEaterParams) (Eater, error)
 	CreateEaterAllergen(ctx context.Context, arg CreateEaterAllergenParams) error
 	CreateEaterExclusion(ctx context.Context, arg CreateEaterExclusionParams) (EaterExclusion, error)
@@ -49,6 +50,7 @@ type Querier interface {
 	ListPlanRecipes(ctx context.Context, planID int64) ([]PlanRecipe, error)
 	ListPlanRollingSummaries(ctx context.Context, arg ListPlanRollingSummariesParams) ([]RollingNutritionSummary, error)
 	ListPlanSlotFills(ctx context.Context, planID int64) ([]SlotFill, error)
+	ListPlans(ctx context.Context) ([]Plan, error)
 	ListProductAllergens(ctx context.Context, productID int64) ([]string, error)
 	ListProductRoleTags(ctx context.Context, productID int64) ([]RoleTag, error)
 	ListProducts(ctx context.Context) ([]Product, error)

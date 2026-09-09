@@ -98,17 +98,18 @@ func (p *Planner) BuildPlan(ctx context.Context, input Input) (Result, error) {
 			}
 
 			evaluator := newDayEvaluator(input, *eaterInput, history)
-			ranked, state, err := searchDay(ctx, p.config, evaluator, *day, fixedMacros, eaterCandidates.Recipes, priorUses)
+			ranked, state, unreachable, err := searchDay(ctx, p.config, evaluator, *day, fixedMacros, eaterCandidates.Recipes, priorUses)
 			if err != nil {
 				return Result{}, err
 			}
 			if state != searchFound {
 				return Result{Failure: &Failure{
-					Code:       failureCode(state),
-					EaterID:    eaterInput.Eater.ID,
-					Date:       day.Date,
-					Exhaustive: state == searchExhausted,
-					Rejections: rejectionsForEater(candidates.Rejections, eaterInput.Eater.ID),
+					Code:             failureCode(state),
+					EaterID:          eaterInput.Eater.ID,
+					Date:             day.Date,
+					Exhaustive:       state == searchExhausted,
+					Rejections:       rejectionsForEater(candidates.Rejections, eaterInput.Eater.ID),
+					MacroConstraints: unreachable,
 				}}, nil
 			}
 			builder.addDay(*eaterInput, *day, fixedMeals, ranked.solution)

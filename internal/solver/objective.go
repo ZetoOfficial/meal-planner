@@ -91,16 +91,21 @@ func searchDay(
 	fixedMacros nutrition.Macros,
 	recipes []RecipeCandidate,
 	priorUses map[int64]int,
-) (rankedDay, searchState, error) {
+) (rankedDay, searchState, []MacroConstraint, error) {
 	variables, err := searchVariables(day.GeneratedMealTypes, recipes)
 	if err != nil {
-		return rankedDay{}, searchExhausted, err
+		return rankedDay{}, searchExhausted, nil, err
 	}
 
 	suffixMaximums, err := suffixMaximums(variables, config.ServingMultipliers)
 	if err != nil {
-		return rankedDay{}, searchExhausted, err
+		return rankedDay{}, searchExhausted, nil, err
 	}
+	ceiling, err := fixedMacros.Add(suffixMaximums[0])
+	if err != nil {
+		return rankedDay{}, searchExhausted, nil, err
+	}
+	unreachable := unreachableMacros(day.Goal.Range, fixedMacros, ceiling)
 	search := daySearch{
 		config:             config,
 		target:             day.Goal.Range,
@@ -117,16 +122,16 @@ func searchDay(
 	switch err := search.walk(ctx, 0, fixedMacros); {
 	case errors.Is(err, errSearchBudget), errors.Is(err, errCandidateBudget):
 	case err != nil:
-		return rankedDay{}, searchExhausted, err
+		return rankedDay{}, searchExhausted, nil, err
 	}
 
 	if search.best == nil {
 		if search.limited {
-			return rankedDay{}, searchLimited, nil
+			return rankedDay{}, searchLimited, unreachable, nil
 		}
-		return rankedDay{}, searchExhausted, nil
+		return rankedDay{}, searchExhausted, unreachable, nil
 	}
-	return *search.best, searchFound, nil
+	return *search.best, searchFound, nil, nil
 }
 
 func (search *daySearch) walk(ctx context.Context, index int, total nutrition.Macros) error {

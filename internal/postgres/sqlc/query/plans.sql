@@ -144,3 +144,14 @@ FROM meal_component_allocation mca
 JOIN meal m ON m.id = mca.meal_id
 WHERE m.plan_id = sqlc.arg(plan_id)
 ORDER BY mca.meal_id, mca.plan_recipe_id;
+
+-- name: ListPlans :many
+SELECT *
+FROM plan
+ORDER BY id DESC;
+
+-- name: ArchivePlan :one
+UPDATE plan
+SET status = 'archived'
+WHERE id = sqlc.arg(id)
+RETURNING *;

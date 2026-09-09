@@ -15,9 +15,11 @@ import (
 
 	catalog "github.com/ZetoOfficial/meal-planner/internal/domain/catalog"
 	eater "github.com/ZetoOfficial/meal-planner/internal/domain/eater"
+	planning "github.com/ZetoOfficial/meal-planner/internal/domain/planning"
 	recipe "github.com/ZetoOfficial/meal-planner/internal/domain/recipe"
 	catalog0 "github.com/ZetoOfficial/meal-planner/internal/usecase/catalog"
 	eater0 "github.com/ZetoOfficial/meal-planner/internal/usecase/eater"
+	planning0 "github.com/ZetoOfficial/meal-planner/internal/usecase/planning"
 	recipe0 "github.com/ZetoOfficial/meal-planner/internal/usecase/recipe"
 	gomock "go.uber.org/mock/gomock"
 )
@@ -405,4 +407,87 @@ func (m *MockRecipeUseCases) PromoteRecipe(arg0 context.Context, arg1 recipe.ID)
 func (mr *MockRecipeUseCasesMockRecorder) PromoteRecipe(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PromoteRecipe", reflect.TypeOf((*MockRecipeUseCases)(nil).PromoteRecipe), arg0, arg1)
+}
+
+// MockPlanningUseCases is a mock of PlanningUseCases interface.
+type MockPlanningUseCases struct {
+	ctrl     *gomock.Controller
+	recorder *MockPlanningUseCasesMockRecorder
+	isgomock struct{}
+}
+
+// MockPlanningUseCasesMockRecorder is the mock recorder for MockPlanningUseCases.
+type MockPlanningUseCasesMockRecorder struct {
+	mock *MockPlanningUseCases
+}
+
+// NewMockPlanningUseCases creates a new mock instance.
+func NewMockPlanningUseCases(ctrl *gomock.Controller) *MockPlanningUseCases {
+	mock := &MockPlanningUseCases{ctrl: ctrl}
+	mock.recorder = &MockPlanningUseCasesMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockPlanningUseCases) EXPECT() *MockPlanningUseCasesMockRecorder {
+	return m.recorder
+}
+
+// ArchivePlan mocks base method.
+func (m *MockPlanningUseCases) ArchivePlan(arg0 context.Context, arg1 planning.PlanID) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ArchivePlan", arg0, arg1)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// ArchivePlan indicates an expected call of ArchivePlan.
+func (mr *MockPlanningUseCasesMockRecorder) ArchivePlan(arg0, arg1 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ArchivePlan", reflect.TypeOf((*MockPlanningUseCases)(nil).ArchivePlan), arg0, arg1)
+}
+
+// GeneratePlan mocks base method.
+func (m *MockPlanningUseCases) GeneratePlan(arg0 context.Context, arg1 planning0.GeneratePlanCommand) (planning0.PlanResult, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GeneratePlan", arg0, arg1)
+	ret0, _ := ret[0].(planning0.PlanResult)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GeneratePlan indicates an expected call of GeneratePlan.
+func (mr *MockPlanningUseCasesMockRecorder) GeneratePlan(arg0, arg1 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GeneratePlan", reflect.TypeOf((*MockPlanningUseCases)(nil).GeneratePlan), arg0, arg1)
+}
+
+// GetPlan mocks base method.
+func (m *MockPlanningUseCases) GetPlan(arg0 context.Context, arg1 planning.PlanID) (planning0.PlanResult, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetPlan", arg0, arg1)
+	ret0, _ := ret[0].(planning0.PlanResult)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetPlan indicates an expected call of GetPlan.
+func (mr *MockPlanningUseCasesMockRecorder) GetPlan(arg0, arg1 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetPlan", reflect.TypeOf((*MockPlanningUseCases)(nil).GetPlan), arg0, arg1)
+}
+
+// ListPlans mocks base method.
+func (m *MockPlanningUseCases) ListPlans(arg0 context.Context) ([]planning.Plan, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListPlans", arg0)
+	ret0, _ := ret[0].([]planning.Plan)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListPlans indicates an expected call of ListPlans.
+func (mr *MockPlanningUseCasesMockRecorder) ListPlans(arg0 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListPlans", reflect.TypeOf((*MockPlanningUseCases)(nil).ListPlans), arg0)
 }

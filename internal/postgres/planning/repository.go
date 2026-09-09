@@ -397,3 +397,26 @@ func (r *Repository) attachRuleResults(
 	}
 	return nil
 }
+
+func (r *Repository) List(ctx context.Context) ([]planningdom.Plan, error) {
+	rows, err := r.store.Queries(ctx).ListPlans(ctx)
+	if err != nil {
+		return nil, dberror.Map(err, "plan")
+	}
+	plans := make([]planningdom.Plan, 0, len(rows))
+	for i := range rows {
+		plan, err := planFromRow(rows[i])
+		if err != nil {
+			return nil, err
+		}
+		plans = append(plans, plan)
+	}
+	return plans, nil
+}
+
+func (r *Repository) Archive(ctx context.Context, id planningdom.PlanID) error {
+	if _, err := r.store.Queries(ctx).ArchivePlan(ctx, int64(id)); err != nil {
+		return dberror.Map(err, "plan")
+	}
+	return nil
+}

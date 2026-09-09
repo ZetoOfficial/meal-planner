@@ -7,9 +7,11 @@ import (
 
 	catalogdom "github.com/ZetoOfficial/meal-planner/internal/domain/catalog"
 	eaterdom "github.com/ZetoOfficial/meal-planner/internal/domain/eater"
+	planningdom "github.com/ZetoOfficial/meal-planner/internal/domain/planning"
 	recipedom "github.com/ZetoOfficial/meal-planner/internal/domain/recipe"
 	usecasecatalog "github.com/ZetoOfficial/meal-planner/internal/usecase/catalog"
 	usecaseeater "github.com/ZetoOfficial/meal-planner/internal/usecase/eater"
+	usecaseplanning "github.com/ZetoOfficial/meal-planner/internal/usecase/planning"
 	usecaserecipe "github.com/ZetoOfficial/meal-planner/internal/usecase/recipe"
 )
 
@@ -43,12 +45,20 @@ type RecipeUseCases interface {
 	PromoteRecipe(context.Context, recipedom.ID) (recipedom.Template, error)
 }
 
-type server struct {
-	catalog CatalogUseCases
-	eater   EaterUseCases
-	recipe  RecipeUseCases
+type PlanningUseCases interface {
+	GeneratePlan(context.Context, usecaseplanning.GeneratePlanCommand) (usecaseplanning.PlanResult, error)
+	GetPlan(context.Context, planningdom.PlanID) (usecaseplanning.PlanResult, error)
+	ListPlans(context.Context) ([]planningdom.Plan, error)
+	ArchivePlan(context.Context, planningdom.PlanID) error
 }
 
-func newServer(catalog CatalogUseCases, eater EaterUseCases, recipe RecipeUseCases) *server {
-	return &server{catalog: catalog, eater: eater, recipe: recipe}
+type server struct {
+	catalog  CatalogUseCases
+	eater    EaterUseCases
+	recipe   RecipeUseCases
+	planning PlanningUseCases
+}
+
+func newServer(catalog CatalogUseCases, eater EaterUseCases, recipe RecipeUseCases, planning PlanningUseCases) *server {
+	return &server{catalog: catalog, eater: eater, recipe: recipe, planning: planning}
 }

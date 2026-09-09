@@ -17,9 +17,12 @@ import (
 	"github.com/ZetoOfficial/meal-planner/internal/postgres"
 	catalogrepo "github.com/ZetoOfficial/meal-planner/internal/postgres/catalog"
 	eaterrepo "github.com/ZetoOfficial/meal-planner/internal/postgres/eater"
+	planningrepo "github.com/ZetoOfficial/meal-planner/internal/postgres/planning"
 	reciperepo "github.com/ZetoOfficial/meal-planner/internal/postgres/recipe"
+	"github.com/ZetoOfficial/meal-planner/internal/solver"
 	usecasecatalog "github.com/ZetoOfficial/meal-planner/internal/usecase/catalog"
 	usecaseeater "github.com/ZetoOfficial/meal-planner/internal/usecase/eater"
+	usecaseplanning "github.com/ZetoOfficial/meal-planner/internal/usecase/planning"
 	usecaserecipe "github.com/ZetoOfficial/meal-planner/internal/usecase/recipe"
 )
 
@@ -54,11 +57,21 @@ func run() error {
 
 	store := postgres.NewStore(pool)
 	tx := postgres.NewTxManager(pool)
+	eaters := eaterrepo.New(store)
+	products := catalogrepo.New(store)
+	recipes := reciperepo.New(store)
 	handler := httpapi.New(httpapi.Deps{
 		APIToken: cfg.APIToken,
-		Catalog:  usecasecatalog.NewService(catalogrepo.New(store), tx),
-		Eater:    usecaseeater.NewService(eaterrepo.New(store), tx, clock.System{}),
-		Recipe:   usecaserecipe.NewService(reciperepo.New(store), tx, clock.System{}),
+		Catalog:  usecasecatalog.NewService(products, tx),
+		Eater:    usecaseeater.NewService(eaters, tx, clock.System{}),
+		Recipe:   usecaserecipe.NewService(recipes, tx, clock.System{}),
+		Planning: usecaseplanning.NewService(
+			planningrepo.New(store), eaters, products, recipes, solver.New(), tx,
+			usecaseplanning.Options{
+				AvailableEquipment: cfg.PlannerEquipment,
+				RollingWindowDays:  cfg.RollingWindowDays,
+			},
+		),
 	})
 
 	srv := &http.Server{

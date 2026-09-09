@@ -4,13 +4,19 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strings"
 	"time"
 )
 
 const (
-	defaultLLMTimeout   = 30 * time.Second
-	defaultShutdownWait = 10 * time.Second
+	defaultLLMTimeout       = 30 * time.Second
+	defaultShutdownWait     = 10 * time.Second
+	defaultRollingWindowDay = 7
 )
+
+// defaultEquipment is the kitchen the plan generator may assume. Recipes that
+// need anything else are filtered out before the search starts.
+var defaultEquipment = []string{"stove", "oven"}
 
 type Config struct {
 	HTTPAddr     string
@@ -21,6 +27,10 @@ type Config struct {
 	LLMAPIKey    string
 	LLMTimeout   time.Duration
 	ShutdownWait time.Duration
+
+	// PlannerEquipment lists the kitchen equipment available to the household.
+	PlannerEquipment  []string
+	RollingWindowDays int
 }
 
 func Load() (Config, error) {
@@ -33,6 +43,9 @@ func Load() (Config, error) {
 		LLMAPIKey:    os.Getenv("LLM_API_KEY"),
 		LLMTimeout:   defaultLLMTimeout,
 		ShutdownWait: defaultShutdownWait,
+
+		PlannerEquipment:  equipment(),
+		RollingWindowDays: defaultRollingWindowDay,
 	}
 	if cfg.DatabaseURL == "" {
 		return Config{}, errors.New("config: DATABASE_URL (или DB_* переменные) обязателен")
@@ -54,6 +67,21 @@ func databaseURL() string {
 		host, env("DB_PORT", "5432"), os.Getenv("DB_NAME"),
 		env("DB_SSLMODE", "disable"),
 	)
+}
+
+func equipment() []string {
+	raw := os.Getenv("PLANNER_EQUIPMENT")
+	if raw == "" {
+		return append([]string(nil), defaultEquipment...)
+	}
+	parts := strings.Split(raw, ",")
+	result := make([]string, 0, len(parts))
+	for _, part := range parts {
+		if trimmed := strings.TrimSpace(part); trimmed != "" {
+			result = append(result, trimmed)
+		}
+	}
+	return result
 }
 
 func env(key, def string) string {

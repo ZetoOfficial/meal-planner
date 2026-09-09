@@ -136,3 +136,52 @@ func assertDiagnostic(t *testing.T, diagnostics []Diagnostic, code DiagnosticCod
 	}
 	t.Fatalf("diagnostics = %#v, want code %q with detail %q", diagnostics, code, detail)
 }
+
+func TestFailureNamesTheUnreachableMacro(t *testing.T) {
+	input := rankingInput(rankingProduct(1, withFiber(40)))
+	input.Eaters[0].Days[0].Goal.Range.ProteinMinG = 500
+	input.Eaters[0].Days[0].Goal.Range.ProteinMaxG = 600
+
+	result, err := New().BuildPlan(t.Context(), input)
+	if err != nil {
+		t.Fatalf("BuildPlan() error = %v", err)
+	}
+	if result.Failure == nil {
+		t.Fatalf("BuildPlan() = %#v, want an impossible plan", result.Plan)
+	}
+
+	constraint := macroConstraint(result.Failure.MacroConstraints, MacroProtein)
+	if constraint == nil {
+		t.Fatalf("macro constraints = %#v, want the unreachable protein bound", result.Failure.MacroConstraints)
+	}
+	if constraint.TargetMin != 500 || constraint.ReachableMax != 60 {
+		t.Fatalf("protein constraint = %#v, want target 500 g against 60 g reachable", constraint)
+	}
+}
+
+func TestFailureReportsNoMacroConstraintWhenTargetsAreReachable(t *testing.T) {
+	// Candidates cover the target range, but no single combination hits it.
+	input := rankingInput(rankingProduct(1, withFiber(40)))
+	input.Eaters[0].Days[0].Goal.Range.ProteinMinG = 31
+	input.Eaters[0].Days[0].Goal.Range.ProteinMaxG = 32
+
+	result, err := New().BuildPlan(t.Context(), input)
+	if err != nil {
+		t.Fatalf("BuildPlan() error = %v", err)
+	}
+	if result.Failure == nil {
+		t.Fatalf("BuildPlan() = %#v, want an impossible plan", result.Plan)
+	}
+	if len(result.Failure.MacroConstraints) != 0 {
+		t.Fatalf("macro constraints = %#v, want none when every bound is individually reachable", result.Failure.MacroConstraints)
+	}
+}
+
+func macroConstraint(constraints []MacroConstraint, code MacroCode) *MacroConstraint {
+	for i := range constraints {
+		if constraints[i].Code == code {
+			return &constraints[i]
+		}
+	}
+	return nil
+}
