@@ -54,7 +54,7 @@ func planSummaryResponse(plan planningdom.Plan) model.PlanSummary {
 		StartDate:            openapiDate(plan.StartDate),
 		Days:                 plan.Days,
 		Status:               model.PlanSummaryStatus(plan.Status),
-		QualityScore:         float32Pointer(plan.QualityScore),
+		QualityScore:         plan.QualityScore,
 		QualityWarningsCount: plan.QualityWarningsCount,
 		ShoppingListStale:    plan.ShoppingListStale,
 	}
@@ -120,15 +120,15 @@ func planRecipesResponse(plan planningdom.Plan) []model.PlanRecipe {
 				Id:               &id,
 				SlotId:           int64(fill.SlotID),
 				ProductId:        int64(fill.ProductID),
-				PlannedInputQtyG: float32(fill.PlannedInputQtyG),
+				PlannedInputQtyG: fill.PlannedInputQtyG,
 			})
 		}
 		result = append(result, model.PlanRecipe{
 			Id:              int64(recipe.ID),
 			TemplateId:      int64(recipe.TemplateID),
 			Label:           recipe.Label,
-			ScaleFactor:     float32(recipe.ScaleFactor),
-			ExpectedOutputG: float32Pointer(recipe.ExpectedOutputG),
+			ScaleFactor:     recipe.ScaleFactor,
+			ExpectedOutputG: recipe.ExpectedOutputG,
 			ReserveFactor:   floatValuePointer(max(0, 1-allocated[i])),
 			Fills:           fills,
 		})
@@ -156,11 +156,11 @@ func planMealsResponse(plan planningdom.Plan) []model.Meal {
 		meal := &plan.Meals[i]
 		components := make([]model.MealComponentAllocation, 0, len(meal.Components))
 		for _, component := range meal.Components {
-			allocation := model.MealComponentAllocation{PortionFactor: float32(component.PortionFactor)}
+			allocation := model.MealComponentAllocation{PortionFactor: component.PortionFactor}
 			if component.PlanRecipeIndex >= 0 && component.PlanRecipeIndex < len(plan.Recipes) {
 				allocation.PlanRecipeId = int64(plan.Recipes[component.PlanRecipeIndex].ID)
 			}
-			allocation.PlannedServingG = float32Pointer(component.PlannedServingG)
+			allocation.PlannedServingG = component.PlannedServingG
 			components = append(components, allocation)
 		}
 
@@ -186,9 +186,9 @@ func planMealsResponse(plan planningdom.Plan) []model.Meal {
 
 func macrosResponse(macros nutrition.Macros) model.Macros {
 	return model.Macros{
-		ProteinG: float32(macros.ProteinG),
-		FatG:     float32(macros.FatG),
-		CarbG:    float32(macros.CarbG),
+		ProteinG: macros.ProteinG,
+		FatG:     macros.FatG,
+		CarbG:    macros.CarbG,
 		Kcal:     macros.Kcal,
 	}
 }
@@ -208,7 +208,7 @@ func qualitySummaryResponse(
 		RuleEvaluations: make([]model.RuleEvaluation, 0, len(snapshots)),
 	}
 	if plan.QualityScore != nil {
-		summary.QualityScore = float32(*plan.QualityScore)
+		summary.QualityScore = *plan.QualityScore
 	}
 
 	var coverage float64
@@ -223,7 +223,7 @@ func qualitySummaryResponse(
 			summary.RuleEvaluations = append(summary.RuleEvaluations, ruleEvaluationResponse(*snapshot, rule, true))
 		}
 	}
-	summary.DataCoverageScore = float32(coverage / float64(len(snapshots)))
+	summary.DataCoverageScore = coverage / float64(len(snapshots))
 	return &summary
 }
 
@@ -247,7 +247,7 @@ func addSnapshotTotals(summary *model.NutritionQualitySummary, snapshot planning
 	summary.LegumeServingsRolling7d = floatValuePointer(snapshot.Rolling.LegumeServings)
 	summary.RedMeatGRolling7d = floatValuePointer(snapshot.Rolling.RedMeatG)
 	summary.ProcessedMeatGRolling7d = floatValuePointer(snapshot.Rolling.ProcessedMeatG)
-	summary.UpfKcalShareEst = float32Pointer(snapshot.Day.Shares.UPFKcalShare(snapshot.Day.Macros.Kcal))
+	summary.UpfKcalShareEst = snapshot.Day.Shares.UPFKcalShare(snapshot.Day.Macros.Kcal)
 }
 
 func ruleEvaluationResponse(
@@ -262,10 +262,10 @@ func ruleEvaluationResponse(
 		EaterId:       &eaterID,
 		Basis:         model.RuleEvaluationBasis(snapshot.BasisOrPlanned()),
 		Status:        model.RuleEvaluationStatus(rule.Status),
-		ActualValue:   float32Pointer(rule.Actual),
-		TargetValue:   float32Pointer(rule.Target),
+		ActualValue:   rule.Actual,
+		TargetValue:   rule.Target,
 		Unit:          optionalString(rule.Unit),
-		CoverageScore: float32(rule.Coverage),
+		CoverageScore: rule.Coverage,
 		Message:       optionalString(rule.Message),
 	}
 	if rolling {
@@ -314,10 +314,10 @@ func solverErrorResponse(failure solver.Failure) model.SolverError {
 }
 
 func macroDiagnostic(eaterID int64, date openapi_types.Date, constraint solver.MacroConstraint) model.SolverDiagnostic {
-	targetMin := float32(constraint.TargetMin)
-	targetMax := float32(constraint.TargetMax)
-	reachableMin := float32(constraint.ReachableMin)
-	reachableMax := float32(constraint.ReachableMax)
+	targetMin := constraint.TargetMin
+	targetMax := constraint.TargetMax
+	reachableMin := constraint.ReachableMin
+	reachableMax := constraint.ReachableMax
 	return model.SolverDiagnostic{
 		EaterId:      &eaterID,
 		Date:         &date,
@@ -358,17 +358,16 @@ func openapiDate(value time.Time) openapi_types.Date {
 	return openapi_types.Date{Time: value.UTC().Truncate(dayDuration)}
 }
 
-func floatValuePointer(value float64) *float32 {
-	converted := float32(value)
-	return &converted
+func floatValuePointer(value float64) *float64 {
+	return &value
 }
 
-func addFloat(target **float32, value float64) {
+func addFloat(target **float64, value float64) {
 	if *target == nil {
 		*target = floatValuePointer(value)
 		return
 	}
-	**target += float32(value)
+	**target += value
 }
 
 func optionalString(value string) *string {

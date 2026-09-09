@@ -9,7 +9,7 @@ import (
 func productCommand(input model.ProductInput) usecasecatalog.CreateProductCommand {
 	command := usecasecatalog.CreateProductCommand{
 		Brand: input.Brand, Name: input.Name, ProteinPer100G: float64(input.ProteinPer100g), FatPer100G: float64(input.FatPer100g),
-		CarbPer100G: float64(input.CarbPer100g), KcalPer100G: float64(input.KcalPer100g), PricePer100G: float64Pointer(input.PricePer100g),
+		CarbPer100G: float64(input.CarbPer100g), KcalPer100G: float64(input.KcalPer100g), PricePer100G: input.PricePer100g,
 		Purchasable: true, Roles: append([]string(nil), input.Roles...),
 	}
 	if input.DefaultUnit != nil {
@@ -35,11 +35,11 @@ func nutritionFactsCommand(input *model.NutritionFacts) catalogdom.NutritionFact
 		return catalogdom.NutritionFacts{}
 	}
 	return catalogdom.NutritionFacts{
-		SaturatedFatPer100G: float64Pointer(input.SaturatedFatPer100g), TransFatPer100G: float64Pointer(input.TransFatPer100g),
-		IndustrialTransFatPer100G: float64Pointer(input.IndustrialTransFatPer100g), FiberPer100G: float64Pointer(input.FiberPer100g),
-		SodiumMgPer100G: float64Pointer(input.SodiumMgPer100g), SaltGPer100G: float64Pointer(input.SaltGPer100g),
-		TotalSugarsPer100G: float64Pointer(input.TotalSugarsPer100g), AddedSugarsPer100G: float64Pointer(input.AddedSugarsPer100g),
-		FreeSugarsPer100G: float64Pointer(input.FreeSugarsPer100g), ContainsPartiallyHydrogenatedOils: input.ContainsPartiallyHydrogenatedOils,
+		SaturatedFatPer100G: input.SaturatedFatPer100g, TransFatPer100G: input.TransFatPer100g,
+		IndustrialTransFatPer100G: input.IndustrialTransFatPer100g, FiberPer100G: input.FiberPer100g,
+		SodiumMgPer100G: input.SodiumMgPer100g, SaltGPer100G: input.SaltGPer100g,
+		TotalSugarsPer100G: input.TotalSugarsPer100g, AddedSugarsPer100G: input.AddedSugarsPer100g,
+		FreeSugarsPer100G: input.FreeSugarsPer100g, ContainsPartiallyHydrogenatedOils: input.ContainsPartiallyHydrogenatedOils,
 	}
 }
 
@@ -63,9 +63,9 @@ func classificationCommand(input *model.FoodClassification) catalogdom.FoodClass
 		return catalogdom.FoodClassification{}
 	}
 	result := catalogdom.FoodClassification{
-		ProcessingConfidence: float64Pointer(input.ProcessingConfidence), CountsToFruitVeg: input.CountsToFruitVeg,
+		ProcessingConfidence: input.ProcessingConfidence, CountsToFruitVeg: input.CountsToFruitVeg,
 		IsLegume: input.IsLegume, IsWholeGrain: input.IsWholeGrain,
-		WholeGrainRatio: float64Pointer(input.WholeGrainRatio), IsRedMeat: input.IsRedMeat,
+		WholeGrainRatio: input.WholeGrainRatio, IsRedMeat: input.IsRedMeat,
 		IsProcessedMeat: input.IsProcessedMeat, Source: input.ClassificationSource, Note: input.ClassificationNote,
 	}
 	if input.FoodGroup != nil {
@@ -88,9 +88,9 @@ func productResponse(product catalogdom.Product) model.Product {
 		allergens[i] = string(product.Allergens[i])
 	}
 	return model.Product{
-		Id: int64(product.ID), Brand: product.Brand, Name: product.Name, ProteinPer100g: float32(product.ProteinPer100G),
-		FatPer100g: float32(product.FatPer100G), CarbPer100g: float32(product.CarbPer100G), KcalPer100g: float32(product.KcalPer100G),
-		PricePer100g: float32Pointer(product.PricePer100G), DefaultUnit: stringPointer(product.DefaultUnit), Purchasable: boolPointer(product.Purchasable),
+		Id: int64(product.ID), Brand: product.Brand, Name: product.Name, ProteinPer100g: product.ProteinPer100G,
+		FatPer100g: product.FatPer100G, CarbPer100g: product.CarbPer100G, KcalPer100g: product.KcalPer100G,
+		PricePer100g: product.PricePer100G, DefaultUnit: stringPointer(product.DefaultUnit), Purchasable: boolPointer(product.Purchasable),
 		Allergens: &allergens, Roles: &roles, Nutrition: nutritionFactsResponse(product.Nutrition),
 		DataQuality: nutritionDataResponse(product.DataQuality), Classification: classificationResponse(product.Classification),
 	}
@@ -106,16 +106,16 @@ func productsResponse(products []catalogdom.Product) []model.Product {
 
 func nutritionFactsResponse(value catalogdom.NutritionFacts) *model.NutritionFacts {
 	return &model.NutritionFacts{
-		SaturatedFatPer100g: float32Pointer(value.SaturatedFatPer100G), TransFatPer100g: float32Pointer(value.TransFatPer100G),
-		IndustrialTransFatPer100g: float32Pointer(value.IndustrialTransFatPer100G), FiberPer100g: float32Pointer(value.FiberPer100G),
-		SodiumMgPer100g: float32Pointer(value.SodiumMgPer100G), SaltGPer100g: float32Pointer(value.SaltGPer100G),
-		TotalSugarsPer100g: float32Pointer(value.TotalSugarsPer100G), AddedSugarsPer100g: float32Pointer(value.AddedSugarsPer100G),
-		FreeSugarsPer100g: float32Pointer(value.FreeSugarsPer100G), ContainsPartiallyHydrogenatedOils: value.ContainsPartiallyHydrogenatedOils,
+		SaturatedFatPer100g: value.SaturatedFatPer100G, TransFatPer100g: value.TransFatPer100G,
+		IndustrialTransFatPer100g: value.IndustrialTransFatPer100G, FiberPer100g: value.FiberPer100G,
+		SodiumMgPer100g: value.SodiumMgPer100G, SaltGPer100g: value.SaltGPer100G,
+		TotalSugarsPer100g: value.TotalSugarsPer100G, AddedSugarsPer100g: value.AddedSugarsPer100G,
+		FreeSugarsPer100g: value.FreeSugarsPer100G, ContainsPartiallyHydrogenatedOils: value.ContainsPartiallyHydrogenatedOils,
 	}
 }
 
 func nutritionDataResponse(value catalogdom.NutritionData) *model.NutritionDataQuality {
-	result := &model.NutritionDataQuality{NutritionCoverageScore: float32Pointer(&value.Coverage), SourceNote: value.SourceNote, LastVerifiedAt: value.LastVerifiedAt}
+	result := &model.NutritionDataQuality{NutritionCoverageScore: &value.Coverage, SourceNote: value.SourceNote, LastVerifiedAt: value.LastVerifiedAt}
 	quality := model.NutritionDataQualityNutritionDataQuality(value.Quality)
 	result.NutritionDataQuality = &quality
 	if value.SourceKind != nil {
@@ -128,9 +128,9 @@ func nutritionDataResponse(value catalogdom.NutritionData) *model.NutritionDataQ
 func classificationResponse(value catalogdom.FoodClassification) *model.FoodClassification {
 	processingLevel := model.FoodClassificationProcessingLevel(value.ProcessingLevel)
 	result := &model.FoodClassification{
-		ProcessingLevel: &processingLevel, ProcessingConfidence: float32Pointer(value.ProcessingConfidence),
+		ProcessingLevel: &processingLevel, ProcessingConfidence: value.ProcessingConfidence,
 		CountsToFruitVeg: value.CountsToFruitVeg, IsLegume: value.IsLegume, IsWholeGrain: value.IsWholeGrain,
-		WholeGrainRatio: float32Pointer(value.WholeGrainRatio), IsRedMeat: value.IsRedMeat, IsProcessedMeat: value.IsProcessedMeat,
+		WholeGrainRatio: value.WholeGrainRatio, IsRedMeat: value.IsRedMeat, IsProcessedMeat: value.IsProcessedMeat,
 		ClassificationSource: value.Source, ClassificationNote: value.Note,
 	}
 	if value.FoodGroup != nil {

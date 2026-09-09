@@ -46,8 +46,8 @@ func mealResponse(meal planningdom.Meal) model.Meal {
 	components := make([]model.MealComponentAllocation, 0, len(meal.Components))
 	for _, component := range meal.Components {
 		components = append(components, model.MealComponentAllocation{
-			PortionFactor:   float32(component.PortionFactor),
-			PlannedServingG: float32Pointer(component.PlannedServingG),
+			PortionFactor:   component.PortionFactor,
+			PlannedServingG: component.PlannedServingG,
 		})
 	}
 
@@ -99,7 +99,7 @@ func feedbackResponse(event feedbackdom.Event) model.FeedbackEvent {
 		TargetId:    event.TargetID,
 		Rating:      event.Rating,
 		Comment:     event.Comment,
-		WeightDelta: float32Pointer(event.WeightDelta),
+		WeightDelta: event.WeightDelta,
 		CreatedAt:   &event.CreatedAt,
 	}
 }
@@ -136,7 +136,7 @@ func qualityAnalyticsResponse(
 		EaterId:                 &eaterID,
 		From:                    &from,
 		To:                      &to,
-		DataCoverageScore:       float32(analytics.Coverage),
+		DataCoverageScore:       analytics.Coverage,
 		FiberG:                  floatValuePointer(totals.FiberG),
 		SodiumMg:                floatValuePointer(totals.SodiumMg),
 		SaturatedFatG:           floatValuePointer(totals.SaturatedFatG),
@@ -151,7 +151,7 @@ func qualityAnalyticsResponse(
 		RuleEvaluations:         ruleEvaluationsResponse(analytics),
 	}
 	if totals.GrainGEquiv > 0 {
-		ratio := float32(totals.WholeGrainGEquiv / totals.GrainGEquiv)
+		ratio := totals.WholeGrainGEquiv / totals.GrainGEquiv
 		response.WholeGrainRatio = &ratio
 	}
 	return response
@@ -168,10 +168,10 @@ func ruleEvaluationsResponse(analytics usecasereality.QualityAnalytics) []model.
 			EaterId:       &eaterID,
 			Basis:         model.RuleEvaluationBasis(analytics.Basis),
 			Status:        model.RuleEvaluationStatus(rule.Result.Status),
-			ActualValue:   float32Pointer(rule.Result.Actual),
-			TargetValue:   float32Pointer(rule.Result.Target),
+			ActualValue:   rule.Result.Actual,
+			TargetValue:   rule.Result.Target,
 			Unit:          optionalString(rule.Result.Unit),
-			CoverageScore: float32(rule.Result.Coverage),
+			CoverageScore: rule.Result.Coverage,
 			Message:       optionalString(rule.Result.Message),
 		}
 		if rule.Scope == usecasereality.RuleScopeRollingWindow {
@@ -200,6 +200,7 @@ func topRecipesResponse(recipes []usecasereality.TopRecipe) []model.TopRecipe {
 			RecipeId:    int64(recipe.RecipeID),
 			Name:        recipe.Name,
 			CookedCount: recipe.CookedCount,
+			PlanUsage:   recipe.PlanUsage,
 		})
 	}
 	return result

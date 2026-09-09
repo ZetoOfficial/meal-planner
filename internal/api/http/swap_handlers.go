@@ -53,7 +53,7 @@ func swapCommand(
 	level model.SwapInputLevel,
 	slotFillID, newProductID *int64,
 ) (usecaseplanning.SwapCommand, error) {
-	if level != model.Fill {
+	if level != model.SwapInputLevelFill {
 		return usecaseplanning.SwapCommand{}, apperr.Validation(
 			"only fill-level swaps are supported", string(level),
 		)

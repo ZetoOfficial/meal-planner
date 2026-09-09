@@ -586,11 +586,7 @@ paths:
         required: true
         content:
           application/json:
-            schema:
-              type: object
-              properties:
-                checked: { type: boolean }
-              required: [checked]
+            schema: { $ref: '../model/api.yaml#/components/schemas/ShoppingItemCheck' }
       responses:
         '200':
           description: OK
@@ -723,21 +719,7 @@ paths:
           description: OK
           content:
             application/json:
-              schema:
-                allOf:
-                  - $ref: '../model/api.yaml#/components/schemas/NutritionQualitySummary'
-                  - type: object
-                    properties:
-                      eater_id: { type: integer, format: int64 }
-                      from: { type: string, format: date }
-                      to: { type: string, format: date }
-                      fixed_meal_quality_burden:
-                        type: object
-                        description: 'вклад фиксированных приёмов (напр. Сашин завтрак)'
-                        properties:
-                          sodium_mg: { type: number, format: float }
-                          saturated_fat_g: { type: number, format: float }
-                          processed_meat_g: { type: number, format: float }
+              schema: { $ref: '../model/api.yaml#/components/schemas/NutritionQualityAnalytics' }
         '501': { $ref: '#/components/responses/NotImplemented' }
 
   /analytics/top-recipes:

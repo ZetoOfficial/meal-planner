@@ -13,7 +13,7 @@ func recipeCommand(input model.RecipeTemplateInput) usecaserecipe.CreateRecipeCo
 		ComponentKind:    recipedom.ComponentKind(input.ComponentKind),
 		AllowedMealTypes: mealTypesCommand(input.AllowedMealTypes),
 		BaseServings:     input.BaseServings,
-		ExpectedOutputG:  float64Pointer(input.ExpectedOutputG),
+		ExpectedOutputG:  input.ExpectedOutputG,
 		Cuisine:          input.Cuisine,
 		CookingMethod:    input.CookingMethod,
 		Storage:          recipedom.StorageProfile(input.Storage),
@@ -29,7 +29,7 @@ func recipeCommand(input model.RecipeTemplateInput) usecaserecipe.CreateRecipeCo
 			RoleTagCode:       slot.RoleTag,
 			Label:             slot.Label,
 			QtyG:              float64(slot.QtyG),
-			PreparedQtyFactor: float64Pointer(slot.PreparedQtyFactor),
+			PreparedQtyFactor: slot.PreparedQtyFactor,
 			Position:          slot.Position,
 		}
 		if slot.Optional != nil {
@@ -41,7 +41,7 @@ func recipeCommand(input model.RecipeTemplateInput) usecaserecipe.CreateRecipeCo
 
 func recipeResponse(value recipedom.Template) model.RecipeTemplate {
 	source := model.RecipeTemplateSource(value.Source)
-	weight := float32(value.Weight)
+	weight := value.Weight
 	cookedCount := value.CookedCount
 	equipment := append([]string{}, value.Equipment...)
 	return model.RecipeTemplate{
@@ -52,7 +52,7 @@ func recipeResponse(value recipedom.Template) model.RecipeTemplate {
 		ComponentKind:    model.ComponentKind(value.ComponentKind),
 		AllowedMealTypes: mealTypesResponse(value.AllowedMealTypes),
 		BaseServings:     value.BaseServings,
-		ExpectedOutputG:  float32Pointer(value.ExpectedOutputG),
+		ExpectedOutputG:  value.ExpectedOutputG,
 		Cuisine:          value.Cuisine,
 		CookingMethod:    value.CookingMethod,
 		Storage:          model.StorageProfile(value.Storage),
@@ -82,8 +82,8 @@ func slotsResponse(values []recipedom.Slot) []model.Slot {
 			Id:                &id,
 			RoleTag:           value.RoleTagCode,
 			Label:             value.Label,
-			QtyG:              float32(value.QtyG),
-			PreparedQtyFactor: float32Pointer(value.PreparedQtyFactor),
+			QtyG:              value.QtyG,
+			PreparedQtyFactor: value.PreparedQtyFactor,
 			Position:          value.Position,
 			Optional:          &optional,
 		}
