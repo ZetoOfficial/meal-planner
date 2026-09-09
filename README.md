@@ -147,7 +147,6 @@ make seed
 - [docs/schema.sql](docs/schema.sql) — контракт схемы PostgreSQL.
 - [api/openapi/api/api.yaml](api/openapi/api/api.yaml) — контракт HTTP API (схемы — в [api/openapi/model/api.yaml](api/openapi/model/api.yaml)).
 - [docs/deep-research-report.md](docs/deep-research-report.md) — обоснование правил качества рациона.
-- [docs/github-roadmap.md](docs/github-roadmap.md) — этапы и задачи реализации.
 
 ## Границы проекта
 
