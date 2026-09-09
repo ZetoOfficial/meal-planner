@@ -338,3 +338,28 @@ func findOutcome(ev Evaluation, code string) RuleOutcome {
 	}
 	panic("outcome not found: " + code)
 }
+
+func TestAggregateOutcomesWeighsOnlyTheSuppliedRules(t *testing.T) {
+	ruleset := DefaultRuleset()
+	outcomes := []RuleOutcome{
+		passOutcome(RuleFiber, SeveritySoft, nil, nil, "g/day", 1),
+		softFailOutcome(RuleSodium, SeveritySoft, nil, nil, "mg/day", 0.5),
+	}
+
+	score, coverage := AggregateOutcomes(ruleset, outcomes)
+
+	if score != 50 {
+		t.Fatalf("score = %v, want 50 for one pass and one soft fail", score)
+	}
+	if math.Abs(coverage-0.75) > 1e-9 {
+		t.Fatalf("coverage = %v, want the mean of the supplied rule coverages", coverage)
+	}
+}
+
+func TestAggregateOutcomesReturnsZeroWithoutWeightedRules(t *testing.T) {
+	score, coverage := AggregateOutcomes(DefaultRuleset(), nil)
+
+	if score != 0 || coverage != 0 {
+		t.Fatalf("AggregateOutcomes(nil) = (%v, %v), want zero values", score, coverage)
+	}
+}

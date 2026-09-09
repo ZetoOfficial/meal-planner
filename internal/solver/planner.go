@@ -10,7 +10,9 @@ import (
 	catalogdom "github.com/ZetoOfficial/meal-planner/internal/domain/catalog"
 	eaterdom "github.com/ZetoOfficial/meal-planner/internal/domain/eater"
 	mealdom "github.com/ZetoOfficial/meal-planner/internal/domain/meal"
+	"github.com/ZetoOfficial/meal-planner/internal/domain/nutrition"
 	recipedom "github.com/ZetoOfficial/meal-planner/internal/domain/recipe"
+	"github.com/ZetoOfficial/meal-planner/internal/quality"
 )
 
 type EaterDayInput struct {
@@ -23,6 +25,9 @@ type EaterInput struct {
 	Eater      eaterdom.Eater
 	Days       []EaterDayInput
 	FixedMeals []eaterdom.FixedMeal
+	// History holds planned or actual day summaries that already fall inside
+	// the rolling window, oldest first, so weekly rules see the real horizon.
+	History []nutrition.DaySummary
 }
 
 type Input struct {
@@ -34,28 +39,41 @@ type Input struct {
 	Eaters             []EaterInput
 	Products           []catalogdom.Product
 	Recipes            []recipedom.Template
+	// Ruleset overrides the default quality rules; nil keeps the MVP defaults.
+	Ruleset           *quality.Ruleset
+	RollingWindowDays int
 }
 
 type Config struct {
 	ServingMultipliers []float64
 	SearchBudget       int
+	// CandidateBudget bounds how many macro-feasible candidates the objective
+	// ranks per eater-day before it settles on the best one seen.
+	CandidateBudget int
 }
 
 type Planner struct {
 	config Config
 }
 
-const defaultSearchBudget = 200_000
+const (
+	defaultSearchBudget    = 200_000
+	defaultCandidateBudget = 256
+)
 
 func New() *Planner {
 	return NewWithConfig(Config{
 		ServingMultipliers: []float64{0.5, 1, 1.5, 2},
 		SearchBudget:       defaultSearchBudget,
+		CandidateBudget:    defaultCandidateBudget,
 	})
 }
 
 func NewWithConfig(config Config) *Planner {
 	config.ServingMultipliers = append([]float64(nil), config.ServingMultipliers...)
+	if config.CandidateBudget <= 0 {
+		config.CandidateBudget = defaultCandidateBudget
+	}
 	return &Planner{config: config}
 }
 
@@ -66,9 +84,12 @@ func (p *Planner) BuildPlan(ctx context.Context, input Input) (Result, error) {
 
 	candidates := FilterCandidates(input)
 	builder := newPlanBuilder(input)
+	evaluations := make([]EaterDayQuality, 0, len(input.Eaters)*input.Days)
+	priorUses := make(map[int64]int)
 	for eaterIndex := range input.Eaters {
 		eaterInput := &input.Eaters[eaterIndex]
 		eaterCandidates := &candidates.Eaters[eaterIndex]
+		history := append([]nutrition.DaySummary(nil), eaterInput.History...)
 		for dayIndex := range eaterInput.Days {
 			day := &eaterInput.Days[dayIndex]
 			fixedMeals, fixedMacros, err := fixedMealsForDay(*eaterInput, day.Date)
@@ -76,7 +97,8 @@ func (p *Planner) BuildPlan(ctx context.Context, input Input) (Result, error) {
 				return Result{}, err
 			}
 
-			solution, state, err := searchDay(ctx, p.config, *day, fixedMacros, eaterCandidates.Recipes)
+			evaluator := newDayEvaluator(input, *eaterInput, history)
+			ranked, state, err := searchDay(ctx, p.config, evaluator, *day, fixedMacros, eaterCandidates.Recipes, priorUses)
 			if err != nil {
 				return Result{}, err
 			}
@@ -89,7 +111,16 @@ func (p *Planner) BuildPlan(ctx context.Context, input Input) (Result, error) {
 					Rejections: rejectionsForEater(candidates.Rejections, eaterInput.Eater.ID),
 				}}, nil
 			}
-			builder.addDay(*eaterInput, *day, fixedMeals, solution)
+			builder.addDay(*eaterInput, *day, fixedMeals, ranked.solution)
+			evaluations = append(evaluations, EaterDayQuality{
+				EaterID:    eaterInput.Eater.ID,
+				Date:       day.Date,
+				Day:        ranked.day,
+				Rolling:    ranked.rolling,
+				Evaluation: ranked.evaluation,
+			})
+			history = append(history, ranked.day)
+			recordUses(priorUses, ranked.solution)
 		}
 	}
 
@@ -97,7 +128,13 @@ func (p *Planner) BuildPlan(ctx context.Context, input Input) (Result, error) {
 	if err != nil {
 		return Result{}, err
 	}
-	return Result{Plan: plan}, nil
+	return Result{Plan: plan, Quality: evaluations}, nil
+}
+
+func recordUses(priorUses map[int64]int, solution daySolution) {
+	for i := range solution.uses {
+		priorUses[int64(solution.uses[i].variant.recipe.ID)]++
+	}
 }
 
 func (p *Planner) validate(input Input) error {

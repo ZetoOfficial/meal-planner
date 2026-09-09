@@ -7,6 +7,7 @@ import (
 	eaterdom "github.com/ZetoOfficial/meal-planner/internal/domain/eater"
 	"github.com/ZetoOfficial/meal-planner/internal/domain/nutrition"
 	planningdom "github.com/ZetoOfficial/meal-planner/internal/domain/planning"
+	"github.com/ZetoOfficial/meal-planner/internal/quality"
 )
 
 type FailureCode string
@@ -24,8 +25,19 @@ type Failure struct {
 	Rejections []HardRejection
 }
 
+// EaterDayQuality is the evaluation that ranked the selected plan, reused
+// verbatim for API explanations.
+type EaterDayQuality struct {
+	EaterID    eaterdom.ID
+	Date       time.Time
+	Day        nutrition.DaySummary
+	Rolling    nutrition.RollingSummary
+	Evaluation quality.Evaluation
+}
+
 type Result struct {
 	Plan    planningdom.Plan
+	Quality []EaterDayQuality
 	Failure *Failure
 }
 

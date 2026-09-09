@@ -12,6 +12,7 @@ import (
 	"github.com/ZetoOfficial/meal-planner/internal/domain/nutrition"
 	planningdom "github.com/ZetoOfficial/meal-planner/internal/domain/planning"
 	recipedom "github.com/ZetoOfficial/meal-planner/internal/domain/recipe"
+	"github.com/ZetoOfficial/meal-planner/internal/quality"
 )
 
 type searchState uint8
@@ -28,6 +29,7 @@ type componentVariant struct {
 	recipe     recipedom.Template
 	baseFills  []planningdom.SlotFill
 	baseMacros nutrition.Macros
+	slots      []variantSlot
 }
 
 type searchVariable struct {
@@ -55,23 +57,49 @@ type daySearch struct {
 	mealComponentCount []int
 	visited            int
 	limited            bool
+
+	evaluator dayEvaluator
+	ruleset   quality.Ruleset
+	mealTypes []mealdom.Type
+	priorUses map[int64]int
+	accepted  int
+	best      *rankedDay
+	bestScore dayScore
 }
+
+// rankedDay carries the winning candidate together with the evaluation that
+// won it, so callers explain exactly what the objective compared.
+type rankedDay struct {
+	solution   daySolution
+	day        nutrition.DaySummary
+	rolling    nutrition.RollingSummary
+	evaluation quality.Evaluation
+}
+
+// errSearchBudget and errCandidateBudget unwind the recursion without turning a
+// bounded search into an application error.
+var (
+	errSearchBudget    = errors.New("solver search budget reached")
+	errCandidateBudget = errors.New("solver candidate budget reached")
+)
 
 func searchDay(
 	ctx context.Context,
 	config Config,
+	evaluator dayEvaluator,
 	day EaterDayInput,
 	fixedMacros nutrition.Macros,
 	recipes []RecipeCandidate,
-) (daySolution, searchState, error) {
+	priorUses map[int64]int,
+) (rankedDay, searchState, error) {
 	variables, err := searchVariables(day.GeneratedMealTypes, recipes)
 	if err != nil {
-		return daySolution{}, searchExhausted, err
+		return rankedDay{}, searchExhausted, err
 	}
 
 	suffixMaximums, err := suffixMaximums(variables, config.ServingMultipliers)
 	if err != nil {
-		return daySolution{}, searchExhausted, err
+		return rankedDay{}, searchExhausted, err
 	}
 	search := daySearch{
 		config:             config,
@@ -80,57 +108,98 @@ func searchDay(
 		suffixMaximums:     suffixMaximums,
 		chosen:             make([]float64, len(variables)),
 		mealComponentCount: make([]int, len(day.GeneratedMealTypes)),
+		evaluator:          evaluator,
+		ruleset:            evaluator.ruleset,
+		mealTypes:          day.GeneratedMealTypes,
+		priorUses:          priorUses,
 	}
 
-	found, err := search.walk(ctx, 0, fixedMacros)
-	if err != nil {
-		return daySolution{}, searchExhausted, err
+	switch err := search.walk(ctx, 0, fixedMacros); {
+	case errors.Is(err, errSearchBudget), errors.Is(err, errCandidateBudget):
+	case err != nil:
+		return rankedDay{}, searchExhausted, err
 	}
-	if !found {
+
+	if search.best == nil {
 		if search.limited {
-			return daySolution{}, searchLimited, nil
+			return rankedDay{}, searchLimited, nil
 		}
-		return daySolution{}, searchExhausted, nil
+		return rankedDay{}, searchExhausted, nil
 	}
-	result, err := search.solution(len(day.GeneratedMealTypes))
-	return result, searchFound, err
+	return *search.best, searchFound, nil
 }
 
-func (search *daySearch) walk(ctx context.Context, index int, total nutrition.Macros) (bool, error) {
-	done, found, err := search.enter(ctx, index, total)
-	if done {
-		return found, err
+func (search *daySearch) walk(ctx context.Context, index int, total nutrition.Macros) error {
+	done, err := search.enter(ctx, index, total)
+	if done || err != nil {
+		return err
 	}
-	if found, err = search.walk(ctx, index+1, total); stopSearch(found, err, search.limited) {
-		return found, err
+	if err := search.walk(ctx, index+1, total); err != nil {
+		return err
 	}
 
 	for _, multiplier := range search.config.ServingMultipliers {
-		found, err = search.tryMultiplier(ctx, index, total, multiplier)
-		if stopSearch(found, err, search.limited) {
-			return found, err
-		}
+		err := search.tryMultiplier(ctx, index, total, multiplier)
 		search.chosen[index] = 0
+		if err != nil {
+			return err
+		}
 	}
-	return false, nil
+	return nil
 }
 
-func (search *daySearch) enter(ctx context.Context, index int, total nutrition.Macros) (done, found bool, err error) {
+func (search *daySearch) enter(ctx context.Context, index int, total nutrition.Macros) (done bool, err error) {
 	if err := ctx.Err(); err != nil {
-		return true, false, err
+		return true, err
 	}
 	search.visited++
 	if search.visited > search.config.SearchBudget {
 		search.limited = true
-		return true, false, nil
+		return true, errSearchBudget
 	}
 	if exceedsMaximum(total, search.target) || cannotReachMinimum(total, search.suffixMaximums[index], search.target) {
-		return true, false, nil
+		return true, nil
 	}
 	if index == len(search.variables) {
-		return true, allMealsPopulated(search.mealComponentCount) && search.target.Contains(total), nil
+		if !allMealsPopulated(search.mealComponentCount) || !search.target.Contains(total) {
+			return true, nil
+		}
+		return true, search.consider()
 	}
-	return false, false, nil
+	return false, nil
+}
+
+// consider ranks one macro-feasible candidate. Hard quality violations keep the
+// candidate infeasible; soft failures only lower its rank.
+func (search *daySearch) consider() error {
+	solution, err := search.solution(len(search.mealTypes))
+	if err != nil {
+		return err
+	}
+	evaluated, err := search.evaluator.evaluate(solution, search.mealTypes)
+	if err != nil {
+		return err
+	}
+	if len(evaluated.hard) > 0 {
+		return nil
+	}
+
+	score := scoreDay(search.ruleset, evaluated.evaluation, solution, search.priorUses)
+	if search.best == nil || score.betterThan(search.bestScore) {
+		search.best = &rankedDay{
+			solution:   solution,
+			day:        evaluated.day,
+			rolling:    evaluated.rolling,
+			evaluation: evaluated.evaluation,
+		}
+		search.bestScore = score
+	}
+
+	search.accepted++
+	if search.accepted >= search.config.CandidateBudget {
+		return errCandidateBudget
+	}
+	return nil
 }
 
 func (search *daySearch) tryMultiplier(
@@ -138,25 +207,21 @@ func (search *daySearch) tryMultiplier(
 	index int,
 	total nutrition.Macros,
 	multiplier float64,
-) (bool, error) {
+) error {
 	variable := &search.variables[index]
 	macros, err := variable.variant.macros(multiplier)
 	if err != nil {
-		return false, err
+		return err
 	}
 	next, err := total.Add(macros)
 	if err != nil {
-		return false, err
+		return err
 	}
 	search.chosen[index] = multiplier
 	search.mealComponentCount[variable.mealIndex]++
-	found, err := search.walk(ctx, index+1, next)
+	err = search.walk(ctx, index+1, next)
 	search.mealComponentCount[variable.mealIndex]--
-	return found, err
-}
-
-func stopSearch(found bool, err error, limited bool) bool {
-	return found || err != nil || limited
+	return err
 }
 
 func (search *daySearch) solution(mealCount int) (daySolution, error) {
@@ -214,7 +279,7 @@ func recipeVariants(candidate RecipeCandidate) ([]componentVariant, error) {
 	var expand func(int) error
 	expand = func(index int) error {
 		if index == len(candidate.Slots) {
-			baseMacros, fills, err := filledRecipeMacros(candidate.Slots, products, included)
+			baseMacros, fills, slots, err := filledRecipeMacros(candidate.Slots, products, included)
 			if err != nil {
 				return err
 			}
@@ -222,6 +287,7 @@ func recipeVariants(candidate RecipeCandidate) ([]componentVariant, error) {
 				recipe:     candidate.Recipe,
 				baseFills:  fills,
 				baseMacros: baseMacros,
+				slots:      slots,
 			})
 			return nil
 		}
@@ -252,9 +318,10 @@ func filledRecipeMacros(
 	slots []SlotCandidates,
 	products []catalogdom.Product,
 	included []bool,
-) (nutrition.Macros, []planningdom.SlotFill, error) {
+) (nutrition.Macros, []planningdom.SlotFill, []variantSlot, error) {
 	var proteinG, fatG, carbG, kcal float64
 	fills := make([]planningdom.SlotFill, 0, len(slots))
+	variantSlots := make([]variantSlot, 0, len(slots))
 	for i := range slots {
 		if !included[i] {
 			continue
@@ -262,7 +329,7 @@ func filledRecipeMacros(
 		product := &products[i]
 		qtyG := slots[i].Slot.QtyG
 		if !validProductMacros(*product) || math.IsNaN(qtyG) || math.IsInf(qtyG, 0) || qtyG <= 0 {
-			return nutrition.Macros{}, nil, errors.New("recipe product macros and quantity must be finite and positive")
+			return nutrition.Macros{}, nil, nil, errors.New("recipe product macros and quantity must be finite and positive")
 		}
 		factor := qtyG / gramsPer100
 		proteinG += product.ProteinPer100G * factor
@@ -274,12 +341,13 @@ func filledRecipeMacros(
 			ProductID:        product.ID,
 			PlannedInputQtyG: qtyG,
 		})
+		variantSlots = append(variantSlots, newVariantSlot(slots[i], *product))
 	}
 	result := nutrition.Macros{ProteinG: proteinG, FatG: fatG, CarbG: carbG, Kcal: int(math.Round(kcal))}
 	if !result.Valid() {
-		return nutrition.Macros{}, nil, errors.New("filled recipe macros must be finite and nonnegative")
+		return nutrition.Macros{}, nil, nil, errors.New("filled recipe macros must be finite and nonnegative")
 	}
-	return result, fills, nil
+	return result, fills, variantSlots, nil
 }
 
 func validProductMacros(product catalogdom.Product) bool {
