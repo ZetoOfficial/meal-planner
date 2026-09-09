@@ -63,5 +63,20 @@ func (s *Service) LogMeal(
 	if err := log.Validate(); err != nil {
 		return planningdom.Meal{}, apperr.Validation("meal log is not valid", err.Error())
 	}
-	return s.meals.LogMeal(ctx, mealID, log)
+
+	var logged planningdom.Meal
+	err := s.transactions.WithTx(ctx, func(ctx context.Context) error {
+		var err error
+		logged, err = s.meals.LogMeal(ctx, mealID, log)
+		if err != nil {
+			return err
+		}
+		// The log is what changes the actual-basis picture, so the snapshot is
+		// recomputed here and not when analytics are read.
+		return s.refreshActualSummaries(ctx, logged.PlanID)
+	})
+	if err != nil {
+		return planningdom.Meal{}, err
+	}
+	return logged, nil
 }

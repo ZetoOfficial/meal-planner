@@ -26,7 +26,7 @@ type MealRepository interface {
 	ListEaterMeals(ctx context.Context, eaterID eaterdom.ID, from, to time.Time) ([]planningdom.Meal, error)
 	GetMeal(ctx context.Context, mealID planningdom.MealID) (planningdom.Meal, error)
 	LogMeal(ctx context.Context, mealID planningdom.MealID, log planningdom.MealLog) (planningdom.Meal, error)
-	ListPlansForEaterPeriod(ctx context.Context, eaterID eaterdom.ID, from, to time.Time) ([]planningdom.Plan, error)
+	Get(ctx context.Context, planID planningdom.PlanID) (planningdom.Plan, error)
 	SaveQualitySnapshots(ctx context.Context, planID planningdom.PlanID, snapshots []planningdom.QualitySnapshot) error
 }
 

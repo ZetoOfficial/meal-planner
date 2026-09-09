@@ -19,7 +19,7 @@ func TestUpdateEaterReplacesAllergensAndAppendsGoal(t *testing.T) {
 	service, repository, transactions, clock := newMockService(t)
 	now := time.Date(2026, 7, 12, 18, 30, 0, 0, time.UTC)
 	effectiveFrom := time.Date(2026, 7, 12, 0, 0, 0, 0, time.UTC)
-	clock.EXPECT().Now().Return(now)
+	clock.EXPECT().Now().Return(now).AnyTimes()
 	expectPassthroughTx(transactions)
 
 	var updatedProfile eaterdom.Eater
@@ -29,7 +29,7 @@ func TestUpdateEaterReplacesAllergensAndAppendsGoal(t *testing.T) {
 		DoAndReturn(func(_ context.Context, profile eaterdom.Eater, goal eaterdom.MacroGoal) (eaterdom.Eater, error) {
 			updatedProfile = profile
 			appendedGoal = goal
-			profile.CurrentGoal = &goal
+			profile.Goals = []eaterdom.MacroGoal{goal}
 			return profile, nil
 		})
 
@@ -132,7 +132,7 @@ func TestUpdateEaterSchedulesSameDayGoalForNextAvailableDate(t *testing.T) {
 		EffectiveFrom: now.UTC().Truncate(dayDuration),
 		Range:         eaterdom.MacroRange{ProteinMaxG: 100, FatMaxG: 50, CarbMaxG: 150, KcalMax: 1800},
 	}
-	clock.EXPECT().Now().Return(now)
+	clock.EXPECT().Now().Return(now).AnyTimes()
 	expectPassthroughTx(transactions)
 	repository.EXPECT().ListGoals(gomock.Any(), eaterdom.ID(1)).Return([]eaterdom.MacroGoal{todayGoal}, nil)
 
@@ -141,7 +141,7 @@ func TestUpdateEaterSchedulesSameDayGoalForNextAvailableDate(t *testing.T) {
 		Update(gomock.Any(), gomock.Any(), gomock.Any()).
 		DoAndReturn(func(_ context.Context, profile eaterdom.Eater, goal eaterdom.MacroGoal) (eaterdom.Eater, error) {
 			scheduledGoal = goal
-			profile.CurrentGoal = &todayGoal
+			profile.Goals = []eaterdom.MacroGoal{todayGoal}
 			return profile, nil
 		})
 
@@ -230,7 +230,7 @@ func TestCreateGoalRejectsInvalidRange(t *testing.T) {
 func TestCreateGoalDefaultsEffectiveFromFromClock(t *testing.T) {
 	service, repository, _, clock := newMockService(t)
 	now := time.Date(2026, 7, 12, 18, 30, 0, 0, time.FixedZone("YEKT", 5*60*60))
-	clock.EXPECT().Now().Return(now)
+	clock.EXPECT().Now().Return(now).AnyTimes()
 	repository.EXPECT().
 		CreateGoal(gomock.Any(), gomock.Any()).
 		DoAndReturn(func(_ context.Context, goal eaterdom.MacroGoal) (eaterdom.MacroGoal, error) {
@@ -326,5 +326,28 @@ func assertErrorCode(t *testing.T, err error, want apperr.Code) {
 	var appError *apperr.Error
 	if !errors.As(err, &appError) || appError.Code != want {
 		t.Fatalf("error = %v, want code %q", err, want)
+	}
+}
+
+// Which goal is current depends on today's date, which is a use case decision
+// driven by the injected clock, not something a repository may read from the
+// wall clock.
+func TestGetEaterDerivesTheCurrentGoalFromTheClock(t *testing.T) {
+	service, repository, _, clock := newMockService(t)
+	now := time.Date(2026, 7, 12, 9, 0, 0, 0, time.UTC)
+	clock.EXPECT().Now().Return(now).AnyTimes()
+
+	effective := eaterdom.MacroGoal{ID: 1, EaterID: 1, EffectiveFrom: now.AddDate(0, 0, -10)}
+	scheduled := eaterdom.MacroGoal{ID: 2, EaterID: 1, EffectiveFrom: now.AddDate(0, 0, 10)}
+	repository.EXPECT().
+		Get(gomock.Any(), eaterdom.ID(1)).
+		Return(eaterdom.Eater{ID: 1, Name: "Pasha", Goals: []eaterdom.MacroGoal{effective, scheduled}}, nil)
+
+	profile, err := service.GetEater(t.Context(), 1)
+	if err != nil {
+		t.Fatalf("GetEater() error = %v", err)
+	}
+	if profile.CurrentGoal == nil || profile.CurrentGoal.ID != effective.ID {
+		t.Fatalf("current goal = %#v, want the goal already in effect", profile.CurrentGoal)
 	}
 }

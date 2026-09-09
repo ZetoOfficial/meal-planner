@@ -65,18 +65,37 @@ func (s *Service) CreateEater(ctx context.Context, command CreateEaterCommand) (
 	if err != nil {
 		return eaterdom.Eater{}, err
 	}
-	return created, nil
+	return s.withCurrentGoal(created), nil
 }
 
 func (s *Service) ListEaters(ctx context.Context) ([]eaterdom.Eater, error) {
-	return s.eaters.List(ctx)
+	profiles, err := s.eaters.List(ctx)
+	if err != nil {
+		return nil, err
+	}
+	for i := range profiles {
+		profiles[i] = s.withCurrentGoal(profiles[i])
+	}
+	return profiles, nil
 }
 
 func (s *Service) GetEater(ctx context.Context, id eaterdom.ID) (eaterdom.Eater, error) {
 	if !id.Valid() {
 		return eaterdom.Eater{}, apperr.Validation("eater id must be positive")
 	}
-	return s.eaters.Get(ctx, id)
+	profile, err := s.eaters.Get(ctx, id)
+	if err != nil {
+		return eaterdom.Eater{}, err
+	}
+	return s.withCurrentGoal(profile), nil
+}
+
+// withCurrentGoal picks the goal in effect today out of the stored history. It
+// is a use case decision because it depends on the clock: a goal scheduled for
+// next week is stored but must not steer anything yet.
+func (s *Service) withCurrentGoal(profile eaterdom.Eater) eaterdom.Eater {
+	profile.CurrentGoal = eaterdom.CurrentGoalAt(profile.Goals, s.clock.Now())
+	return profile
 }
 
 func (s *Service) UpdateEater(ctx context.Context, id eaterdom.ID, command UpdateEaterCommand) (eaterdom.Eater, error) {
@@ -112,7 +131,7 @@ func (s *Service) UpdateEater(ctx context.Context, id eaterdom.ID, command Updat
 	if err != nil {
 		return eaterdom.Eater{}, err
 	}
-	return updated, nil
+	return s.withCurrentGoal(updated), nil
 }
 
 func firstAvailableGoalDate(goals []eaterdom.MacroGoal, candidate time.Time) time.Time {

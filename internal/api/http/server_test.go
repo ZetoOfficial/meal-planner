@@ -60,3 +60,45 @@ func TestOpenAPIRouteRejectsUnsupportedMethod(t *testing.T) {
 		t.Fatal("PATCH /products/42 response has no Allow header")
 	}
 }
+
+func TestPanicInAHandlerBecomesAJSONInternalError(t *testing.T) {
+	handler := recoverPanics(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {
+		panic("handler exploded")
+	}))
+
+	req := httptest.NewRequest(http.MethodGet, "/products", http.NoBody)
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusInternalServerError {
+		t.Fatalf("status = %d, want 500 instead of a dropped connection", rec.Code)
+	}
+	if rec.Header().Get("Content-Type") != "application/json" {
+		t.Fatalf("content type = %q, want a JSON error body", rec.Header().Get("Content-Type"))
+	}
+}
+
+func TestResponseCarriesARequestID(t *testing.T) {
+	handler := New(Deps{})
+
+	req := httptest.NewRequest(http.MethodGet, "/livez", http.NoBody)
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+
+	if rec.Header().Get(requestIDHeader) == "" {
+		t.Fatalf("response has no %s header", requestIDHeader)
+	}
+}
+
+func TestRequestIDOfTheCallerIsKept(t *testing.T) {
+	handler := New(Deps{})
+
+	req := httptest.NewRequest(http.MethodGet, "/livez", http.NoBody)
+	req.Header.Set(requestIDHeader, "abc-123")
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+
+	if got := rec.Header().Get(requestIDHeader); got != "abc-123" {
+		t.Fatalf("%s = %q, want the caller's id echoed", requestIDHeader, got)
+	}
+}

@@ -122,6 +122,21 @@ func (m *MockMealRepository) EXPECT() *MockMealRepositoryMockRecorder {
 	return m.recorder
 }
 
+// Get mocks base method.
+func (m *MockMealRepository) Get(ctx context.Context, planID planning.PlanID) (planning.Plan, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Get", ctx, planID)
+	ret0, _ := ret[0].(planning.Plan)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Get indicates an expected call of Get.
+func (mr *MockMealRepositoryMockRecorder) Get(ctx, planID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockMealRepository)(nil).Get), ctx, planID)
+}
+
 // GetMeal mocks base method.
 func (m *MockMealRepository) GetMeal(ctx context.Context, mealID planning.MealID) (planning.Meal, error) {
 	m.ctrl.T.Helper()
@@ -165,21 +180,6 @@ func (m *MockMealRepository) ListPlanMeals(ctx context.Context, planID planning.
 func (mr *MockMealRepositoryMockRecorder) ListPlanMeals(ctx, planID, eaterID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListPlanMeals", reflect.TypeOf((*MockMealRepository)(nil).ListPlanMeals), ctx, planID, eaterID)
-}
-
-// ListPlansForEaterPeriod mocks base method.
-func (m *MockMealRepository) ListPlansForEaterPeriod(ctx context.Context, eaterID eater.ID, from, to time.Time) ([]planning.Plan, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListPlansForEaterPeriod", ctx, eaterID, from, to)
-	ret0, _ := ret[0].([]planning.Plan)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// ListPlansForEaterPeriod indicates an expected call of ListPlansForEaterPeriod.
-func (mr *MockMealRepositoryMockRecorder) ListPlansForEaterPeriod(ctx, eaterID, from, to any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListPlansForEaterPeriod", reflect.TypeOf((*MockMealRepository)(nil).ListPlansForEaterPeriod), ctx, eaterID, from, to)
 }
 
 // LogMeal mocks base method.

@@ -34,8 +34,16 @@ func TestLogMealStoresEachStatus(t *testing.T) {
 				LogMeal(gomock.Any(), planningdom.MealID(21), gomock.Any()).
 				DoAndReturn(func(_ context.Context, _ planningdom.MealID, l planningdom.MealLog) (planningdom.Meal, error) {
 					stored = l
-					return planningdom.Meal{ID: 21, LogStatus: l.Status, Actual: l.Actual}, nil
+					return planningdom.Meal{ID: 21, PlanID: 7, LogStatus: l.Status, Actual: l.Actual}, nil
 				})
+			deps.meals.EXPECT().
+				Get(gomock.Any(), planningdom.PlanID(7)).
+				Return(planningdom.Plan{ID: 7, StartDate: analyticsDay(0), Days: 1, CookDate: analyticsDay(0)}, nil)
+			deps.products.EXPECT().List(gomock.Any(), "").Return(nil, nil)
+			deps.recipes.EXPECT().List(gomock.Any(), nil).Return(nil, nil)
+			deps.meals.EXPECT().
+				SaveQualitySnapshots(gomock.Any(), planningdom.PlanID(7), gomock.Any()).
+				Return(nil)
 
 			meal, err := deps.service.LogMeal(t.Context(), 21, log)
 			if err != nil {
@@ -48,6 +56,36 @@ func TestLogMealStoresEachStatus(t *testing.T) {
 				t.Fatal("log timestamp is zero, want the service to stamp it")
 			}
 		})
+	}
+}
+
+// Recomputing the actual-basis snapshot belongs to the event that changes the
+// data, not to the read that reports it: a GET must not write.
+func TestLogMealRefreshesTheActualSnapshotAndAnalyticsDoesNot(t *testing.T) {
+	deps := newRealityDeps(t)
+	plan := planningdom.Plan{
+		ID: 7, StartDate: analyticsDay(0), Days: 1, CookDate: analyticsDay(0),
+		EaterDays: []planningdom.EaterDay{{EaterID: 1, Date: analyticsDay(0), MacroGoalID: 1}},
+	}
+	deps.meals.EXPECT().
+		LogMeal(gomock.Any(), planningdom.MealID(21), gomock.Any()).
+		Return(planningdom.Meal{ID: 21, PlanID: 7, EaterID: 1, Date: analyticsDay(0)}, nil)
+	deps.meals.EXPECT().Get(gomock.Any(), planningdom.PlanID(7)).Return(plan, nil)
+	deps.products.EXPECT().List(gomock.Any(), "").Return(nil, nil)
+	deps.recipes.EXPECT().List(gomock.Any(), nil).Return(nil, nil)
+	deps.eaters.EXPECT().Get(gomock.Any(), eaterdom.ID(1)).Return(eaterdom.Eater{ID: 1}, nil)
+	deps.eaters.EXPECT().ListFixedMeals(gomock.Any(), eaterdom.ID(1)).Return(nil, nil)
+	deps.meals.EXPECT().SaveQualitySnapshots(gomock.Any(), planningdom.PlanID(7), gomock.Any()).Return(nil)
+
+	if _, err := deps.service.LogMeal(t.Context(), 21, planningdom.MealLog{
+		Status: planningdom.MealLogStatusEatenAsPlanned, LoggedBy: 1,
+	}); err != nil {
+		t.Fatalf("LogMeal() error = %v", err)
+	}
+
+	// No repository write is expected here: gomock fails the test if one happens.
+	if _, err := deps.service.QualityAnalytics(t.Context(), analyticsPeriod(), nutrition.SummaryBasisActual); err != nil {
+		t.Fatalf("QualityAnalytics() error = %v", err)
 	}
 }
 

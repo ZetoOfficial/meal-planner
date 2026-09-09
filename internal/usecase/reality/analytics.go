@@ -147,12 +147,6 @@ func (s *Service) QualityAnalytics(
 		return QualityAnalytics{}, apperr.Validation("basis must be planned or actual", "basis")
 	}
 
-	if basis == nutrition.SummaryBasisActual {
-		if err := s.refreshActualSummaries(ctx, period); err != nil {
-			return QualityAnalytics{}, err
-		}
-	}
-
 	days, err := s.analytics.ListDaySummaries(ctx, period.EaterID, basis, period.From, period.To)
 	if err != nil {
 		return QualityAnalytics{}, err
@@ -206,32 +200,23 @@ func averageTotals(days []nutrition.DaySummary) (totals nutrition.DailyTotals, c
 	return totals, coverage / count
 }
 
-// refreshActualSummaries recomputes the actual-basis snapshot from the meal log
-// before reading it, so analytics never serve a stale picture. Snapshots are
-// keyed by plan, eater, date and basis, so recomputing replaces rather than
-// duplicates.
-func (s *Service) refreshActualSummaries(ctx context.Context, period Period) error {
-	plans, err := s.meals.ListPlansForEaterPeriod(ctx, period.EaterID, period.From, period.To)
+// refreshActualSummaries recomputes the actual-basis snapshot of one plan from
+// the meal log. Snapshots are keyed by plan, eater, date and basis, so
+// recomputing replaces rather than duplicates.
+func (s *Service) refreshActualSummaries(ctx context.Context, planID planningdom.PlanID) error {
+	plan, err := s.meals.Get(ctx, planID)
 	if err != nil {
 		return err
 	}
-	catalogue, err := reference.LoadCatalogue(ctx, s.reference, plans)
+	catalogue, err := reference.LoadCatalogue(ctx, s.reference, []planningdom.Plan{plan})
 	if err != nil {
 		return err
 	}
-
-	return s.transactions.WithTx(ctx, func(ctx context.Context) error {
-		for i := range plans {
-			snapshots, err := actualSnapshots(plans[i], catalogue, s.ruleset(), s.windowDays())
-			if err != nil {
-				return err
-			}
-			if err := s.meals.SaveQualitySnapshots(ctx, plans[i].ID, snapshots); err != nil {
-				return err
-			}
-		}
-		return nil
-	})
+	snapshots, err := actualSnapshots(plan, catalogue, s.ruleset(), s.windowDays())
+	if err != nil {
+		return err
+	}
+	return s.meals.SaveQualitySnapshots(ctx, planID, snapshots)
 }
 
 func actualSnapshots(

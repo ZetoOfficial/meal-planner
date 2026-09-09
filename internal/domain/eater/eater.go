@@ -19,11 +19,15 @@ func (s Sex) Valid() bool {
 }
 
 type Eater struct {
-	ID          ID
-	Name        string
-	Sex         Sex
-	Allergens   []Allergen
-	Exclusions  []Exclusion
+	ID         ID
+	Name       string
+	Sex        Sex
+	Allergens  []Allergen
+	Exclusions []Exclusion
+	// Goals is the stored history, future versions included. Which one is
+	// current depends on today's date, so only a use case with a clock may
+	// decide it; CurrentGoal is that decision, not stored state.
+	Goals       []MacroGoal
 	CurrentGoal *MacroGoal
 }
 

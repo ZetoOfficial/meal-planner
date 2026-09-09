@@ -2,6 +2,7 @@ package httpapi
 
 import (
 	"context"
+	"crypto/subtle"
 	"errors"
 	"fmt"
 	"net/http"
@@ -64,12 +65,21 @@ func New(d Deps) http.Handler {
 	})(apiMux)
 
 	mux.Handle("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if d.APIToken != "" && r.Header.Get("X-API-Token") != d.APIToken {
+		if !authorized(d.APIToken, r.Header.Get("X-API-Token")) {
 			applicationError(w, r, apperr.Unauthorized("missing or invalid X-API-Token"))
 			return
 		}
 		validated.ServeHTTP(w, r)
 	}))
 
-	return mux
+	return withRequestID(recoverPanics(logRequests(mux)))
+}
+
+// authorized compares in constant time so the response latency cannot be used
+// to recover the token byte by byte. An empty configured token disables auth.
+func authorized(want, got string) bool {
+	if want == "" {
+		return true
+	}
+	return subtle.ConstantTimeCompare([]byte(got), []byte(want)) == 1
 }
