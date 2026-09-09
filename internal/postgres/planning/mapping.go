@@ -189,6 +189,10 @@ func mealFromRow(row sqlc.Meal) (planningdom.Meal, error) {
 		id := eaterdom.FixedMealID(*row.FixedMealID)
 		fixedMealID = &id
 	}
+	actual, err := actualMacros(row)
+	if err != nil {
+		return planningdom.Meal{}, err
+	}
 	return planningdom.Meal{
 		ID:          planningdom.MealID(row.ID),
 		LogStatus:   planningdom.MealLogStatus(row.LogStatus),
@@ -202,8 +206,84 @@ func mealFromRow(row sqlc.Meal) (planningdom.Meal, error) {
 			CarbG:    carbG,
 			Kcal:     int(row.PlannedKcal),
 		},
+		Actual:   actual,
+		CookedBy: optionalEaterID(row.CookedBy),
+		CookedAt: optionalTime(row.CookedAt),
+		LoggedBy: optionalEaterID(row.LoggedBy),
+		LoggedAt: optionalTime(row.LoggedAt),
 	}, nil
 }
+
+// actualMacros is present only when the meal was logged as eaten differently;
+// a partially filled row would be a fiction, so all four values must be there.
+func actualMacros(row sqlc.Meal) (*nutrition.Macros, error) {
+	if row.ActualKcal == nil {
+		return nil, nil
+	}
+	proteinG, err := pgvalue.OptionalFloat64(row.ActualProteinG)
+	if err != nil {
+		return nil, err
+	}
+	fatG, err := pgvalue.OptionalFloat64(row.ActualFatG)
+	if err != nil {
+		return nil, err
+	}
+	carbG, err := pgvalue.OptionalFloat64(row.ActualCarbG)
+	if err != nil {
+		return nil, err
+	}
+	if proteinG == nil || fatG == nil || carbG == nil {
+		return nil, nil
+	}
+	return &nutrition.Macros{
+		ProteinG: *proteinG,
+		FatG:     *fatG,
+		CarbG:    *carbG,
+		Kcal:     int(*row.ActualKcal),
+	}, nil
+}
+
+func optionalEaterID(value *int64) *eaterdom.ID {
+	if value == nil {
+		return nil
+	}
+	id := eaterdom.ID(*value)
+	return &id
+}
+
+func optionalTime(value pgtype.Timestamptz) *time.Time {
+	if !value.Valid {
+		return nil
+	}
+	moment := value.Time
+	return &moment
+}
+
+func logMealParams(mealID planningdom.MealID, log planningdom.MealLog) sqlc.LogMealParams {
+	params := sqlc.LogMealParams{
+		ID:        int64(mealID),
+		LogStatus: sqlc.MealLogStatus(log.Status),
+		LoggedBy:  int64Pointer(int64(log.LoggedBy)),
+		LoggedAt:  pgtype.Timestamptz{Time: log.At, Valid: true},
+	}
+	if log.CookedBy != nil {
+		params.CookedBy = int64Pointer(int64(*log.CookedBy))
+	}
+	if log.Actual != nil {
+		kcal := log.Actual.Kcal
+		if kcal < 0 || int64(kcal) > math.MaxInt32 {
+			panic("actual meal kcal must be a nonnegative int32")
+		}
+		converted := int32(kcal)
+		params.ActualProteinG = pgvalue.Numeric(log.Actual.ProteinG)
+		params.ActualFatG = pgvalue.Numeric(log.Actual.FatG)
+		params.ActualCarbG = pgvalue.Numeric(log.Actual.CarbG)
+		params.ActualKcal = &converted
+	}
+	return params
+}
+
+func int64Pointer(value int64) *int64 { return &value }
 
 func allocationFromRow(row sqlc.MealComponentAllocation, planRecipeIndex int) (planningdom.ComponentAllocation, error) {
 	portionFactor, err := pgvalue.Float64(row.PortionFactor)

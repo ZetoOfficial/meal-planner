@@ -2,8 +2,12 @@ package planning
 
 import (
 	"context"
+	"errors"
 	"sort"
 	"strconv"
+	"time"
+
+	"github.com/jackc/pgx/v5"
 
 	catalogdom "github.com/ZetoOfficial/meal-planner/internal/domain/catalog"
 	eaterdom "github.com/ZetoOfficial/meal-planner/internal/domain/eater"
@@ -537,4 +541,108 @@ func (r *Repository) ReplacePlanAllocations(
 		}
 	}
 	return r.Get(ctx, planID)
+}
+
+// ListPlanMeals returns the meals of a plan, optionally for one eater.
+func (r *Repository) ListPlanMeals(
+	ctx context.Context,
+	planID planningdom.PlanID,
+	eaterID *eaterdom.ID,
+) ([]planningdom.Meal, error) {
+	var filter *int64
+	if eaterID != nil {
+		id := int64(*eaterID)
+		filter = &id
+	}
+	rows, err := r.store.Queries(ctx).ListPlanMealsForEater(ctx, sqlc.ListPlanMealsForEaterParams{
+		PlanID:  int64(planID),
+		EaterID: filter,
+	})
+	if err != nil {
+		return nil, dberror.Map(err, "meal")
+	}
+	return mealsFromRows(rows)
+}
+
+// ListEaterMeals returns every meal of one eater inside a period, whichever
+// plan it belongs to, which is what analytics reads.
+func (r *Repository) ListEaterMeals(
+	ctx context.Context,
+	eaterID eaterdom.ID,
+	from, to time.Time,
+) ([]planningdom.Meal, error) {
+	rows, err := r.store.Queries(ctx).ListMealsForEaterPeriod(ctx, sqlc.ListMealsForEaterPeriodParams{
+		EaterID:  int64(eaterID),
+		FromDate: dateValue(from),
+		ToDate:   dateValue(to),
+	})
+	if err != nil {
+		return nil, dberror.Map(err, "meal")
+	}
+	return mealsFromRows(rows)
+}
+
+func (r *Repository) GetMeal(ctx context.Context, mealID planningdom.MealID) (planningdom.Meal, error) {
+	row, err := r.store.Queries(ctx).GetMeal(ctx, int64(mealID))
+	if errors.Is(err, pgx.ErrNoRows) {
+		return planningdom.Meal{}, apperr.NotFound("meal")
+	}
+	if err != nil {
+		return planningdom.Meal{}, dberror.Map(err, "meal")
+	}
+	return mealFromRow(row)
+}
+
+// LogMeal records what actually happened to one meal.
+func (r *Repository) LogMeal(
+	ctx context.Context,
+	mealID planningdom.MealID,
+	log planningdom.MealLog,
+) (planningdom.Meal, error) {
+	row, err := r.store.Queries(ctx).LogMeal(ctx, logMealParams(mealID, log))
+	if errors.Is(err, pgx.ErrNoRows) {
+		return planningdom.Meal{}, apperr.NotFound("meal")
+	}
+	if err != nil {
+		return planningdom.Meal{}, dberror.Map(err, "meal")
+	}
+	return mealFromRow(row)
+}
+
+// ListPlansForEaterPeriod finds the plans that cover an eater's dates, so
+// analytics can rebuild actual summaries from real plan data.
+func (r *Repository) ListPlansForEaterPeriod(
+	ctx context.Context,
+	eaterID eaterdom.ID,
+	from, to time.Time,
+) ([]planningdom.Plan, error) {
+	rows, err := r.store.Queries(ctx).ListPlansForEaterPeriod(ctx, sqlc.ListPlansForEaterPeriodParams{
+		EaterID:  int64(eaterID),
+		FromDate: dateValue(from),
+		ToDate:   dateValue(to),
+	})
+	if err != nil {
+		return nil, dberror.Map(err, "plan")
+	}
+	plans := make([]planningdom.Plan, 0, len(rows))
+	for i := range rows {
+		plan, err := r.Get(ctx, planningdom.PlanID(rows[i].ID))
+		if err != nil {
+			return nil, err
+		}
+		plans = append(plans, plan)
+	}
+	return plans, nil
+}
+
+func mealsFromRows(rows []sqlc.Meal) ([]planningdom.Meal, error) {
+	meals := make([]planningdom.Meal, 0, len(rows))
+	for i := range rows {
+		meal, err := mealFromRow(rows[i])
+		if err != nil {
+			return nil, err
+		}
+		meals = append(meals, meal)
+	}
+	return meals, nil
 }

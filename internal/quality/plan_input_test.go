@@ -135,3 +135,61 @@ func storedCatalogue() Catalogue {
 		},
 	}
 }
+
+func TestBuildPlanDaysForActualBasisSkipsSkippedMeals(t *testing.T) {
+	plan := storedPlan()
+	plan.Meals[1].LogStatus = planningdom.MealLogStatusSkipped
+
+	days, err := BuildPlanDaysForBasis(plan, storedCatalogue(), nutrition.SummaryBasisActual)
+	if err != nil {
+		t.Fatalf("BuildPlanDaysForBasis() error = %v", err)
+	}
+
+	if len(days[0].Input.Meals) != 1 {
+		t.Fatalf("meals = %d, want the skipped meal left out of the actual day", len(days[0].Input.Meals))
+	}
+}
+
+func TestBuildPlanDaysForActualBasisLowersCoverageForModifiedMeals(t *testing.T) {
+	plan := storedPlan()
+	actual := nutrition.Macros{ProteinG: 25, FatG: 12, CarbG: 35, Kcal: 380}
+	plan.Meals[1].LogStatus = planningdom.MealLogStatusEatenModified
+	plan.Meals[1].Actual = &actual
+
+	days, err := BuildPlanDaysForBasis(plan, storedCatalogue(), nutrition.SummaryBasisActual)
+	if err != nil {
+		t.Fatalf("BuildPlanDaysForBasis() error = %v", err)
+	}
+	summary, err := BuildDaySummary(days[0].Input, SummaryPurposeAnalytics)
+	if err != nil {
+		t.Fatalf("BuildDaySummary() error = %v", err)
+	}
+
+	if summary.Macros.Kcal != 680 {
+		t.Fatalf("kcal = %d, want the logged macros counted alongside the fixed meal", summary.Macros.Kcal)
+	}
+	if got := summary.RuleCoverage[RuleFiber].Score(); got >= 1 {
+		t.Fatalf("fibre coverage = %v, want the unknown meal to lower confidence", got)
+	}
+	if summary.Totals.FiberG != 3 {
+		t.Fatalf("fibre = %v g, want only the fixed meal's known fibre", summary.Totals.FiberG)
+	}
+}
+
+func TestBuildPlanDaysForActualBasisKeepsMealsEatenAsPlanned(t *testing.T) {
+	plan := storedPlan()
+	plan.Meals[1].LogStatus = planningdom.MealLogStatusEatenAsPlanned
+
+	days, err := BuildPlanDaysForBasis(plan, storedCatalogue(), nutrition.SummaryBasisActual)
+	if err != nil {
+		t.Fatalf("BuildPlanDaysForBasis() error = %v", err)
+	}
+	summary, err := BuildDaySummary(days[0].Input, SummaryPurposeAnalytics)
+	if err != nil {
+		t.Fatalf("BuildDaySummary() error = %v", err)
+	}
+
+	if summary.Totals.FiberG != 8 {
+		t.Fatalf("fibre = %v g, want the planned structured facts reused", summary.Totals.FiberG)
+	}
+}

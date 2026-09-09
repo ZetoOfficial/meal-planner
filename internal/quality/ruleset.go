@@ -31,6 +31,14 @@ const (
 	RuleUPF                = "upf_share"
 )
 
+// AllRules lists every MVP rule code, in evaluation order.
+func AllRules() []string {
+	return []string{
+		RuleFiber, RuleSodium, RuleAddedSugar, RuleSatFat, RuleIndustrialTransFat,
+		RuleFruitVeg, RuleWholeGrain, RuleUPF, RuleLegumes, RuleRedMeat, RuleProcessedMeat,
+	}
+}
+
 type RuleSeverity string
 
 const (

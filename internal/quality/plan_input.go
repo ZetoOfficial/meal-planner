@@ -28,9 +28,20 @@ type PlanDay struct {
 	Input   DayInput
 }
 
-// BuildPlanDays rebuilds the quality input of every eater-day in a stored plan.
-// Days keep the plan's own order so before/after comparisons line up.
+// BuildPlanDays rebuilds the planned quality input of every eater-day.
 func BuildPlanDays(plan planningdom.Plan, catalogue Catalogue) ([]PlanDay, error) {
+	return BuildPlanDaysForBasis(plan, catalogue, nutrition.SummaryBasisPlanned)
+}
+
+// BuildPlanDaysForBasis rebuilds the quality input of every eater-day in a
+// stored plan. Days keep the plan's own order so before/after comparisons line
+// up. On the actual basis a skipped meal contributes nothing and a modified one
+// contributes its logged macros with unknown quality.
+func BuildPlanDaysForBasis(
+	plan planningdom.Plan,
+	catalogue Catalogue,
+	basis nutrition.SummaryBasis,
+) ([]PlanDay, error) {
 	days := make([]PlanDay, 0, len(plan.EaterDays))
 	positions := make(map[string]int, len(plan.EaterDays))
 	for i := range plan.EaterDays {
@@ -52,6 +63,16 @@ func BuildPlanDays(plan planningdom.Plan, catalogue Catalogue) ([]PlanDay, error
 		position, ok := positions[dayKey(meal.EaterID, meal.Date)]
 		if !ok {
 			return nil, fmt.Errorf("plan meal for eater %d has no eater day", meal.EaterID)
+		}
+		if basis == nutrition.SummaryBasisActual && !meal.Eaten() {
+			continue
+		}
+		if basis == nutrition.SummaryBasisActual && !meal.QualityKnown() {
+			days[position].Input.Meals = append(days[position].Input.Meals, MealInput{
+				Type:    meal.Type,
+				Unknown: &UnknownMealInput{Macros: meal.EffectiveMacros()},
+			})
+			continue
 		}
 		mealInput, err := mealQualityInput(plan, *meal, catalogue)
 		if err != nil {

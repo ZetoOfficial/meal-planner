@@ -15,6 +15,7 @@ import (
 	httpapi "github.com/ZetoOfficial/meal-planner/internal/api/http"
 	"github.com/ZetoOfficial/meal-planner/internal/api/http/mocks"
 	catalogdom "github.com/ZetoOfficial/meal-planner/internal/domain/catalog"
+	feedbackdom "github.com/ZetoOfficial/meal-planner/internal/domain/feedback"
 	"github.com/ZetoOfficial/meal-planner/internal/domain/meal"
 	"github.com/ZetoOfficial/meal-planner/internal/domain/nutrition"
 	planningdom "github.com/ZetoOfficial/meal-planner/internal/domain/planning"
@@ -25,6 +26,7 @@ import (
 	"github.com/ZetoOfficial/meal-planner/internal/swap"
 	usecasecatalog "github.com/ZetoOfficial/meal-planner/internal/usecase/catalog"
 	usecaseplanning "github.com/ZetoOfficial/meal-planner/internal/usecase/planning"
+	usecasereality "github.com/ZetoOfficial/meal-planner/internal/usecase/reality"
 	usecaserecipe "github.com/ZetoOfficial/meal-planner/internal/usecase/recipe"
 )
 
@@ -692,5 +694,180 @@ func TestApplyQuantityAdjustmentNeedsConfirmation(t *testing.T) {
 
 	if response.Code != http.StatusConflict {
 		t.Fatalf("status = %d, body = %s; want 409", response.Code, response.Body.String())
+	}
+}
+
+func TestLogMealHTTPContract(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	reality := mocks.NewMockRealityUseCases(ctrl)
+	actual := nutrition.Macros{ProteinG: 25, FatG: 12, CarbG: 35, Kcal: 380}
+
+	var log planningdom.MealLog
+	reality.EXPECT().
+		LogMeal(gomock.Any(), planningdom.MealID(21), gomock.Any()).
+		DoAndReturn(func(_ context.Context, id planningdom.MealID, l planningdom.MealLog) (planningdom.Meal, error) {
+			log = l
+			return planningdom.Meal{
+				ID: id, EaterID: 1, Type: meal.TypeLunch,
+				LogStatus: planningdom.MealLogStatusEatenModified,
+				Planned:   nutrition.Macros{ProteinG: 30, FatG: 10, CarbG: 40, Kcal: 400},
+				Actual:    &actual,
+			}, nil
+		})
+
+	handler := httpapi.New(httpapi.Deps{APIToken: "secret", Reality: reality})
+	body := `{"log_status":"eaten_modified","logged_by":1,"actual":{"protein_g":25,"fat_g":12,"carb_g":35,"kcal":380}}`
+	response := doRequest(t, handler, http.MethodPost, "/meals/21/log", body)
+
+	if response.Code != http.StatusOK {
+		t.Fatalf("status = %d, body = %s; want 200", response.Code, response.Body.String())
+	}
+	if log.Status != planningdom.MealLogStatusEatenModified || log.Actual == nil {
+		t.Fatalf("mapped log = %#v, want the modified meal with its actual macros", log)
+	}
+
+	var logged model.Meal
+	if err := json.Unmarshal(response.Body.Bytes(), &logged); err != nil {
+		t.Fatalf("decode meal: %v", err)
+	}
+	if logged.Actual == nil || logged.Actual.Kcal != 380 {
+		t.Fatalf("meal = %#v, want the actual macros echoed", logged)
+	}
+}
+
+func TestCreateFeedbackHTTPContract(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	reality := mocks.NewMockRealityUseCases(ctrl)
+	rating := -1
+	delta := -0.1
+	reality.EXPECT().
+		CreateFeedback(gomock.Any(), gomock.Any()).
+		DoAndReturn(func(_ context.Context, event feedbackdom.Event) (feedbackdom.Event, error) {
+			event.ID = 3
+			event.WeightDelta = &delta
+			return event, nil
+		})
+
+	handler := httpapi.New(httpapi.Deps{APIToken: "secret", Reality: reality})
+	body := `{"eater_id":1,"target_type":"recipe_template","target_id":5,"rating":-1,"comment":"too salty"}`
+	response := doRequest(t, handler, http.MethodPost, "/feedback", body)
+
+	if response.Code != http.StatusCreated {
+		t.Fatalf("status = %d, body = %s; want 201", response.Code, response.Body.String())
+	}
+	var event model.FeedbackEvent
+	if err := json.Unmarshal(response.Body.Bytes(), &event); err != nil {
+		t.Fatalf("decode feedback: %v", err)
+	}
+	if event.Rating == nil || *event.Rating != rating {
+		t.Fatalf("event = %#v, want the rating stored", event)
+	}
+	if event.WeightDelta == nil || *event.WeightDelta != -0.1 {
+		t.Fatalf("event = %#v, want the bounded weight nudge reported", event)
+	}
+	if event.Comment == nil || *event.Comment != "too salty" {
+		t.Fatalf("event = %#v, want the comment stored", event)
+	}
+}
+
+func TestMacroAnalyticsHTTPContract(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	reality := mocks.NewMockRealityUseCases(ctrl)
+	from := time.Date(2026, time.August, 10, 0, 0, 0, 0, time.UTC)
+	reality.EXPECT().
+		MacroAnalytics(gomock.Any(), gomock.Any()).
+		Return(usecasereality.MacroAnalytics{
+			Period:     usecasereality.Period{EaterID: 1, From: from, To: from.AddDate(0, 0, 6)},
+			Days:       7,
+			AvgPlanned: nutrition.Macros{ProteinG: 120, FatG: 60, CarbG: 200, Kcal: 1800},
+			AvgActual:  nutrition.Macros{ProteinG: 110, FatG: 62, CarbG: 190, Kcal: 1750},
+			HasActual:  true,
+		}, nil)
+
+	handler := httpapi.New(httpapi.Deps{APIToken: "secret", Reality: reality})
+	response := doRequest(t, handler, http.MethodGet, "/analytics/macros?eaterId=1&from=2026-08-10&to=2026-08-16", "")
+
+	if response.Code != http.StatusOK {
+		t.Fatalf("status = %d, body = %s; want 200", response.Code, response.Body.String())
+	}
+	var summary model.MacroSummary
+	if err := json.Unmarshal(response.Body.Bytes(), &summary); err != nil {
+		t.Fatalf("decode summary: %v", err)
+	}
+	if summary.AvgPlanned.Kcal != 1800 || summary.AvgActual == nil || summary.AvgActual.Kcal != 1750 {
+		t.Fatalf("summary = %#v, want both averages", summary)
+	}
+}
+
+func TestNutritionQualityAnalyticsHTTPContract(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	reality := mocks.NewMockRealityUseCases(ctrl)
+	from := time.Date(2026, time.August, 10, 0, 0, 0, 0, time.UTC)
+	reality.EXPECT().
+		QualityAnalytics(gomock.Any(), gomock.Any(), nutrition.SummaryBasisActual).
+		Return(usecasereality.QualityAnalytics{
+			Period:   usecasereality.Period{EaterID: 1, From: from, To: from.AddDate(0, 0, 6)},
+			Basis:    nutrition.SummaryBasisActual,
+			Days:     7,
+			Coverage: 0.4,
+			Averages: nutrition.DailyTotals{FiberG: 18, GrainGEquiv: 200, WholeGrainGEquiv: 50},
+			Rolling:  nutrition.RollingSummary{WindowDays: 7, RedMeatG: 420},
+			Evaluations: []nutrition.RuleEvaluationResult{{
+				RuleCode: "fiber_min_g", Status: nutrition.StatusUnknown, Coverage: 0.4,
+			}},
+		}, nil)
+
+	handler := httpapi.New(httpapi.Deps{APIToken: "secret", Reality: reality})
+	response := doRequest(t, handler, http.MethodGet, "/analytics/nutrition-quality?eaterId=1&from=2026-08-10&to=2026-08-16", "")
+
+	if response.Code != http.StatusOK {
+		t.Fatalf("status = %d, body = %s; want 200", response.Code, response.Body.String())
+	}
+	var payload struct {
+		DataCoverageScore float32 `json:"data_coverage_score"`
+		FiberG            float32 `json:"fiber_g"`
+		WholeGrainRatio   float32 `json:"whole_grain_ratio"`
+		RedMeatGRolling7d float32 `json:"red_meat_g_rolling_7d"`
+		RuleEvaluations   []struct {
+			RuleCode string `json:"rule_code"`
+			Status   string `json:"status"`
+		} `json:"rule_evaluations"`
+	}
+	if err := json.Unmarshal(response.Body.Bytes(), &payload); err != nil {
+		t.Fatalf("decode analytics: %v", err)
+	}
+	if payload.DataCoverageScore != 0.4 {
+		t.Fatalf("coverage = %v, want the low confidence reported rather than hidden", payload.DataCoverageScore)
+	}
+	if payload.WholeGrainRatio != 0.25 || payload.RedMeatGRolling7d != 420 {
+		t.Fatalf("payload = %#v, want the derived ratio and weekly exposure", payload)
+	}
+	if len(payload.RuleEvaluations) != 1 || payload.RuleEvaluations[0].Status != "unknown" {
+		t.Fatalf("rule evaluations = %#v, want the unknown verdict surfaced", payload.RuleEvaluations)
+	}
+}
+
+func TestTopRecipesHTTPContract(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	reality := mocks.NewMockRealityUseCases(ctrl)
+	reality.EXPECT().
+		TopRecipes(gomock.Any(), 3).
+		Return([]usecasereality.TopRecipe{
+			{RecipeID: 5, Name: "Roast chicken", CookedCount: 7},
+			{RecipeID: 6, Name: "Lentil stew", CookedCount: 2},
+		}, nil)
+
+	handler := httpapi.New(httpapi.Deps{APIToken: "secret", Reality: reality})
+	response := doRequest(t, handler, http.MethodGet, "/analytics/top-recipes?limit=3", "")
+
+	if response.Code != http.StatusOK {
+		t.Fatalf("status = %d, body = %s; want 200", response.Code, response.Body.String())
+	}
+	var recipes []model.TopRecipe
+	if err := json.Unmarshal(response.Body.Bytes(), &recipes); err != nil {
+		t.Fatalf("decode recipes: %v", err)
+	}
+	if len(recipes) != 2 || recipes[0].CookedCount < recipes[1].CookedCount {
+		t.Fatalf("recipes = %#v, want the most cooked first", recipes)
 	}
 }
