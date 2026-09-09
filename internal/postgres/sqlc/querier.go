@@ -14,11 +14,17 @@ type Querier interface {
 	CreateEaterExclusion(ctx context.Context, arg CreateEaterExclusionParams) (EaterExclusion, error)
 	CreateFixedMeal(ctx context.Context, arg CreateFixedMealParams) (FixedMeal, error)
 	CreateMacroGoal(ctx context.Context, arg CreateMacroGoalParams) (EaterMacroGoal, error)
+	CreateMeal(ctx context.Context, arg CreateMealParams) (Meal, error)
+	CreateMealComponentAllocation(ctx context.Context, arg CreateMealComponentAllocationParams) (MealComponentAllocation, error)
+	CreatePlan(ctx context.Context, arg CreatePlanParams) (Plan, error)
+	CreatePlanEaterDay(ctx context.Context, arg CreatePlanEaterDayParams) (PlanEaterDay, error)
+	CreatePlanRecipe(ctx context.Context, arg CreatePlanRecipeParams) (PlanRecipe, error)
 	CreateProduct(ctx context.Context, arg CreateProductParams) (Product, error)
 	CreateProductAllergen(ctx context.Context, arg CreateProductAllergenParams) error
 	CreateProductRole(ctx context.Context, arg CreateProductRoleParams) error
 	CreateRecipeSlot(ctx context.Context, arg CreateRecipeSlotParams) (RecipeSlot, error)
 	CreateRecipeTemplate(ctx context.Context, arg CreateRecipeTemplateParams) (RecipeTemplate, error)
+	CreateSlotFill(ctx context.Context, arg CreateSlotFillParams) (SlotFill, error)
 	DeleteEaterAllergens(ctx context.Context, eaterID int64) error
 	DeleteEaterExclusion(ctx context.Context, id int64) (EaterExclusion, error)
 	DeleteProduct(ctx context.Context, id int64) (int64, error)
@@ -26,6 +32,7 @@ type Querier interface {
 	DeleteProductRoles(ctx context.Context, productID int64) error
 	GetCurrentMacroGoal(ctx context.Context, eaterID int64) (EaterMacroGoal, error)
 	GetEater(ctx context.Context, id int64) (Eater, error)
+	GetPlan(ctx context.Context, id int64) (Plan, error)
 	GetProduct(ctx context.Context, id int64) (Product, error)
 	GetProductFoodClassification(ctx context.Context, productID int64) (ProductFoodClassification, error)
 	GetRecipeTemplate(ctx context.Context, id int64) (RecipeTemplate, error)
@@ -35,6 +42,11 @@ type Querier interface {
 	ListEaterExclusions(ctx context.Context, eaterID int64) ([]EaterExclusion, error)
 	ListEaters(ctx context.Context) ([]Eater, error)
 	ListMacroGoals(ctx context.Context, eaterID int64) ([]EaterMacroGoal, error)
+	ListPlanEaterDays(ctx context.Context, planID int64) ([]PlanEaterDay, error)
+	ListPlanMealAllocations(ctx context.Context, planID int64) ([]MealComponentAllocation, error)
+	ListPlanMeals(ctx context.Context, planID int64) ([]Meal, error)
+	ListPlanRecipes(ctx context.Context, planID int64) ([]PlanRecipe, error)
+	ListPlanSlotFills(ctx context.Context, planID int64) ([]SlotFill, error)
 	ListProductAllergens(ctx context.Context, productID int64) ([]string, error)
 	ListProductRoleTags(ctx context.Context, productID int64) ([]RoleTag, error)
 	ListProducts(ctx context.Context) ([]Product, error)
