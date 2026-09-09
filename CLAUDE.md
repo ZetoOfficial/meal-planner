@@ -10,7 +10,7 @@ Read these before making structural changes:
 - `docs/SPEC.md`
 - `docs/ARCHITECTURE.md`
 - `docs/schema.sql`
-- `api/openapi.yaml`
+- `api/openapi/api/api.yaml` (плюс `api/openapi/model/api.yaml` для схем)
 
 Core rules:
 
@@ -20,7 +20,7 @@ Core rules:
 - LLM only generates recipe candidates. Go validates them, the solver decides whether to use them, and the quality evaluator explains the result.
 - Prefer small Go packages with domain names over generic folders like `services`, `utils`, `common`, `interfaces`.
 - Put interfaces on the consumer side, usually in `usecase/*/ports.go`.
-- Do not invent fields or endpoints. `docs/schema.sql` and `api/openapi.yaml` are the source of truth.
+- Do not invent fields or endpoints. `docs/schema.sql` and `api/openapi/api/api.yaml` (with schemas in `api/openapi/model/api.yaml`) are the source of truth.
 - Keep v1 scope: HTTP API only. Telegram bot, Mini App, voice, vision/barcode, FatSecret sync, inventory, RAG, agents and fine-tuning are v2+ or explicitly out of scope.
 
 Git conventions:

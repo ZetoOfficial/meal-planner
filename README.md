@@ -124,7 +124,7 @@ make tidy              # привести go.mod и go.sum в соответст
 - [docs/SPEC.md](docs/SPEC.md) — подробное ожидаемое поведение v1.
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — модули, зависимости и поток данных.
 - [docs/schema.sql](docs/schema.sql) — контракт схемы PostgreSQL.
-- [api/openapi.yaml](api/openapi.yaml) — контракт будущего HTTP API.
+- [api/openapi/api/api.yaml](api/openapi/api/api.yaml) — контракт будущего HTTP API (схемы — в [api/openapi/model/api.yaml](api/openapi/model/api.yaml)).
 - [docs/deep-research-report.md](docs/deep-research-report.md) — обоснование правил качества рациона.
 - [docs/github-roadmap.md](docs/github-roadmap.md) — этапы и задачи реализации.
 

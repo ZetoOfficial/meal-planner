@@ -9,7 +9,7 @@ import (
 	"github.com/getkin/kin-openapi/routers"
 	nethttpmiddleware "github.com/oapi-codegen/nethttp-middleware"
 
-	"github.com/ZetoOfficial/meal-planner/internal/api/openapi"
+	"github.com/ZetoOfficial/meal-planner/api/sdk/go/api"
 	apperr "github.com/ZetoOfficial/meal-planner/internal/errors"
 )
 
@@ -28,14 +28,14 @@ func New(d Deps) http.Handler {
 		_, _ = w.Write([]byte(`{"status":"ok"}`))
 	})
 
-	swagger, err := openapi.GetSpec()
+	swagger, err := api.GetSpec()
 	if err != nil {
 		panic(fmt.Errorf("load OpenAPI spec: %w", err))
 	}
 	swagger.Servers = nil
 	swagger.Security = nil
 
-	strict := openapi.NewStrictHandlerWithOptions(newAPI(d.Catalog, d.Eater, d.Recipe), nil, openapi.StrictHTTPServerOptions{
+	strict := api.NewStrictHandlerWithOptions(newServer(d.Catalog, d.Eater, d.Recipe), nil, api.StrictHTTPServerOptions{
 		RequestErrorHandlerFunc: func(w http.ResponseWriter, r *http.Request, err error) {
 			requestError(w, r, err, http.StatusBadRequest)
 		},
@@ -43,7 +43,7 @@ func New(d Deps) http.Handler {
 	})
 
 	apiMux := http.NewServeMux()
-	openapi.HandlerWithOptions(strict, openapi.StdHTTPServerOptions{
+	api.HandlerWithOptions(strict, api.StdHTTPServerOptions{
 		BaseRouter: apiMux,
 		ErrorHandlerFunc: func(w http.ResponseWriter, r *http.Request, err error) {
 			requestError(w, r, err, http.StatusBadRequest)

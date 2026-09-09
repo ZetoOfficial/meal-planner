@@ -1,0 +1,748 @@
+openapi: 3.0.3
+info:
+  title: Meal Planner API
+  version: 1.0.0
+  description: >
+    HTTP API для планирования компонентной готовки под цели БЖУ (MVP v1, owner-only).
+    Контракт — источник истины для oapi-codegen. См. docs/SPEC.md и docs/schema.sql.
+servers:
+  - url: http://localhost:8080
+    description: Локальный docker-compose стек
+
+security:
+  - apiToken: []
+
+tags:
+  - name: eaters
+  - name: products
+  - name: recipes
+  - name: plans
+  - name: swaps
+  - name: shopping
+  - name: meals
+  - name: feedback
+  - name: analytics
+
+paths:
+  # ---------------------------------------------------------------- eaters
+  /eaters:
+    get:
+      operationId: listEaters
+      tags: [eaters]
+      summary: Список едоков
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '../model/api.yaml#/components/schemas/Eater' }
+    post:
+      operationId: createEater
+      tags: [eaters]
+      summary: Создать профиль едока
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '../model/api.yaml#/components/schemas/EaterInput' }
+      responses:
+        '201': { $ref: '#/components/responses/EaterOK' }
+        '409':
+          description: Едок с таким именем уже существует
+          content:
+            application/json:
+              schema: { $ref: '../model/api.yaml#/components/schemas/Error' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /eaters/{eaterId}:
+    parameters:
+      - $ref: '../model/api.yaml#/components/parameters/EaterId'
+    get:
+      operationId: getEater
+      tags: [eaters]
+      summary: Профиль едока
+      responses:
+        '200': { $ref: '#/components/responses/EaterOK' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    put:
+      operationId: updateEater
+      tags: [eaters]
+      summary: Обновить профиль (влияет на следующую генерацию, не на существующие планы)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '../model/api.yaml#/components/schemas/EaterInput' }
+      responses:
+        '200': { $ref: '#/components/responses/EaterOK' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: Имя едока или дата новой цели уже заняты
+          content:
+            application/json:
+              schema: { $ref: '../model/api.yaml#/components/schemas/Error' }
+
+  /eaters/{eaterId}/goals:
+    parameters:
+      - $ref: '../model/api.yaml#/components/parameters/EaterId'
+    get:
+      operationId: listEaterGoals
+      tags: [eaters]
+      summary: История целей по БЖУ (от новых к старым)
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '../model/api.yaml#/components/schemas/MacroGoal' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    post:
+      operationId: createEaterGoal
+      tags: [eaters]
+      summary: Задать новую цель (создаёт версию, не перезаписывает прошлые)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '../model/api.yaml#/components/schemas/MacroGoalInput' }
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: '../model/api.yaml#/components/schemas/MacroGoal' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: Цель с такой датой начала уже существует
+          content:
+            application/json:
+              schema: { $ref: '../model/api.yaml#/components/schemas/Error' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /eaters/{eaterId}/fixed-meals:
+    parameters:
+      - $ref: '../model/api.yaml#/components/parameters/EaterId'
+    get:
+      operationId: listFixedMeals
+      tags: [eaters]
+      summary: Фиксированные приёмы пищи едока (напр. Сашин завтрак)
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '../model/api.yaml#/components/schemas/FixedMeal' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    post:
+      operationId: createFixedMeal
+      tags: [eaters]
+      summary: Добавить фиксированный приём (учитывается в БЖУ, не генерируется)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '../model/api.yaml#/components/schemas/FixedMealInput' }
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: '../model/api.yaml#/components/schemas/FixedMeal' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: Такой фиксированный приём уже существует
+          content:
+            application/json:
+              schema: { $ref: '../model/api.yaml#/components/schemas/Error' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /eaters/{eaterId}/exclusions:
+    parameters:
+      - $ref: '../model/api.yaml#/components/parameters/EaterId'
+    get:
+      operationId: listExclusions
+      tags: [eaters]
+      summary: Личные исключения едока (preference bans, напр. морепродукты)
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '../model/api.yaml#/components/schemas/Exclusion' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    post:
+      operationId: createExclusion
+      tags: [eaters]
+      summary: Добавить исключение по предпочтению (hard/soft, по food_group/role_tag/product)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '../model/api.yaml#/components/schemas/ExclusionInput' }
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: '../model/api.yaml#/components/schemas/Exclusion' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: Такое исключение уже существует
+          content:
+            application/json:
+              schema: { $ref: '../model/api.yaml#/components/schemas/Error' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /exclusions/{exclusionId}:
+    parameters:
+      - name: exclusionId
+        in: path
+        required: true
+        schema: { type: integer, format: int64 }
+    delete:
+      operationId: deleteExclusion
+      tags: [eaters]
+      summary: Удалить исключение
+      responses:
+        '204': { description: No Content }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  # ---------------------------------------------------------------- products
+  /products:
+    get:
+      operationId: listProducts
+      tags: [products]
+      summary: Список продуктов
+      parameters:
+        - name: role
+          in: query
+          description: Фильтр по коду роли, напр. protein:lean:breast
+          schema: { type: string }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '../model/api.yaml#/components/schemas/Product' }
+    post:
+      operationId: createProduct
+      tags: [products]
+      summary: Добавить продукт в личную БД
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '../model/api.yaml#/components/schemas/ProductInput' }
+      responses:
+        '201': { $ref: '#/components/responses/ProductOK' }
+        '409':
+          description: Продукт с таким брендом и именем уже существует
+          content:
+            application/json:
+              schema: { $ref: '../model/api.yaml#/components/schemas/Error' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /products/{productId}:
+    parameters:
+      - $ref: '../model/api.yaml#/components/parameters/ProductId'
+    get:
+      operationId: getProduct
+      tags: [products]
+      summary: Продукт
+      responses:
+        '200': { $ref: '#/components/responses/ProductOK' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    put:
+      operationId: updateProduct
+      tags: [products]
+      summary: Обновить продукт
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '../model/api.yaml#/components/schemas/ProductInput' }
+      responses:
+        '200': { $ref: '#/components/responses/ProductOK' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: Продукт с таким брендом и именем уже существует
+          content:
+            application/json:
+              schema: { $ref: '../model/api.yaml#/components/schemas/Error' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+    delete:
+      operationId: deleteProduct
+      tags: [products]
+      summary: Удалить продукт
+      responses:
+        '204': { description: No Content }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /role-tags:
+    get:
+      operationId: listRoleTags
+      tags: [products]
+      summary: Справочник ролевых тегов (с подклассами)
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '../model/api.yaml#/components/schemas/RoleTag' }
+        '501': { $ref: '#/components/responses/NotImplemented' }
+
+  # ---------------------------------------------------------------- recipes
+  /recipes:
+    get:
+      operationId: listRecipes
+      tags: [recipes]
+      summary: Библиотека рецептов-шаблонов
+      parameters:
+        - name: status
+          in: query
+          schema: { $ref: '../model/api.yaml#/components/schemas/RecipeStatus' }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '../model/api.yaml#/components/schemas/RecipeTemplate' }
+        '501': { $ref: '#/components/responses/NotImplemented' }
+    post:
+      operationId: createRecipe
+      tags: [recipes]
+      summary: Создать рецепт-шаблон вручную (status=draft по умолчанию)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '../model/api.yaml#/components/schemas/RecipeTemplateInput' }
+      responses:
+        '201': { $ref: '#/components/responses/RecipeOK' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+        '501': { $ref: '#/components/responses/NotImplemented' }
+
+  /recipes/{recipeId}:
+    parameters:
+      - $ref: '../model/api.yaml#/components/parameters/RecipeId'
+    get:
+      operationId: getRecipe
+      tags: [recipes]
+      summary: Рецепт-шаблон со слотами
+      responses:
+        '200': { $ref: '#/components/responses/RecipeOK' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '501': { $ref: '#/components/responses/NotImplemented' }
+
+  /recipes/{recipeId}/promote:
+    parameters:
+      - $ref: '../model/api.yaml#/components/parameters/RecipeId'
+    post:
+      operationId: promoteRecipe
+      tags: [recipes]
+      summary: Повысить draft → permanent после реальной готовки + одобрения (FR-9)
+      responses:
+        '200': { $ref: '#/components/responses/RecipeOK' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: Уже permanent или rejected
+          content:
+            application/json:
+              schema: { $ref: '../model/api.yaml#/components/schemas/Error' }
+        '501': { $ref: '#/components/responses/NotImplemented' }
+
+  # ---------------------------------------------------------------- plans
+  /plans:
+    get:
+      operationId: listPlans
+      tags: [plans]
+      summary: Список планов
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '../model/api.yaml#/components/schemas/PlanSummary' }
+        '501': { $ref: '#/components/responses/NotImplemented' }
+    post:
+      operationId: generatePlan
+      tags: [plans]
+      summary: Сгенерировать план для произвольного набора едоков (reuse-first)
+      description: >
+        Детерминированный солвер выбирает общий набор независимо приготовленных
+        компонентов и рассчитывает отдельные доли партий под цели каждого едока.
+        Сначала используются permanent-рецепты; если допустимого набора нет или
+        novelty_level=3 явно просит новый шаблон, LLM может предложить только новые
+        recipe candidates, после чего Go повторно валидирует их и запускает тот же solver.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '../model/api.yaml#/components/schemas/PlanGenerateInput' }
+      responses:
+        '201': { $ref: '#/components/responses/PlanOK' }
+        '422':
+          description: Вход некорректен, решение доказанно невозможно или исчерпан лимит поиска
+          content:
+            application/json:
+              schema: { $ref: '../model/api.yaml#/components/schemas/SolverError' }
+        '503':
+          description: Генерация LLM недоступна (после retry); можно reuse-only
+          content:
+            application/json:
+              schema: { $ref: '../model/api.yaml#/components/schemas/Error' }
+        '501': { $ref: '#/components/responses/NotImplemented' }
+
+  /plans/{planId}:
+    parameters:
+      - $ref: '../model/api.yaml#/components/parameters/PlanId'
+    get:
+      operationId: getPlan
+      tags: [plans]
+      summary: Полный план (компоненты, заполнения слотов, приёмы, prep-граф)
+      responses:
+        '200': { $ref: '#/components/responses/PlanOK' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '501': { $ref: '#/components/responses/NotImplemented' }
+    delete:
+      operationId: archivePlan
+      tags: [plans]
+      summary: Архивировать план
+      responses:
+        '204': { description: No Content }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '501': { $ref: '#/components/responses/NotImplemented' }
+
+  # ---------------------------------------------------------------- swaps
+  /plans/{planId}/swap/preview:
+    parameters:
+      - $ref: '../model/api.yaml#/components/parameters/PlanId'
+    post:
+      operationId: previewSwap
+      tags: [swaps]
+      summary: Предпросмотр свопа — blast radius ДО подтверждения (FR-4)
+      description: >
+        Возвращает уровень радиуса, diff БЖУ дня, затронутые приёмы и
+        блюда, которые станут невалидны по prep-графу. Ничего не меняет.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '../model/api.yaml#/components/schemas/SwapInput' }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '../model/api.yaml#/components/schemas/SwapPreview' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+        '501': { $ref: '#/components/responses/NotImplemented' }
+
+  /plans/{planId}/swap:
+    parameters:
+      - $ref: '../model/api.yaml#/components/parameters/PlanId'
+    post:
+      operationId: applySwap
+      tags: [swaps]
+      summary: Применить своп (после подтверждения)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: '../model/api.yaml#/components/schemas/SwapInput'
+                - type: object
+                  properties:
+                    confirm:
+                      type: boolean
+                      description: Должно быть true; иначе 409
+                  required: [confirm]
+      responses:
+        '200':
+          description: Применено; в ответе обновлённый план + флаг shopping_list_stale
+          content:
+            application/json:
+              schema: { $ref: '../model/api.yaml#/components/schemas/Plan' }
+        '409':
+          description: Своп ломает prep-граф или confirm!=true
+          content:
+            application/json:
+              schema: { $ref: '../model/api.yaml#/components/schemas/SwapPreview' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '501': { $ref: '#/components/responses/NotImplemented' }
+
+  # ---------------------------------------------------------------- shopping
+  /plans/{planId}/shopping-list:
+    parameters:
+      - $ref: '../model/api.yaml#/components/parameters/PlanId'
+    get:
+      operationId: getShoppingList
+      tags: [shopping]
+      summary: Список покупок (производная от плана)
+      responses:
+        '200': { $ref: '#/components/responses/ShoppingOK' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '501': { $ref: '#/components/responses/NotImplemented' }
+    post:
+      operationId: regenerateShoppingList
+      tags: [shopping]
+      summary: (Пере)генерировать список покупок; сохраняет отметки неизменившихся позиций
+      responses:
+        '200': { $ref: '#/components/responses/ShoppingOK' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '501': { $ref: '#/components/responses/NotImplemented' }
+
+  /shopping-list-items/{itemId}:
+    parameters:
+      - name: itemId
+        in: path
+        required: true
+        schema: { type: integer, format: int64 }
+    patch:
+      operationId: updateShoppingListItem
+      tags: [shopping]
+      summary: Отметить позицию купленной
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                checked: { type: boolean }
+              required: [checked]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '../model/api.yaml#/components/schemas/ShoppingItem' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '501': { $ref: '#/components/responses/NotImplemented' }
+
+  # ---------------------------------------------------------------- meals
+  /plans/{planId}/meals:
+    parameters:
+      - $ref: '../model/api.yaml#/components/parameters/PlanId'
+    get:
+      operationId: listPlanMeals
+      tags: [meals]
+      summary: Приёмы пищи плана (planned + actual)
+      parameters:
+        - name: eaterId
+          in: query
+          schema: { type: integer, format: int64 }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '../model/api.yaml#/components/schemas/Meal' }
+        '501': { $ref: '#/components/responses/NotImplemented' }
+
+  /meals/{mealId}/log:
+    parameters:
+      - name: mealId
+        in: path
+        required: true
+        schema: { type: integer, format: int64 }
+    post:
+      operationId: logMeal
+      tags: [meals]
+      summary: Залогировать факт еды (actual пишется руками только при отклонении, FR-6)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '../model/api.yaml#/components/schemas/MealLogInput' }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '../model/api.yaml#/components/schemas/Meal' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '501': { $ref: '#/components/responses/NotImplemented' }
+
+  # ---------------------------------------------------------------- feedback
+  /feedback:
+    post:
+      operationId: createFeedback
+      tags: [feedback]
+      summary: Оценка/комментарий → сдвиг веса (не бан, FR-7)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '../model/api.yaml#/components/schemas/FeedbackInput' }
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: '../model/api.yaml#/components/schemas/FeedbackEvent' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+        '501': { $ref: '#/components/responses/NotImplemented' }
+
+  # ---------------------------------------------------------------- analytics
+  /analytics/macros:
+    get:
+      operationId: getMacroAnalytics
+      tags: [analytics]
+      summary: Средние БЖУ по едоку за период (planned/actual)
+      parameters:
+        - name: eaterId
+          in: query
+          required: true
+          schema: { type: integer, format: int64 }
+        - name: from
+          in: query
+          required: true
+          schema: { type: string, format: date }
+        - name: to
+          in: query
+          required: true
+          schema: { type: string, format: date }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '../model/api.yaml#/components/schemas/MacroSummary' }
+        '501': { $ref: '#/components/responses/NotImplemented' }
+
+  /analytics/nutrition-quality:
+    get:
+      operationId: getNutritionQualityAnalytics
+      tags: [analytics]
+      summary: Quality-аналитика по едоку за период (FR-8)
+      description: >
+        Средние клетчатка/натрий/sat fat/добавл. сахар, объёмы овощей-фруктов и
+        цельных злаков, rolling-экспозиция красного/переработанного мяса,
+        data coverage по нутриентам, quality-нагрузка фиксированных приёмов.
+      parameters:
+        - name: eaterId
+          in: query
+          required: true
+          schema: { type: integer, format: int64 }
+        - name: from
+          in: query
+          required: true
+          schema: { type: string, format: date }
+        - name: to
+          in: query
+          required: true
+          schema: { type: string, format: date }
+        - name: basis
+          in: query
+          schema: { type: string, enum: [planned, actual], default: actual }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '../model/api.yaml#/components/schemas/NutritionQualitySummary'
+                  - type: object
+                    properties:
+                      eater_id: { type: integer, format: int64 }
+                      from: { type: string, format: date }
+                      to: { type: string, format: date }
+                      fixed_meal_quality_burden:
+                        type: object
+                        description: 'вклад фиксированных приёмов (напр. Сашин завтрак)'
+                        properties:
+                          sodium_mg: { type: number, format: float }
+                          saturated_fat_g: { type: number, format: float }
+                          processed_meat_g: { type: number, format: float }
+        '501': { $ref: '#/components/responses/NotImplemented' }
+
+  /analytics/top-recipes:
+    get:
+      operationId: getTopRecipes
+      tags: [analytics]
+      summary: Топ рецептов по числу готовок
+      parameters:
+        - name: limit
+          in: query
+          schema: { type: integer, default: 10 }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '../model/api.yaml#/components/schemas/TopRecipe' }
+        '501': { $ref: '#/components/responses/NotImplemented' }
+
+components:
+  securitySchemes:
+    apiToken:
+      type: apiKey
+      in: header
+      name: X-API-Token
+  responses:
+    NotFound:
+      description: Не найдено
+      content:
+        application/json:
+          schema: { $ref: '../model/api.yaml#/components/schemas/Error' }
+    ValidationError:
+      description: Ошибка валидации (graceful fail с деталями, SPEC §6)
+      content:
+        application/json:
+          schema: { $ref: '../model/api.yaml#/components/schemas/Error' }
+    NotImplemented:
+      description: Endpoint is not implemented yet
+      content:
+        application/json:
+          schema: { $ref: '../model/api.yaml#/components/schemas/Error' }
+    EaterOK:
+      description: OK
+      content:
+        application/json:
+          schema: { $ref: '../model/api.yaml#/components/schemas/Eater' }
+    ProductOK:
+      description: OK
+      content:
+        application/json:
+          schema: { $ref: '../model/api.yaml#/components/schemas/Product' }
+    RecipeOK:
+      description: OK
+      content:
+        application/json:
+          schema: { $ref: '../model/api.yaml#/components/schemas/RecipeTemplate' }
+    PlanOK:
+      description: OK
+      content:
+        application/json:
+          schema: { $ref: '../model/api.yaml#/components/schemas/Plan' }
+    ShoppingOK:
+      description: OK
+      content:
+        application/json:
+          schema: { $ref: '../model/api.yaml#/components/schemas/ShoppingList' }
+

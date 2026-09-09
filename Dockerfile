@@ -4,6 +4,8 @@ WORKDIR /src
 
 # Кэшируем зависимости отдельно от исходников.
 COPY go.mod go.sum* ./
+# replace => ./api/sdk/go требует модуль SDK в build-контексте до go mod download.
+COPY api/sdk/go/go.mod api/sdk/go/go.sum* ./api/sdk/go/
 RUN go mod download
 
 COPY . .

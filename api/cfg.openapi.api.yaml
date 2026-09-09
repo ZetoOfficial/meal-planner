@@ -1,12 +1,14 @@
-# oapi-codegen config. Источник — api/openapi.yaml (контракт-первый подход).
-# Генерация: go run .../oapi-codegen -config api/oapi-codegen.yaml api/openapi.yaml
-package: openapi
-output: internal/api/openapi/generated.go
+# oapi-codegen config. Источник — api/openapi/api/api.yaml (контракт-первый подход).
+# Генерация: make oapi
+package: api
+output: api/sdk/go/api/api.gen.go
 generate:
   std-http-server: true   # сервер на голом net/http (Go 1.22+), как в SPEC §11
   strict-server: true
   models: true            # DTO из schemas
   embedded-spec: true     # встроить спеку для self-serve / валидации
+import-mapping:
+  ../model/api.yaml: github.com/ZetoOfficial/meal-planner/api/sdk/go/model
 output-options:
   skip-prune: false
   include-tags:

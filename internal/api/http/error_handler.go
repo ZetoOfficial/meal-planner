@@ -6,12 +6,12 @@ import (
 	"log/slog"
 	"net/http"
 
-	"github.com/ZetoOfficial/meal-planner/internal/api/openapi"
+	"github.com/ZetoOfficial/meal-planner/api/sdk/go/model"
 	apperr "github.com/ZetoOfficial/meal-planner/internal/errors"
 )
 
 func requestError(w http.ResponseWriter, r *http.Request, err error, status int) {
-	response := openapi.Error{
+	response := model.Error{
 		Error:   string(apperr.CodeValidation),
 		Message: "invalid request",
 		Details: &[]string{err.Error()},
@@ -19,7 +19,7 @@ func requestError(w http.ResponseWriter, r *http.Request, err error, status int)
 	if status >= http.StatusInternalServerError {
 		slog.ErrorContext(r.Context(), "request validation failed", slog.Any("error", err))
 		status = http.StatusInternalServerError
-		response = openapi.Error{
+		response = model.Error{
 			Error:   string(apperr.CodeInternal),
 			Message: "internal server error",
 		}
@@ -34,7 +34,7 @@ func requestError(w http.ResponseWriter, r *http.Request, err error, status int)
 
 func applicationError(w http.ResponseWriter, r *http.Request, err error) {
 	status := http.StatusInternalServerError
-	response := openapi.Error{
+	response := model.Error{
 		Error:   string(apperr.CodeInternal),
 		Message: "internal server error",
 	}
@@ -58,7 +58,7 @@ func applicationError(w http.ResponseWriter, r *http.Request, err error) {
 			if len(app.Details) > 0 {
 				details = &app.Details
 			}
-			response = openapi.Error{
+			response = model.Error{
 				Error:   string(app.Code),
 				Message: app.Error(),
 				Details: details,

@@ -1,0 +1,9 @@
+# oapi-codegen config для контрактных моделей. Источник — api/openapi/model/api.yaml.
+# Генерация: make oapi
+package: model
+output: api/sdk/go/model/api.gen.go
+generate:
+  models: true
+  embedded-spec: true # api-пакет резолвит внешние $ref через model.PathToRawSpec
+output-options:
+  skip-prune: true # у model-спеки нет paths, иначе prune удалит все типы

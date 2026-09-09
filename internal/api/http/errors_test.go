@@ -8,7 +8,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/ZetoOfficial/meal-planner/internal/api/openapi"
+	"github.com/ZetoOfficial/meal-planner/api/sdk/go/model"
 	apperr "github.com/ZetoOfficial/meal-planner/internal/errors"
 )
 
@@ -36,7 +36,7 @@ func TestApplicationErrorMapsErrors(t *testing.T) {
 			if rec.Code != test.status {
 				t.Fatalf("status = %d, want %d", rec.Code, test.status)
 			}
-			var body openapi.Error
+			var body model.Error
 			if err := json.NewDecoder(rec.Body).Decode(&body); err != nil {
 				t.Fatalf("decode response body: %v", err)
 			}
@@ -56,7 +56,7 @@ func TestApplicationErrorDoesNotExposeUnknownErrors(t *testing.T) {
 	if rec.Code != http.StatusInternalServerError {
 		t.Fatalf("status = %d, want %d", rec.Code, http.StatusInternalServerError)
 	}
-	var body openapi.Error
+	var body model.Error
 	if err := json.NewDecoder(rec.Body).Decode(&body); err != nil {
 		t.Fatalf("decode response body: %v", err)
 	}

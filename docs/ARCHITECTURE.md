@@ -1,7 +1,7 @@
 # Meal Planner — Architecture
 
 > Статус: архитектурное решение для MVP v1.
-> Связанные документы: `docs/DESIGN.md`, `docs/SPEC.md`, `docs/schema.sql`, `api/openapi.yaml`.
+> Связанные документы: `docs/DESIGN.md`, `docs/SPEC.md`, `docs/schema.sql`, `api/openapi/api/api.yaml`.
 
 ---
 

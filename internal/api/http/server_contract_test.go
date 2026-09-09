@@ -9,9 +9,9 @@ import (
 
 	"go.uber.org/mock/gomock"
 
+	"github.com/ZetoOfficial/meal-planner/api/sdk/go/model"
 	httpapi "github.com/ZetoOfficial/meal-planner/internal/api/http"
 	"github.com/ZetoOfficial/meal-planner/internal/api/http/mocks"
-	"github.com/ZetoOfficial/meal-planner/internal/api/openapi"
 	catalogdom "github.com/ZetoOfficial/meal-planner/internal/domain/catalog"
 	"github.com/ZetoOfficial/meal-planner/internal/domain/meal"
 	recipedom "github.com/ZetoOfficial/meal-planner/internal/domain/recipe"
@@ -67,7 +67,7 @@ func TestCreateProductHTTPContract(t *testing.T) {
 	if rec.Code != http.StatusCreated {
 		t.Fatalf("POST /products status = %d, want %d: %s", rec.Code, http.StatusCreated, rec.Body.String())
 	}
-	var product openapi.Product
+	var product model.Product
 	if err := json.NewDecoder(rec.Body).Decode(&product); err != nil {
 		t.Fatalf("decode product: %v", err)
 	}
@@ -93,7 +93,7 @@ func TestApplicationErrorHTTPContract(t *testing.T) {
 	if rec.Code != http.StatusNotFound {
 		t.Fatalf("GET /products/42 status = %d, want %d: %s", rec.Code, http.StatusNotFound, rec.Body.String())
 	}
-	var response openapi.Error
+	var response model.Error
 	if err := json.NewDecoder(rec.Body).Decode(&response); err != nil {
 		t.Fatalf("decode error: %v", err)
 	}
@@ -118,7 +118,7 @@ func TestMalformedRequestHTTPContract(t *testing.T) {
 	if rec.Code != http.StatusBadRequest {
 		t.Fatalf("POST /eaters/1/fixed-meals status = %d, want %d: %s", rec.Code, http.StatusBadRequest, rec.Body.String())
 	}
-	var response openapi.Error
+	var response model.Error
 	if err := json.NewDecoder(rec.Body).Decode(&response); err != nil {
 		t.Fatalf("decode error: %v", err)
 	}
@@ -196,13 +196,13 @@ func TestCreateRecipeHTTPContract(t *testing.T) {
 	if rec.Code != http.StatusCreated {
 		t.Fatalf("POST /recipes status = %d, want %d: %s", rec.Code, http.StatusCreated, rec.Body.String())
 	}
-	var response openapi.RecipeTemplate
+	var response model.RecipeTemplate
 	if err := json.NewDecoder(rec.Body).Decode(&response); err != nil {
 		t.Fatalf("decode recipe: %v", err)
 	}
 	if response.Id != 42 ||
-		response.Status != openapi.Draft ||
-		response.ComponentKind != openapi.ComponentKindProtein ||
+		response.Status != model.Draft ||
+		response.ComponentKind != model.ComponentKindProtein ||
 		response.BaseServings != 4 ||
 		len(response.AllowedMealTypes) != 2 ||
 		response.ExpectedOutputG == nil ||

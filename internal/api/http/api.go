@@ -43,12 +43,12 @@ type RecipeUseCases interface {
 	PromoteRecipe(context.Context, recipedom.ID) (recipedom.Template, error)
 }
 
-type api struct {
+type server struct {
 	catalog CatalogUseCases
 	eater   EaterUseCases
 	recipe  RecipeUseCases
 }
 
-func newAPI(catalog CatalogUseCases, eater EaterUseCases, recipe RecipeUseCases) *api {
-	return &api{catalog: catalog, eater: eater, recipe: recipe}
+func newServer(catalog CatalogUseCases, eater EaterUseCases, recipe RecipeUseCases) *server {
+	return &server{catalog: catalog, eater: eater, recipe: recipe}
 }

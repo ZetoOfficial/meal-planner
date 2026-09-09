@@ -2,7 +2,7 @@
 
 > Производное от `docs/DESIGN.md`. Дизайн зафиксирован, открытые вопросы (§12 DESIGN) закрыты.
 > Скоуп v1: owner-only household planner для произвольного непустого набора едоков, **HTTP API** (бот и Mini App — отдельный проект, v2).
-> Артефакты ТЗ: этот файл (функциональные требования) + `docs/schema.sql` (схема БД) + `api/openapi.yaml` (контракт API).
+> Артефакты ТЗ: этот файл (функциональные требования) + `docs/schema.sql` (схема БД) + `api/openapi/api/api.yaml` (контракт API, схемы — `api/openapi/model/api.yaml`).
 
 ---
 
@@ -340,7 +340,7 @@ solver только следующим fairness tie-break. Aggregate coverage п
 - **Go** — основной язык.
 - **Postgres** — хранилище (продукты, рецепты, планы, факты, feedback, LLM-логи).
 - **sqlc** — type-safe queries из SQL (`docs/schema.sql`).
-- **OpenAPI-first** (oapi-codegen) — спека `api/openapi.yaml` → хендлеры/DTO.
+- **OpenAPI-first** (oapi-codegen) — спека `api/openapi/api/api.yaml` → хендлеры/DTO.
 - **Docker** — контейнеризация: `Dockerfile` для приложения (multi-stage Go build) + `docker-compose.yml` с Postgres для локальной разработки и запуска. Миграции прогоняются в составе compose. Owner-only деплой — один compose-стек.
 - **LLM:** Claude Sonnet для MVP (строгий JSON, длинные системные промпты). Доступ через `internal/llm/client.go` с интерфейсом `LLMClient.Generate(ctx, prompt, schema)` + кэш/retry/timeout 30s (DESIGN §11).
 

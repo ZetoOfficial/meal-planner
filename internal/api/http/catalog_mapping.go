@@ -1,12 +1,12 @@
 package httpapi
 
 import (
-	"github.com/ZetoOfficial/meal-planner/internal/api/openapi"
+	"github.com/ZetoOfficial/meal-planner/api/sdk/go/model"
 	catalogdom "github.com/ZetoOfficial/meal-planner/internal/domain/catalog"
 	usecasecatalog "github.com/ZetoOfficial/meal-planner/internal/usecase/catalog"
 )
 
-func productCommand(input openapi.ProductInput) usecasecatalog.CreateProductCommand {
+func productCommand(input model.ProductInput) usecasecatalog.CreateProductCommand {
 	command := usecasecatalog.CreateProductCommand{
 		Brand: input.Brand, Name: input.Name, ProteinPer100G: float64(input.ProteinPer100g), FatPer100G: float64(input.FatPer100g),
 		CarbPer100G: float64(input.CarbPer100g), KcalPer100G: float64(input.KcalPer100g), PricePer100G: float64Pointer(input.PricePer100g),
@@ -30,7 +30,7 @@ func productCommand(input openapi.ProductInput) usecasecatalog.CreateProductComm
 	return command
 }
 
-func nutritionFactsCommand(input *openapi.NutritionFacts) catalogdom.NutritionFacts {
+func nutritionFactsCommand(input *model.NutritionFacts) catalogdom.NutritionFacts {
 	if input == nil {
 		return catalogdom.NutritionFacts{}
 	}
@@ -43,7 +43,7 @@ func nutritionFactsCommand(input *openapi.NutritionFacts) catalogdom.NutritionFa
 	}
 }
 
-func nutritionDataCommand(input *openapi.NutritionDataQuality) catalogdom.NutritionData {
+func nutritionDataCommand(input *model.NutritionDataQuality) catalogdom.NutritionData {
 	if input == nil {
 		return catalogdom.NutritionData{}
 	}
@@ -58,7 +58,7 @@ func nutritionDataCommand(input *openapi.NutritionDataQuality) catalogdom.Nutrit
 	return result
 }
 
-func classificationCommand(input *openapi.FoodClassification) catalogdom.FoodClassification {
+func classificationCommand(input *model.FoodClassification) catalogdom.FoodClassification {
 	if input == nil {
 		return catalogdom.FoodClassification{}
 	}
@@ -78,7 +78,7 @@ func classificationCommand(input *openapi.FoodClassification) catalogdom.FoodCla
 	return result
 }
 
-func productResponse(product catalogdom.Product) openapi.Product {
+func productResponse(product catalogdom.Product) model.Product {
 	roles := make([]string, len(product.Roles))
 	for i := range product.Roles {
 		roles[i] = product.Roles[i].Code
@@ -87,7 +87,7 @@ func productResponse(product catalogdom.Product) openapi.Product {
 	for i := range product.Allergens {
 		allergens[i] = string(product.Allergens[i])
 	}
-	return openapi.Product{
+	return model.Product{
 		Id: int64(product.ID), Brand: product.Brand, Name: product.Name, ProteinPer100g: float32(product.ProteinPer100G),
 		FatPer100g: float32(product.FatPer100G), CarbPer100g: float32(product.CarbPer100G), KcalPer100g: float32(product.KcalPer100G),
 		PricePer100g: float32Pointer(product.PricePer100G), DefaultUnit: stringPointer(product.DefaultUnit), Purchasable: boolPointer(product.Purchasable),
@@ -96,16 +96,16 @@ func productResponse(product catalogdom.Product) openapi.Product {
 	}
 }
 
-func productsResponse(products []catalogdom.Product) []openapi.Product {
-	result := make([]openapi.Product, len(products))
+func productsResponse(products []catalogdom.Product) []model.Product {
+	result := make([]model.Product, len(products))
 	for i := range products {
 		result[i] = productResponse(products[i])
 	}
 	return result
 }
 
-func nutritionFactsResponse(value catalogdom.NutritionFacts) *openapi.NutritionFacts {
-	return &openapi.NutritionFacts{
+func nutritionFactsResponse(value catalogdom.NutritionFacts) *model.NutritionFacts {
+	return &model.NutritionFacts{
 		SaturatedFatPer100g: float32Pointer(value.SaturatedFatPer100G), TransFatPer100g: float32Pointer(value.TransFatPer100G),
 		IndustrialTransFatPer100g: float32Pointer(value.IndustrialTransFatPer100G), FiberPer100g: float32Pointer(value.FiberPer100G),
 		SodiumMgPer100g: float32Pointer(value.SodiumMgPer100G), SaltGPer100g: float32Pointer(value.SaltGPer100G),
@@ -114,40 +114,40 @@ func nutritionFactsResponse(value catalogdom.NutritionFacts) *openapi.NutritionF
 	}
 }
 
-func nutritionDataResponse(value catalogdom.NutritionData) *openapi.NutritionDataQuality {
-	result := &openapi.NutritionDataQuality{NutritionCoverageScore: float32Pointer(&value.Coverage), SourceNote: value.SourceNote, LastVerifiedAt: value.LastVerifiedAt}
-	quality := openapi.NutritionDataQualityNutritionDataQuality(value.Quality)
+func nutritionDataResponse(value catalogdom.NutritionData) *model.NutritionDataQuality {
+	result := &model.NutritionDataQuality{NutritionCoverageScore: float32Pointer(&value.Coverage), SourceNote: value.SourceNote, LastVerifiedAt: value.LastVerifiedAt}
+	quality := model.NutritionDataQualityNutritionDataQuality(value.Quality)
 	result.NutritionDataQuality = &quality
 	if value.SourceKind != nil {
-		source := openapi.NutritionDataQualitySourceKind(*value.SourceKind)
+		source := model.NutritionDataQualitySourceKind(*value.SourceKind)
 		result.SourceKind = &source
 	}
 	return result
 }
 
-func classificationResponse(value catalogdom.FoodClassification) *openapi.FoodClassification {
-	processingLevel := openapi.FoodClassificationProcessingLevel(value.ProcessingLevel)
-	result := &openapi.FoodClassification{
+func classificationResponse(value catalogdom.FoodClassification) *model.FoodClassification {
+	processingLevel := model.FoodClassificationProcessingLevel(value.ProcessingLevel)
+	result := &model.FoodClassification{
 		ProcessingLevel: &processingLevel, ProcessingConfidence: float32Pointer(value.ProcessingConfidence),
 		CountsToFruitVeg: value.CountsToFruitVeg, IsLegume: value.IsLegume, IsWholeGrain: value.IsWholeGrain,
 		WholeGrainRatio: float32Pointer(value.WholeGrainRatio), IsRedMeat: value.IsRedMeat, IsProcessedMeat: value.IsProcessedMeat,
 		ClassificationSource: value.Source, ClassificationNote: value.Note,
 	}
 	if value.FoodGroup != nil {
-		foodGroup := openapi.FoodClassificationFoodGroup(*value.FoodGroup)
+		foodGroup := model.FoodClassificationFoodGroup(*value.FoodGroup)
 		result.FoodGroup = &foodGroup
 	}
 	return result
 }
 
-func roleTagResponse(value catalogdom.RoleTag) openapi.RoleTag {
-	return openapi.RoleTag{
-		Id: value.ID, Code: value.Code, Kind: openapi.RoleKind(value.Kind), Label: value.Label, ParentId: value.ParentID,
+func roleTagResponse(value catalogdom.RoleTag) model.RoleTag {
+	return model.RoleTag{
+		Id: value.ID, Code: value.Code, Kind: model.RoleKind(value.Kind), Label: value.Label, ParentId: value.ParentID,
 	}
 }
 
-func roleTagsResponse(tags []catalogdom.RoleTag) []openapi.RoleTag {
-	result := make([]openapi.RoleTag, len(tags))
+func roleTagsResponse(tags []catalogdom.RoleTag) []model.RoleTag {
+	result := make([]model.RoleTag, len(tags))
 	for i := range tags {
 		result[i] = roleTagResponse(tags[i])
 	}

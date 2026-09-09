@@ -2,7 +2,7 @@
 
 > Статус: дизайн и ТЗ зафиксированы в source-of-truth документах.
 > Скоуп: owner-only household planner. Не SaaS; число едоков не зашито в модель.
-> Обновление: добавлен **evidence-based слой качества питания** поверх макро-целей (см. `docs/deep-research-report.md`, разделы §1, §2, §5, §8, §13 и новый §14). ТЗ — в `docs/SPEC.md`, `docs/schema.sql`, `api/openapi.yaml`.
+> Обновление: добавлен **evidence-based слой качества питания** поверх макро-целей (см. `docs/deep-research-report.md`, разделы §1, §2, §5, §8, §13 и новый §14). ТЗ — в `docs/SPEC.md`, `docs/schema.sql`, `api/openapi/api/api.yaml`.
 
 ---
 

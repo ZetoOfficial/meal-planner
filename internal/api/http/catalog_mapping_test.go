@@ -3,7 +3,7 @@ package httpapi
 import (
 	"testing"
 
-	"github.com/ZetoOfficial/meal-planner/internal/api/openapi"
+	"github.com/ZetoOfficial/meal-planner/api/sdk/go/model"
 	catalogdom "github.com/ZetoOfficial/meal-planner/internal/domain/catalog"
 )
 
@@ -14,9 +14,9 @@ func TestClassificationMappingPreservesUnknownAndKnownFalse(t *testing.T) {
 	}
 
 	knownFalse := false
-	foodGroup := openapi.Other
+	foodGroup := model.Other
 	source := "manual"
-	known := classificationCommand(&openapi.FoodClassification{
+	known := classificationCommand(&model.FoodClassification{
 		FoodGroup:            &foodGroup,
 		IsLegume:             &knownFalse,
 		ClassificationSource: &source,

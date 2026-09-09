@@ -3,63 +3,63 @@ package httpapi
 import (
 	"context"
 
-	"github.com/ZetoOfficial/meal-planner/internal/api/openapi"
+	"github.com/ZetoOfficial/meal-planner/api/sdk/go/api"
 	catalogdom "github.com/ZetoOfficial/meal-planner/internal/domain/catalog"
 )
 
-func (a *api) ListProducts(ctx context.Context, request openapi.ListProductsRequestObject) (openapi.ListProductsResponseObject, error) {
+func (s *server) ListProducts(ctx context.Context, request api.ListProductsRequestObject) (api.ListProductsResponseObject, error) {
 	role := ""
 	if request.Params.Role != nil {
 		role = *request.Params.Role
 	}
-	products, err := a.catalog.ListProducts(ctx, role)
+	products, err := s.catalog.ListProducts(ctx, role)
 	if err != nil {
 		return nil, err
 	}
-	return openapi.ListProducts200JSONResponse(productsResponse(products)), nil
+	return api.ListProducts200JSONResponse(productsResponse(products)), nil
 }
 
-func (a *api) CreateProduct(ctx context.Context, request openapi.CreateProductRequestObject) (openapi.CreateProductResponseObject, error) {
-	product, err := a.catalog.CreateProduct(ctx, productCommand(*request.Body))
+func (s *server) CreateProduct(ctx context.Context, request api.CreateProductRequestObject) (api.CreateProductResponseObject, error) {
+	product, err := s.catalog.CreateProduct(ctx, productCommand(*request.Body))
 	if err != nil {
 		return nil, err
 	}
-	return openapi.CreateProduct201JSONResponse{
-		ProductOKJSONResponse: openapi.ProductOKJSONResponse(productResponse(product)),
+	return api.CreateProduct201JSONResponse{
+		ProductOKJSONResponse: api.ProductOKJSONResponse(productResponse(product)),
 	}, nil
 }
 
-func (a *api) GetProduct(ctx context.Context, request openapi.GetProductRequestObject) (openapi.GetProductResponseObject, error) {
-	product, err := a.catalog.GetProduct(ctx, catalogdom.ProductID(request.ProductId))
+func (s *server) GetProduct(ctx context.Context, request api.GetProductRequestObject) (api.GetProductResponseObject, error) {
+	product, err := s.catalog.GetProduct(ctx, catalogdom.ProductID(request.ProductId))
 	if err != nil {
 		return nil, err
 	}
-	return openapi.GetProduct200JSONResponse{
-		ProductOKJSONResponse: openapi.ProductOKJSONResponse(productResponse(product)),
+	return api.GetProduct200JSONResponse{
+		ProductOKJSONResponse: api.ProductOKJSONResponse(productResponse(product)),
 	}, nil
 }
 
-func (a *api) UpdateProduct(ctx context.Context, request openapi.UpdateProductRequestObject) (openapi.UpdateProductResponseObject, error) {
-	product, err := a.catalog.UpdateProduct(ctx, catalogdom.ProductID(request.ProductId), productCommand(*request.Body))
+func (s *server) UpdateProduct(ctx context.Context, request api.UpdateProductRequestObject) (api.UpdateProductResponseObject, error) {
+	product, err := s.catalog.UpdateProduct(ctx, catalogdom.ProductID(request.ProductId), productCommand(*request.Body))
 	if err != nil {
 		return nil, err
 	}
-	return openapi.UpdateProduct200JSONResponse{
-		ProductOKJSONResponse: openapi.ProductOKJSONResponse(productResponse(product)),
+	return api.UpdateProduct200JSONResponse{
+		ProductOKJSONResponse: api.ProductOKJSONResponse(productResponse(product)),
 	}, nil
 }
 
-func (a *api) DeleteProduct(ctx context.Context, request openapi.DeleteProductRequestObject) (openapi.DeleteProductResponseObject, error) {
-	if err := a.catalog.DeleteProduct(ctx, catalogdom.ProductID(request.ProductId)); err != nil {
+func (s *server) DeleteProduct(ctx context.Context, request api.DeleteProductRequestObject) (api.DeleteProductResponseObject, error) {
+	if err := s.catalog.DeleteProduct(ctx, catalogdom.ProductID(request.ProductId)); err != nil {
 		return nil, err
 	}
-	return openapi.DeleteProduct204Response{}, nil
+	return api.DeleteProduct204Response{}, nil
 }
 
-func (a *api) ListRoleTags(ctx context.Context, _ openapi.ListRoleTagsRequestObject) (openapi.ListRoleTagsResponseObject, error) {
-	tags, err := a.catalog.ListRoleTags(ctx)
+func (s *server) ListRoleTags(ctx context.Context, _ api.ListRoleTagsRequestObject) (api.ListRoleTagsResponseObject, error) {
+	tags, err := s.catalog.ListRoleTags(ctx)
 	if err != nil {
 		return nil, err
 	}
-	return openapi.ListRoleTags200JSONResponse(roleTagsResponse(tags)), nil
+	return api.ListRoleTags200JSONResponse(roleTagsResponse(tags)), nil
 }

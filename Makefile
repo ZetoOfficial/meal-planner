@@ -24,8 +24,9 @@ sqlc: ## Сгенерировать type-safe DB-код (схема docs/schema.
 	$(SQLC) generate
 
 .PHONY: oapi
-oapi: ## Сгенерировать HTTP-сервер/DTO из api/openapi.yaml
-	$(OAPI) -config api/oapi-codegen.yaml api/openapi.yaml
+oapi: ## Сгенерировать SDK-типы и HTTP-сервер/DTO из api/openapi/{model,api}/api.yaml
+	$(OAPI) -config api/cfg.openapi.model.yaml api/openapi/model/api.yaml
+	$(OAPI) -config api/cfg.openapi.api.yaml api/openapi/api/api.yaml
 
 .PHONY: mocks
 mocks: ## Сгенерировать GoMock-моки из go:generate-директив

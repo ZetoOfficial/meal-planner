@@ -1,13 +1,13 @@
 package httpapi
 
 import (
-	"github.com/ZetoOfficial/meal-planner/internal/api/openapi"
+	"github.com/ZetoOfficial/meal-planner/api/sdk/go/model"
 	"github.com/ZetoOfficial/meal-planner/internal/domain/meal"
 	recipedom "github.com/ZetoOfficial/meal-planner/internal/domain/recipe"
 	usecaserecipe "github.com/ZetoOfficial/meal-planner/internal/usecase/recipe"
 )
 
-func recipeCommand(input openapi.RecipeTemplateInput) usecaserecipe.CreateRecipeCommand {
+func recipeCommand(input model.RecipeTemplateInput) usecaserecipe.CreateRecipeCommand {
 	command := usecaserecipe.CreateRecipeCommand{
 		Name:             input.Name,
 		ComponentKind:    recipedom.ComponentKind(input.ComponentKind),
@@ -39,23 +39,23 @@ func recipeCommand(input openapi.RecipeTemplateInput) usecaserecipe.CreateRecipe
 	return command
 }
 
-func recipeResponse(value recipedom.Template) openapi.RecipeTemplate {
-	source := openapi.RecipeTemplateSource(value.Source)
+func recipeResponse(value recipedom.Template) model.RecipeTemplate {
+	source := model.RecipeTemplateSource(value.Source)
 	weight := float32(value.Weight)
 	cookedCount := value.CookedCount
 	equipment := append([]string{}, value.Equipment...)
-	return openapi.RecipeTemplate{
+	return model.RecipeTemplate{
 		Id:               int64(value.ID),
 		Name:             value.Name,
-		Status:           openapi.RecipeStatus(value.Status),
+		Status:           model.RecipeStatus(value.Status),
 		Source:           source,
-		ComponentKind:    openapi.ComponentKind(value.ComponentKind),
+		ComponentKind:    model.ComponentKind(value.ComponentKind),
 		AllowedMealTypes: mealTypesResponse(value.AllowedMealTypes),
 		BaseServings:     value.BaseServings,
 		ExpectedOutputG:  float32Pointer(value.ExpectedOutputG),
 		Cuisine:          value.Cuisine,
 		CookingMethod:    value.CookingMethod,
-		Storage:          openapi.StorageProfile(value.Storage),
+		Storage:          model.StorageProfile(value.Storage),
 		StorageNotes:     value.StorageNotes,
 		Equipment:        &equipment,
 		Instructions:     value.Instructions,
@@ -65,20 +65,20 @@ func recipeResponse(value recipedom.Template) openapi.RecipeTemplate {
 	}
 }
 
-func recipesResponse(values []recipedom.Template) []openapi.RecipeTemplate {
-	result := make([]openapi.RecipeTemplate, len(values))
+func recipesResponse(values []recipedom.Template) []model.RecipeTemplate {
+	result := make([]model.RecipeTemplate, len(values))
 	for i := range values {
 		result[i] = recipeResponse(values[i])
 	}
 	return result
 }
 
-func slotsResponse(values []recipedom.Slot) []openapi.Slot {
-	result := make([]openapi.Slot, len(values))
+func slotsResponse(values []recipedom.Slot) []model.Slot {
+	result := make([]model.Slot, len(values))
 	for i, value := range values {
 		id := int64(value.ID)
 		optional := value.Optional
-		result[i] = openapi.Slot{
+		result[i] = model.Slot{
 			Id:                &id,
 			RoleTag:           value.RoleTagCode,
 			Label:             value.Label,
@@ -91,7 +91,7 @@ func slotsResponse(values []recipedom.Slot) []openapi.Slot {
 	return result
 }
 
-func mealTypesCommand(values []openapi.MealType) []meal.Type {
+func mealTypesCommand(values []model.MealType) []meal.Type {
 	result := make([]meal.Type, len(values))
 	for i, value := range values {
 		result[i] = meal.Type(value)
@@ -99,10 +99,10 @@ func mealTypesCommand(values []openapi.MealType) []meal.Type {
 	return result
 }
 
-func mealTypesResponse(values []meal.Type) []openapi.MealType {
-	result := make([]openapi.MealType, len(values))
+func mealTypesResponse(values []meal.Type) []model.MealType {
+	result := make([]model.MealType, len(values))
 	for i, value := range values {
-		result[i] = openapi.MealType(value)
+		result[i] = model.MealType(value)
 	}
 	return result
 }
