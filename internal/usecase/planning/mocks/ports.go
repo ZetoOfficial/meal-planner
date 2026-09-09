@@ -280,6 +280,21 @@ func (mr *MockProductRepositoryMockRecorder) List(ctx, roleCode any) *gomock.Cal
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockProductRepository)(nil).List), ctx, roleCode)
 }
 
+// ListRoleTags mocks base method.
+func (m *MockProductRepository) ListRoleTags(ctx context.Context) ([]catalog.RoleTag, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListRoleTags", ctx)
+	ret0, _ := ret[0].([]catalog.RoleTag)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListRoleTags indicates an expected call of ListRoleTags.
+func (mr *MockProductRepositoryMockRecorder) ListRoleTags(ctx any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListRoleTags", reflect.TypeOf((*MockProductRepository)(nil).ListRoleTags), ctx)
+}
+
 // MockRecipeRepository is a mock of RecipeRepository interface.
 type MockRecipeRepository struct {
 	ctrl     *gomock.Controller
@@ -304,6 +319,21 @@ func (m *MockRecipeRepository) EXPECT() *MockRecipeRepositoryMockRecorder {
 	return m.recorder
 }
 
+// Create mocks base method.
+func (m *MockRecipeRepository) Create(ctx context.Context, template recipe.Template, roles map[string]catalog.RoleTag) (recipe.Template, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Create", ctx, template, roles)
+	ret0, _ := ret[0].(recipe.Template)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Create indicates an expected call of Create.
+func (mr *MockRecipeRepositoryMockRecorder) Create(ctx, template, roles any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockRecipeRepository)(nil).Create), ctx, template, roles)
+}
+
 // ListPermanentCandidates mocks base method.
 func (m *MockRecipeRepository) ListPermanentCandidates(ctx context.Context) ([]recipe.Template, error) {
 	m.ctrl.T.Helper()
@@ -317,6 +347,21 @@ func (m *MockRecipeRepository) ListPermanentCandidates(ctx context.Context) ([]r
 func (mr *MockRecipeRepositoryMockRecorder) ListPermanentCandidates(ctx any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListPermanentCandidates", reflect.TypeOf((*MockRecipeRepository)(nil).ListPermanentCandidates), ctx)
+}
+
+// ResolveRoleTags mocks base method.
+func (m *MockRecipeRepository) ResolveRoleTags(ctx context.Context, codes []string) (map[string]catalog.RoleTag, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ResolveRoleTags", ctx, codes)
+	ret0, _ := ret[0].(map[string]catalog.RoleTag)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ResolveRoleTags indicates an expected call of ResolveRoleTags.
+func (mr *MockRecipeRepositoryMockRecorder) ResolveRoleTags(ctx, codes any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ResolveRoleTags", reflect.TypeOf((*MockRecipeRepository)(nil).ResolveRoleTags), ctx, codes)
 }
 
 // MockSolver is a mock of Solver interface.

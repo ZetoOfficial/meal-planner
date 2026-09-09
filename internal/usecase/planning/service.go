@@ -9,6 +9,7 @@ import (
 	mealdom "github.com/ZetoOfficial/meal-planner/internal/domain/meal"
 	"github.com/ZetoOfficial/meal-planner/internal/domain/nutrition"
 	planningdom "github.com/ZetoOfficial/meal-planner/internal/domain/planning"
+	recipedom "github.com/ZetoOfficial/meal-planner/internal/domain/recipe"
 	apperr "github.com/ZetoOfficial/meal-planner/internal/errors"
 	"github.com/ZetoOfficial/meal-planner/internal/solver"
 )
@@ -56,6 +57,7 @@ type Service struct {
 	products     ProductRepository
 	recipes      RecipeRepository
 	planner      Solver
+	generator    RecipeGenerator
 	transactions TxRunner
 	options      Options
 }
@@ -74,6 +76,7 @@ func NewService(
 	products ProductRepository,
 	recipes RecipeRepository,
 	planner Solver,
+	generator RecipeGenerator,
 	transactions TxRunner,
 	options Options,
 ) *Service {
@@ -84,6 +87,7 @@ func NewService(
 		products:     products,
 		recipes:      recipes,
 		planner:      planner,
+		generator:    generator,
 		transactions: transactions,
 		options:      options,
 	}
@@ -105,6 +109,10 @@ func (s *Service) GeneratePlan(ctx context.Context, command GeneratePlanCommand)
 			return err
 		}
 		solved, err := s.planner.BuildPlan(ctx, input)
+		if err != nil {
+			return err
+		}
+		solved, err = s.withGeneratedCandidates(ctx, command, input, solved)
 		if err != nil {
 			return err
 		}
@@ -132,6 +140,50 @@ func (s *Service) GeneratePlan(ctx context.Context, command GeneratePlanCommand)
 		return PlanResult{}, err
 	}
 	return result, nil
+}
+
+// withGeneratedCandidates gives the solver a second chance with freshly
+// generated drafts. A generation failure never replaces the original
+// infeasibility: the owner still learns why the saved library was not enough.
+func (s *Service) withGeneratedCandidates(
+	ctx context.Context,
+	command GeneratePlanCommand,
+	input solver.Input,
+	solved solver.Result,
+) (solver.Result, error) {
+	if s.generator == nil || !shouldGenerate(solved, command.Novelty) {
+		return solved, nil
+	}
+
+	drafts, generated := s.tryGenerateCandidates(ctx, command, input)
+	if !generated {
+		return solved, nil
+	}
+
+	input.Recipes = append(append([]recipedom.Template(nil), input.Recipes...), drafts...)
+	retried, err := s.planner.BuildPlan(ctx, input)
+	if err != nil {
+		return solver.Result{}, err
+	}
+	if retried.Failure != nil && solved.Failure == nil {
+		return solved, nil
+	}
+	return retried, nil
+}
+
+// tryGenerateCandidates reports whether usable drafts were produced. A failed
+// generation is not an error for the caller: an infeasible plan keeps its
+// diagnostics and a feasible one keeps the plan the library already produced.
+func (s *Service) tryGenerateCandidates(
+	ctx context.Context,
+	command GeneratePlanCommand,
+	input solver.Input,
+) ([]recipedom.Template, bool) {
+	drafts, err := s.generateCandidates(ctx, command, input)
+	if err != nil {
+		return nil, false
+	}
+	return drafts, true
 }
 
 func (s *Service) GetPlan(ctx context.Context, id planningdom.PlanID) (PlanResult, error) {

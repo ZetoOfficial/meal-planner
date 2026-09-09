@@ -13,6 +13,7 @@ import (
 	mealdom "github.com/ZetoOfficial/meal-planner/internal/domain/meal"
 	"github.com/ZetoOfficial/meal-planner/internal/domain/nutrition"
 	planningdom "github.com/ZetoOfficial/meal-planner/internal/domain/planning"
+	recipedom "github.com/ZetoOfficial/meal-planner/internal/domain/recipe"
 	apperr "github.com/ZetoOfficial/meal-planner/internal/errors"
 	"github.com/ZetoOfficial/meal-planner/internal/quality"
 	"github.com/ZetoOfficial/meal-planner/internal/solver"
@@ -222,13 +223,16 @@ func TestGeneratePlanPassesOnlyActiveFixedMealsToTheSolver(t *testing.T) {
 }
 
 type deps struct {
-	service   *Service
-	plans     *mocks.MockPlanRepository
-	eaters    *mocks.MockEaterRepository
-	products  *mocks.MockProductRepository
-	recipes   *mocks.MockRecipeRepository
-	planner   *mocks.MockSolver
-	committed bool
+	service      *Service
+	plans        *mocks.MockPlanRepository
+	eaters       *mocks.MockEaterRepository
+	products     *mocks.MockProductRepository
+	recipes      *mocks.MockRecipeRepository
+	planner      *mocks.MockSolver
+	transactions *mocks.MockTxRunner
+	generator    *fakeGenerator
+	storedDraft  recipedom.Template
+	committed    bool
 }
 
 func newDeps(t *testing.T) *deps {
@@ -242,6 +246,7 @@ func newDeps(t *testing.T) *deps {
 		planner:  mocks.NewMockSolver(controller),
 	}
 	transactions := mocks.NewMockTxRunner(controller)
+	result.transactions = transactions
 	transactions.EXPECT().
 		WithTx(gomock.Any(), gomock.Any()).
 		DoAndReturn(func(ctx context.Context, fn func(context.Context) error) error {
@@ -252,14 +257,16 @@ func newDeps(t *testing.T) *deps {
 		AnyTimes()
 
 	result.service = NewService(
-		result.plans, result.eaters, result.products, result.recipes, result.planner, transactions,
+		result.plans, result.eaters, result.products, result.recipes, result.planner, nil, transactions,
 		Options{AvailableEquipment: []string{"oven"}, RollingWindowDays: 7},
 	)
 	return result
 }
 
 func (d *deps) expectInputs() {
-	d.products.EXPECT().List(gomock.Any(), "").Return([]catalogdom.Product{{ID: 1}}, nil)
+	d.products.EXPECT().List(gomock.Any(), "").Return([]catalogdom.Product{{
+		ID: 1, Roles: []catalogdom.RoleTag{{Code: "protein:lean"}},
+	}}, nil)
 	d.recipes.EXPECT().ListPermanentCandidates(gomock.Any()).Return(nil, nil)
 	d.eaters.EXPECT().Get(gomock.Any(), eaterdom.ID(1)).Return(eaterdom.Eater{ID: 1}, nil)
 	d.eaters.EXPECT().ListGoals(gomock.Any(), eaterdom.ID(1)).Return(validGoals(), nil)
@@ -267,25 +274,27 @@ func (d *deps) expectInputs() {
 }
 
 func (d *deps) expectSolvedPlan() {
-	d.planner.EXPECT().
-		BuildPlan(gomock.Any(), gomock.Any()).
-		Return(solver.Result{
-			Plan: planningdom.Plan{StartDate: planStartDate(), Days: 1, CookDate: planStartDate(), Novelty: 2},
-			Quality: []solver.EaterDayQuality{{
-				EaterID: 1,
-				Date:    planStartDate(),
-				Day:     nutrition.DaySummary{Basis: nutrition.SummaryBasisPlanned},
-				Rolling: nutrition.RollingSummary{Basis: nutrition.SummaryBasisPlanned, WindowDays: 7},
-				Evaluation: quality.Evaluation{
-					Score:    80,
-					Coverage: 0.9,
-					Outcomes: []quality.RuleOutcome{
-						{Code: quality.RuleFiber, Status: nutrition.StatusSoftFail, Message: "fiber below target"},
-						{Code: quality.RuleRedMeat, Status: nutrition.StatusPass, Message: "red meat within the weekly cap"},
-					},
+	d.planner.EXPECT().BuildPlan(gomock.Any(), gomock.Any()).Return(solvedResult(), nil)
+}
+
+func solvedResult() solver.Result {
+	return solver.Result{
+		Plan: planningdom.Plan{StartDate: planStartDate(), Days: 1, CookDate: planStartDate(), Novelty: 2},
+		Quality: []solver.EaterDayQuality{{
+			EaterID: 1,
+			Date:    planStartDate(),
+			Day:     nutrition.DaySummary{Basis: nutrition.SummaryBasisPlanned},
+			Rolling: nutrition.RollingSummary{Basis: nutrition.SummaryBasisPlanned, WindowDays: 7},
+			Evaluation: quality.Evaluation{
+				Score:    80,
+				Coverage: 0.9,
+				Outcomes: []quality.RuleOutcome{
+					{Code: quality.RuleFiber, Status: nutrition.StatusSoftFail, Message: "fiber below target"},
+					{Code: quality.RuleRedMeat, Status: nutrition.StatusPass, Message: "red meat within the weekly cap"},
 				},
-			}},
-		}, nil)
+			},
+		}},
+	}
 }
 
 func isValidation(err error) bool {
@@ -319,4 +328,184 @@ func goalRange() eaterdom.MacroRange {
 		CarbMinG: 40, CarbMaxG: 300,
 		KcalMin: 400, KcalMax: 2500,
 	}
+}
+
+func TestGeneratePlanSkipsTheLLMWhenTheLibraryIsEnough(t *testing.T) {
+	deps := newDepsWithGenerator(t)
+	deps.expectInputs()
+	deps.expectSolvedPlan()
+	deps.expectPersistence()
+
+	if _, err := deps.service.GeneratePlan(t.Context(), validCommand()); err != nil {
+		t.Fatalf("GeneratePlan() error = %v", err)
+	}
+
+	if deps.generator.calls != 0 {
+		t.Fatalf("generator calls = %d, want none when reuse-first already works", deps.generator.calls)
+	}
+}
+
+func TestGeneratePlanAsksTheLLMWhenNoveltyThreeIsRequested(t *testing.T) {
+	deps := newDepsWithGenerator(t)
+	deps.expectInputs()
+	deps.expectSolvedPlan()
+	deps.expectSolvedPlan()
+	deps.expectRoleTagsAndDraftStorage()
+	deps.expectPersistence()
+	deps.generator.candidates = []recipedom.Template{validCandidate()}
+
+	command := validCommand()
+	command.Novelty = 3
+	if _, err := deps.service.GeneratePlan(t.Context(), command); err != nil {
+		t.Fatalf("GeneratePlan() error = %v", err)
+	}
+
+	if deps.generator.calls != 1 {
+		t.Fatalf("generator calls = %d, want one for novelty 3", deps.generator.calls)
+	}
+	if deps.storedDraft.Status != recipedom.StatusDraft || deps.storedDraft.Source != recipedom.SourceLLM {
+		t.Fatalf("stored candidate = %#v, want an llm draft rather than a permanent recipe", deps.storedDraft)
+	}
+}
+
+func TestGeneratePlanRetriesTheSolverWithGeneratedDrafts(t *testing.T) {
+	deps := newDepsWithGenerator(t)
+	deps.expectInputs()
+	deps.planner.EXPECT().
+		BuildPlan(gomock.Any(), gomock.Any()).
+		Return(solver.Result{Failure: &solver.Failure{Code: solver.FailureMacroInfeasible, EaterID: 1}}, nil)
+	deps.expectRoleTagsAndDraftStorage()
+
+	var retried solver.Input
+	deps.planner.EXPECT().
+		BuildPlan(gomock.Any(), gomock.Any()).
+		DoAndReturn(func(_ context.Context, input solver.Input) (solver.Result, error) {
+			retried = input
+			return solvedResult(), nil
+		})
+	deps.expectPersistence()
+	deps.generator.candidates = []recipedom.Template{validCandidate()}
+
+	if _, err := deps.service.GeneratePlan(t.Context(), validCommand()); err != nil {
+		t.Fatalf("GeneratePlan() error = %v", err)
+	}
+
+	if len(retried.Recipes) != 1 || retried.Recipes[0].ID != 99 {
+		t.Fatalf("retry candidates = %#v, want the stored draft handed to the solver", retried.Recipes)
+	}
+}
+
+func TestGeneratePlanRejectsCandidatesNoStockedProductCanFill(t *testing.T) {
+	deps := newDepsWithGenerator(t)
+	deps.expectInputs()
+	deps.planner.EXPECT().
+		BuildPlan(gomock.Any(), gomock.Any()).
+		Return(solver.Result{Failure: &solver.Failure{Code: solver.FailureMacroInfeasible, EaterID: 1}}, nil)
+	deps.products.EXPECT().ListRoleTags(gomock.Any()).Return(validRoleTags(), nil)
+
+	unusable := validCandidate()
+	unusable.Slots[0].RoleTagCode = "protein:unicorn"
+	deps.generator.candidates = []recipedom.Template{unusable}
+
+	_, err := deps.service.GeneratePlan(t.Context(), validCommand())
+
+	var infeasible *InfeasibleError
+	if !errors.As(err, &infeasible) {
+		t.Fatalf("GeneratePlan() error = %v, want the original infeasibility kept", err)
+	}
+	if deps.storedDraft.Name != "" {
+		t.Fatalf("stored candidate = %#v, want the unusable candidate rejected before storage", deps.storedDraft)
+	}
+}
+
+func TestGeneratePlanKeepsTheOriginalFailureWhenGenerationFails(t *testing.T) {
+	deps := newDepsWithGenerator(t)
+	deps.expectInputs()
+	deps.planner.EXPECT().
+		BuildPlan(gomock.Any(), gomock.Any()).
+		Return(solver.Result{Failure: &solver.Failure{Code: solver.FailureMacroInfeasible, EaterID: 1, Exhaustive: true}}, nil)
+	deps.products.EXPECT().ListRoleTags(gomock.Any()).Return(validRoleTags(), nil)
+	deps.generator.err = errors.New("provider unavailable")
+
+	_, err := deps.service.GeneratePlan(t.Context(), validCommand())
+
+	var infeasible *InfeasibleError
+	if !errors.As(err, &infeasible) || !infeasible.Failure.Exhaustive {
+		t.Fatalf("GeneratePlan() error = %v, want the original exhaustive infeasibility", err)
+	}
+}
+
+func newDepsWithGenerator(t *testing.T) *deps {
+	t.Helper()
+	result := newDeps(t)
+	result.generator = &fakeGenerator{}
+	result.service = NewService(
+		result.plans, result.eaters, result.products, result.recipes, result.planner,
+		result.generator, result.transactions,
+		Options{AvailableEquipment: []string{"oven"}, RollingWindowDays: 7},
+	)
+	return result
+}
+
+func (d *deps) expectRoleTagsAndDraftStorage() {
+	d.products.EXPECT().ListRoleTags(gomock.Any()).Return(validRoleTags(), nil)
+	d.recipes.EXPECT().
+		ResolveRoleTags(gomock.Any(), gomock.Any()).
+		Return(map[string]catalogdom.RoleTag{"protein:lean": {ID: 1, Code: "protein:lean", Kind: catalogdom.RoleKindProtein, Label: "Lean"}}, nil)
+	d.recipes.EXPECT().
+		Create(gomock.Any(), gomock.Any(), gomock.Any()).
+		DoAndReturn(func(_ context.Context, template recipedom.Template, _ map[string]catalogdom.RoleTag) (recipedom.Template, error) {
+			d.storedDraft = template
+			template.ID = 99
+			return template, nil
+		})
+}
+
+func (d *deps) expectPersistence() {
+	d.plans.EXPECT().
+		Save(gomock.Any(), gomock.Any()).
+		DoAndReturn(func(_ context.Context, plan planningdom.Plan) (planningdom.Plan, error) {
+			plan.ID = 7
+			return plan, nil
+		})
+	d.plans.EXPECT().SaveQualitySnapshots(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+}
+
+func validRoleTags() []catalogdom.RoleTag {
+	return []catalogdom.RoleTag{{ID: 1, Code: "protein:lean", Kind: catalogdom.RoleKindProtein, Label: "Lean"}}
+}
+
+func validCandidate() recipedom.Template {
+	output := 400.0
+	return recipedom.Template{
+		Name:             "Generated bowl",
+		Status:           recipedom.StatusDraft,
+		Source:           recipedom.SourceLLM,
+		ComponentKind:    recipedom.ComponentKindProtein,
+		AllowedMealTypes: []mealdom.Type{mealdom.TypeLunch},
+		BaseServings:     2,
+		ExpectedOutputG:  &output,
+		Storage:          recipedom.StorageKeeps3d,
+		Equipment:        []string{"oven"},
+		Slots:            []recipedom.Slot{{RoleTagCode: "protein:lean", Label: "Protein", QtyG: 400, Position: 0}},
+	}
+}
+
+type fakeGenerator struct {
+	calls      int
+	candidates []recipedom.Template
+	err        error
+	request    RecipeCandidateRequest
+}
+
+func (g *fakeGenerator) GenerateCandidates(
+	_ context.Context,
+	request RecipeCandidateRequest,
+) ([]recipedom.Template, error) {
+	g.calls++
+	g.request = request
+	if g.err != nil {
+		return nil, g.err
+	}
+	return g.candidates, nil
 }

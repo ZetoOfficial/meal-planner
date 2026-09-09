@@ -24,6 +24,7 @@ type Config struct {
 	APIToken     string
 	LLMProvider  string
 	LLMModel     string
+	LLMEndpoint  string
 	LLMAPIKey    string
 	LLMTimeout   time.Duration
 	ShutdownWait time.Duration
@@ -39,7 +40,8 @@ func Load() (Config, error) {
 		DatabaseURL:  databaseURL(),
 		APIToken:     os.Getenv("API_TOKEN"),
 		LLMProvider:  env("LLM_PROVIDER", "anthropic"),
-		LLMModel:     env("LLM_MODEL", "claude-sonnet-4-6"),
+		LLMModel:     env("LLM_MODEL", "claude-sonnet-5"),
+		LLMEndpoint:  env("LLM_ENDPOINT", "https://api.anthropic.com/v1/messages"),
 		LLMAPIKey:    os.Getenv("LLM_API_KEY"),
 		LLMTimeout:   defaultLLMTimeout,
 		ShutdownWait: defaultShutdownWait,

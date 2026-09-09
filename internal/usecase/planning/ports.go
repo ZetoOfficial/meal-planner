@@ -40,11 +40,15 @@ type EaterRepository interface {
 
 type ProductRepository interface {
 	List(ctx context.Context, roleCode string) ([]catalogdom.Product, error)
+	ListRoleTags(ctx context.Context) ([]catalogdom.RoleTag, error)
 }
 
-// RecipeRepository serves the reuse-first candidate set: permanent recipes only.
+// RecipeRepository serves the reuse-first candidate set (permanent recipes) and
+// stores accepted LLM candidates as drafts.
 type RecipeRepository interface {
 	ListPermanentCandidates(ctx context.Context) ([]recipedom.Template, error)
+	ResolveRoleTags(ctx context.Context, codes []string) (map[string]catalogdom.RoleTag, error)
+	Create(ctx context.Context, template recipedom.Template, roles map[string]catalogdom.RoleTag) (recipedom.Template, error)
 }
 
 type Solver interface {

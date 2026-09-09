@@ -14,9 +14,11 @@ import (
 	httpapi "github.com/ZetoOfficial/meal-planner/internal/api/http"
 	"github.com/ZetoOfficial/meal-planner/internal/app"
 	"github.com/ZetoOfficial/meal-planner/internal/clock"
+	"github.com/ZetoOfficial/meal-planner/internal/llm"
 	"github.com/ZetoOfficial/meal-planner/internal/postgres"
 	catalogrepo "github.com/ZetoOfficial/meal-planner/internal/postgres/catalog"
 	eaterrepo "github.com/ZetoOfficial/meal-planner/internal/postgres/eater"
+	llmrepo "github.com/ZetoOfficial/meal-planner/internal/postgres/llm"
 	planningrepo "github.com/ZetoOfficial/meal-planner/internal/postgres/planning"
 	reciperepo "github.com/ZetoOfficial/meal-planner/internal/postgres/recipe"
 	"github.com/ZetoOfficial/meal-planner/internal/solver"
@@ -27,6 +29,27 @@ import (
 )
 
 const readHeaderTimeout = 10 * time.Second
+
+// recipeGenerator stays nil without an API key: the planner then works
+// reuse-only instead of failing at start-up.
+func recipeGenerator(cfg app.Config, store *postgres.Store) (usecaseplanning.RecipeGenerator, error) {
+	if cfg.LLMAPIKey == "" {
+		slog.Warn("llm api key is not set, plan generation stays reuse-only")
+		return nil, nil
+	}
+	client := llm.New(llm.Config{
+		Provider: cfg.LLMProvider,
+		Model:    cfg.LLMModel,
+		Endpoint: cfg.LLMEndpoint,
+		APIKey:   cfg.LLMAPIKey,
+		Timeout:  cfg.LLMTimeout,
+	}, llmrepo.New(store))
+	generator, err := llm.NewRecipeGenerator(client)
+	if err != nil {
+		return nil, err
+	}
+	return llm.NewPlanningGenerator(generator), nil
+}
 
 func main() {
 	slog.SetDefault(slog.New(slog.NewJSONHandler(os.Stdout, nil)))
@@ -60,13 +83,18 @@ func run() error {
 	eaters := eaterrepo.New(store)
 	products := catalogrepo.New(store)
 	recipes := reciperepo.New(store)
+	generator, err := recipeGenerator(cfg, store)
+	if err != nil {
+		return err
+	}
+
 	handler := httpapi.New(httpapi.Deps{
 		APIToken: cfg.APIToken,
 		Catalog:  usecasecatalog.NewService(products, tx),
 		Eater:    usecaseeater.NewService(eaters, tx, clock.System{}),
 		Recipe:   usecaserecipe.NewService(recipes, tx, clock.System{}),
 		Planning: usecaseplanning.NewService(
-			planningrepo.New(store), eaters, products, recipes, solver.New(), tx,
+			planningrepo.New(store), eaters, products, recipes, solver.New(), generator, tx,
 			usecaseplanning.Options{
 				AvailableEquipment: cfg.PlannerEquipment,
 				RollingWindowDays:  cfg.RollingWindowDays,
