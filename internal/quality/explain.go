@@ -34,3 +34,17 @@ func formatTarget(v *float64) string {
 	}
 	return fmt.Sprintf("%.2f", *v)
 }
+
+// Result narrows an outcome to the persisted rule verdict, so the stored
+// explanation is exactly the one the ranking produced.
+func (o RuleOutcome) Result() nutrition.RuleEvaluationResult {
+	return nutrition.RuleEvaluationResult{
+		RuleCode: o.Code,
+		Status:   o.Status,
+		Actual:   o.Actual,
+		Target:   o.Target,
+		Unit:     o.Unit,
+		Coverage: o.Coverage,
+		Message:  o.Message,
+	}
+}

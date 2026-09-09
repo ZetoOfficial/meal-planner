@@ -5,6 +5,7 @@ package planning
 import (
 	"context"
 
+	"github.com/ZetoOfficial/meal-planner/internal/domain/nutrition"
 	planningdom "github.com/ZetoOfficial/meal-planner/internal/domain/planning"
 )
 
@@ -17,4 +18,7 @@ type TxRunner interface {
 type PlanRepository interface {
 	Save(ctx context.Context, plan planningdom.Plan) (planningdom.Plan, error)
 	Get(ctx context.Context, id planningdom.PlanID) (planningdom.Plan, error)
+
+	SaveQualitySnapshots(ctx context.Context, planID planningdom.PlanID, snapshots []planningdom.QualitySnapshot) error
+	ListQualitySnapshots(ctx context.Context, planID planningdom.PlanID, basis nutrition.SummaryBasis) ([]planningdom.QualitySnapshot, error)
 }

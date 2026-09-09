@@ -19,6 +19,7 @@ import (
 	eaterrepo "github.com/ZetoOfficial/meal-planner/internal/postgres/eater"
 	planningrepo "github.com/ZetoOfficial/meal-planner/internal/postgres/planning"
 	reciperepo "github.com/ZetoOfficial/meal-planner/internal/postgres/recipe"
+	"github.com/ZetoOfficial/meal-planner/internal/quality"
 	testpostgres "github.com/ZetoOfficial/meal-planner/internal/testkit/postgres"
 )
 
@@ -299,4 +300,159 @@ func mealOfType(t *testing.T, plan planningdom.Plan, mealType mealdom.Type) plan
 	}
 	t.Fatalf("plan has no %s meal", mealType)
 	return planningdom.Meal{}
+}
+
+func TestQualitySnapshotsRoundTripPerPlanAndEater(t *testing.T) {
+	fixture := newPlanFixture(t)
+	saved, err := fixture.repository.Save(fixture.ctx, fixture.plan())
+	if err != nil {
+		t.Fatalf("Save() error = %v", err)
+	}
+
+	if err := fixture.repository.SaveQualitySnapshots(fixture.ctx, saved.ID, fixture.snapshots()); err != nil {
+		t.Fatalf("SaveQualitySnapshots() error = %v", err)
+	}
+
+	loaded, err := fixture.repository.ListQualitySnapshots(fixture.ctx, saved.ID, nutrition.SummaryBasisPlanned)
+	if err != nil {
+		t.Fatalf("ListQualitySnapshots() error = %v", err)
+	}
+	if len(loaded) != 1 {
+		t.Fatalf("snapshots = %d, want one per eater-day", len(loaded))
+	}
+	snapshot := loaded[0]
+	if snapshot.EaterID != fixture.eaterID || !snapshot.Date.Equal(fixture.start) {
+		t.Fatalf("snapshot key = eater %d on %s, want the stored eater-day", snapshot.EaterID, snapshot.Date)
+	}
+	if snapshot.Day.Totals.FiberG != 30 || snapshot.Day.Macros.Kcal != 400 {
+		t.Fatalf("day summary = %#v, want the stored totals", snapshot.Day)
+	}
+	if snapshot.Rolling.WindowDays != 7 || snapshot.Rolling.RedMeatG != 120 {
+		t.Fatalf("rolling summary = %#v, want the stored weekly projection", snapshot.Rolling)
+	}
+	if len(snapshot.DayRules) != 1 || snapshot.DayRules[0].RuleCode != quality.RuleFiber {
+		t.Fatalf("day rules = %#v, want the stored fiber verdict", snapshot.DayRules)
+	}
+	if snapshot.DayRules[0].Message == "" || snapshot.DayRules[0].Status != nutrition.StatusPass {
+		t.Fatalf("fiber verdict = %#v, want a readable passing explanation", snapshot.DayRules[0])
+	}
+	if len(snapshot.RollingRules) != 1 || snapshot.RollingRules[0].RuleCode != quality.RuleRedMeat {
+		t.Fatalf("rolling rules = %#v, want the stored red meat verdict", snapshot.RollingRules)
+	}
+}
+
+func TestQualitySnapshotsReplaceInsteadOfDuplicating(t *testing.T) {
+	fixture := newPlanFixture(t)
+	saved, err := fixture.repository.Save(fixture.ctx, fixture.plan())
+	if err != nil {
+		t.Fatalf("Save() error = %v", err)
+	}
+	if err := fixture.repository.SaveQualitySnapshots(fixture.ctx, saved.ID, fixture.snapshots()); err != nil {
+		t.Fatalf("first SaveQualitySnapshots() error = %v", err)
+	}
+
+	reevaluated := fixture.snapshots()
+	reevaluated[0].Day.Totals.FiberG = 12
+	reevaluated[0].DayRules[0].Status = nutrition.StatusSoftFail
+	if err := fixture.repository.SaveQualitySnapshots(fixture.ctx, saved.ID, reevaluated); err != nil {
+		t.Fatalf("second SaveQualitySnapshots() error = %v", err)
+	}
+
+	var rules int
+	if err := fixture.database.Pool.QueryRow(fixture.ctx, "SELECT count(*) FROM rule_evaluation_result").Scan(&rules); err != nil {
+		t.Fatalf("count rule results: %v", err)
+	}
+	if rules != 2 {
+		t.Fatalf("rule results = %d, want the re-evaluation to replace the first verdicts", rules)
+	}
+
+	loaded, err := fixture.repository.ListQualitySnapshots(fixture.ctx, saved.ID, nutrition.SummaryBasisPlanned)
+	if err != nil {
+		t.Fatalf("ListQualitySnapshots() error = %v", err)
+	}
+	if len(loaded) != 1 || loaded[0].Day.Totals.FiberG != 12 {
+		t.Fatalf("reloaded snapshot = %#v, want the replaced totals", loaded)
+	}
+	if loaded[0].DayRules[0].Status != nutrition.StatusSoftFail {
+		t.Fatalf("reloaded verdict = %#v, want the replaced status", loaded[0].DayRules[0])
+	}
+}
+
+func TestQualitySnapshotsOfDifferentPlansDoNotCollide(t *testing.T) {
+	fixture := newPlanFixture(t)
+	first, err := fixture.repository.Save(fixture.ctx, fixture.plan())
+	if err != nil {
+		t.Fatalf("Save(first) error = %v", err)
+	}
+	second, err := fixture.repository.Save(fixture.ctx, fixture.plan())
+	if err != nil {
+		t.Fatalf("Save(second) error = %v", err)
+	}
+
+	if err := fixture.repository.SaveQualitySnapshots(fixture.ctx, first.ID, fixture.snapshots()); err != nil {
+		t.Fatalf("SaveQualitySnapshots(first) error = %v", err)
+	}
+	other := fixture.snapshots()
+	other[0].Day.Totals.FiberG = 5
+	if err := fixture.repository.SaveQualitySnapshots(fixture.ctx, second.ID, other); err != nil {
+		t.Fatalf("SaveQualitySnapshots(second) error = %v", err)
+	}
+
+	firstLoaded, err := fixture.repository.ListQualitySnapshots(fixture.ctx, first.ID, nutrition.SummaryBasisPlanned)
+	if err != nil {
+		t.Fatalf("ListQualitySnapshots(first) error = %v", err)
+	}
+	if len(firstLoaded) != 1 || firstLoaded[0].Day.Totals.FiberG != 30 {
+		t.Fatalf("first plan snapshot = %#v, want it untouched by the second plan", firstLoaded)
+	}
+}
+
+func (f *planFixture) snapshots() []planningdom.QualitySnapshot {
+	fiber := 30.0
+	fiberTarget := 25.0
+	redMeat := 120.0
+	redMeatTarget := 350.0
+	dayCoverage, err := nutrition.CoverageForInput(true, 1)
+	if err != nil {
+		f.t.Fatalf("CoverageForInput() error = %v", err)
+	}
+
+	return []planningdom.QualitySnapshot{{
+		EaterID: f.eaterID,
+		Date:    f.start,
+		Basis:   nutrition.SummaryBasisPlanned,
+		Day: nutrition.DaySummary{
+			Basis:        nutrition.SummaryBasisPlanned,
+			Macros:       nutrition.Macros{ProteinG: 30, FatG: 10, CarbG: 40, Kcal: 400},
+			Totals:       nutrition.DailyTotals{FiberG: fiber, SodiumMg: 800, RedMeatG: redMeat},
+			Coverage:     dayCoverage,
+			RuleCoverage: map[string]nutrition.Coverage{quality.RuleFiber: dayCoverage},
+		},
+		Rolling: nutrition.RollingSummary{
+			Basis:        nutrition.SummaryBasisPlanned,
+			WindowDays:   7,
+			RedMeatG:     redMeat,
+			FiberGAvg:    fiber,
+			Coverage:     dayCoverage,
+			RuleCoverage: map[string]nutrition.Coverage{quality.RuleRedMeat: dayCoverage},
+		},
+		DayRules: []nutrition.RuleEvaluationResult{{
+			RuleCode: quality.RuleFiber,
+			Status:   nutrition.StatusPass,
+			Actual:   &fiber,
+			Target:   &fiberTarget,
+			Unit:     "g/day",
+			Coverage: 1,
+			Message:  "fiber 30.0 g/day meets the 25.0 g/day target",
+		}},
+		RollingRules: []nutrition.RuleEvaluationResult{{
+			RuleCode: quality.RuleRedMeat,
+			Status:   nutrition.StatusPass,
+			Actual:   &redMeat,
+			Target:   &redMeatTarget,
+			Unit:     "g/week",
+			Coverage: 1,
+			Message:  "red meat 120.0 g/week stays under 350.0 g/week",
+		}},
+	}}
 }

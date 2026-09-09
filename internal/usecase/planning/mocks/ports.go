@@ -13,6 +13,7 @@ import (
 	context "context"
 	reflect "reflect"
 
+	nutrition "github.com/ZetoOfficial/meal-planner/internal/domain/nutrition"
 	planning "github.com/ZetoOfficial/meal-planner/internal/domain/planning"
 	gomock "go.uber.org/mock/gomock"
 )
@@ -94,6 +95,21 @@ func (mr *MockPlanRepositoryMockRecorder) Get(ctx, id any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockPlanRepository)(nil).Get), ctx, id)
 }
 
+// ListQualitySnapshots mocks base method.
+func (m *MockPlanRepository) ListQualitySnapshots(ctx context.Context, planID planning.PlanID, basis nutrition.SummaryBasis) ([]planning.QualitySnapshot, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListQualitySnapshots", ctx, planID, basis)
+	ret0, _ := ret[0].([]planning.QualitySnapshot)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListQualitySnapshots indicates an expected call of ListQualitySnapshots.
+func (mr *MockPlanRepositoryMockRecorder) ListQualitySnapshots(ctx, planID, basis any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListQualitySnapshots", reflect.TypeOf((*MockPlanRepository)(nil).ListQualitySnapshots), ctx, planID, basis)
+}
+
 // Save mocks base method.
 func (m *MockPlanRepository) Save(ctx context.Context, plan planning.Plan) (planning.Plan, error) {
 	m.ctrl.T.Helper()
@@ -107,4 +123,18 @@ func (m *MockPlanRepository) Save(ctx context.Context, plan planning.Plan) (plan
 func (mr *MockPlanRepositoryMockRecorder) Save(ctx, plan any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Save", reflect.TypeOf((*MockPlanRepository)(nil).Save), ctx, plan)
+}
+
+// SaveQualitySnapshots mocks base method.
+func (m *MockPlanRepository) SaveQualitySnapshots(ctx context.Context, planID planning.PlanID, snapshots []planning.QualitySnapshot) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SaveQualitySnapshots", ctx, planID, snapshots)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// SaveQualitySnapshots indicates an expected call of SaveQualitySnapshots.
+func (mr *MockPlanRepositoryMockRecorder) SaveQualitySnapshots(ctx, planID, snapshots any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SaveQualitySnapshots", reflect.TypeOf((*MockPlanRepository)(nil).SaveQualitySnapshots), ctx, planID, snapshots)
 }
