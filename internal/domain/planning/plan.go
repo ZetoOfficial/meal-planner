@@ -45,6 +45,7 @@ type Plan struct {
 	EaterDays            []EaterDay
 	Recipes              []PlanRecipe
 	Meals                []Meal
+	PrepDependencies     []PrepDependency
 }
 
 type EaterDay struct {
