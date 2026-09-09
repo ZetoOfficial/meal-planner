@@ -4,11 +4,11 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/ZetoOfficial/meal-planner/internal/apperr"
 	catalogdom "github.com/ZetoOfficial/meal-planner/internal/domain/catalog"
 	eaterdom "github.com/ZetoOfficial/meal-planner/internal/domain/eater"
 	mealdom "github.com/ZetoOfficial/meal-planner/internal/domain/meal"
 	recipedom "github.com/ZetoOfficial/meal-planner/internal/domain/recipe"
-	apperr "github.com/ZetoOfficial/meal-planner/internal/errors"
 	"github.com/ZetoOfficial/meal-planner/internal/solver"
 )
 

@@ -10,10 +10,10 @@ import (
 	"strings"
 	"text/template"
 
+	"github.com/ZetoOfficial/meal-planner/internal/apperr"
 	catalogdom "github.com/ZetoOfficial/meal-planner/internal/domain/catalog"
 	mealdom "github.com/ZetoOfficial/meal-planner/internal/domain/meal"
 	recipedom "github.com/ZetoOfficial/meal-planner/internal/domain/recipe"
-	apperr "github.com/ZetoOfficial/meal-planner/internal/errors"
 )
 
 //go:embed prompts/recipe_generation.md

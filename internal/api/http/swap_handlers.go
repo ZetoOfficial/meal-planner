@@ -6,9 +6,9 @@ import (
 
 	"github.com/ZetoOfficial/meal-planner/api/sdk/go/api"
 	"github.com/ZetoOfficial/meal-planner/api/sdk/go/model"
+	"github.com/ZetoOfficial/meal-planner/internal/apperr"
 	catalogdom "github.com/ZetoOfficial/meal-planner/internal/domain/catalog"
 	planningdom "github.com/ZetoOfficial/meal-planner/internal/domain/planning"
-	apperr "github.com/ZetoOfficial/meal-planner/internal/errors"
 	usecaseplanning "github.com/ZetoOfficial/meal-planner/internal/usecase/planning"
 )
 

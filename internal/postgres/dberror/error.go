@@ -6,7 +6,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 
-	apperr "github.com/ZetoOfficial/meal-planner/internal/errors"
+	"github.com/ZetoOfficial/meal-planner/internal/apperr"
 )
 
 // Map translates a driver error for a read or a write. A foreign key violation

@@ -7,9 +7,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/ZetoOfficial/meal-planner/internal/apperr"
 	catalogdom "github.com/ZetoOfficial/meal-planner/internal/domain/catalog"
 	eaterdom "github.com/ZetoOfficial/meal-planner/internal/domain/eater"
-	apperr "github.com/ZetoOfficial/meal-planner/internal/errors"
 )
 
 const (

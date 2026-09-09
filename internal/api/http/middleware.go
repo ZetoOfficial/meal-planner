@@ -8,7 +8,7 @@ import (
 	"net/http"
 	"time"
 
-	apperr "github.com/ZetoOfficial/meal-planner/internal/errors"
+	"github.com/ZetoOfficial/meal-planner/internal/apperr"
 )
 
 // requestIDHeader is both read and written: a caller that already correlates

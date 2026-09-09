@@ -7,7 +7,7 @@ import (
 	"net/http"
 
 	"github.com/ZetoOfficial/meal-planner/api/sdk/go/model"
-	apperr "github.com/ZetoOfficial/meal-planner/internal/errors"
+	"github.com/ZetoOfficial/meal-planner/internal/apperr"
 )
 
 func requestError(w http.ResponseWriter, r *http.Request, err error, status int) {

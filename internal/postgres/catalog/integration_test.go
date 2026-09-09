@@ -9,8 +9,8 @@ import (
 
 	"go.uber.org/mock/gomock"
 
+	"github.com/ZetoOfficial/meal-planner/internal/apperr"
 	catalogdom "github.com/ZetoOfficial/meal-planner/internal/domain/catalog"
-	apperr "github.com/ZetoOfficial/meal-planner/internal/errors"
 	postgresdb "github.com/ZetoOfficial/meal-planner/internal/postgres"
 	catalogrepo "github.com/ZetoOfficial/meal-planner/internal/postgres/catalog"
 	"github.com/ZetoOfficial/meal-planner/internal/postgres/sqlc"

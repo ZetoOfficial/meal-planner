@@ -3,9 +3,9 @@ package planning
 import (
 	"context"
 
+	"github.com/ZetoOfficial/meal-planner/internal/apperr"
 	eaterdom "github.com/ZetoOfficial/meal-planner/internal/domain/eater"
 	planningdom "github.com/ZetoOfficial/meal-planner/internal/domain/planning"
-	apperr "github.com/ZetoOfficial/meal-planner/internal/errors"
 	"github.com/ZetoOfficial/meal-planner/internal/swap"
 )
 

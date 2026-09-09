@@ -8,13 +8,13 @@ import (
 
 	"go.uber.org/mock/gomock"
 
+	"github.com/ZetoOfficial/meal-planner/internal/apperr"
 	catalogdom "github.com/ZetoOfficial/meal-planner/internal/domain/catalog"
 	eaterdom "github.com/ZetoOfficial/meal-planner/internal/domain/eater"
 	mealdom "github.com/ZetoOfficial/meal-planner/internal/domain/meal"
 	"github.com/ZetoOfficial/meal-planner/internal/domain/nutrition"
 	planningdom "github.com/ZetoOfficial/meal-planner/internal/domain/planning"
 	recipedom "github.com/ZetoOfficial/meal-planner/internal/domain/recipe"
-	apperr "github.com/ZetoOfficial/meal-planner/internal/errors"
 	"github.com/ZetoOfficial/meal-planner/internal/quality"
 	"github.com/ZetoOfficial/meal-planner/internal/solver"
 	"github.com/ZetoOfficial/meal-planner/internal/usecase/planning/mocks"

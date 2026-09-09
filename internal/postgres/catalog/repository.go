@@ -3,8 +3,8 @@ package catalog
 import (
 	"context"
 
+	"github.com/ZetoOfficial/meal-planner/internal/apperr"
 	catalogdom "github.com/ZetoOfficial/meal-planner/internal/domain/catalog"
-	apperr "github.com/ZetoOfficial/meal-planner/internal/errors"
 	"github.com/ZetoOfficial/meal-planner/internal/postgres"
 	"github.com/ZetoOfficial/meal-planner/internal/postgres/dberror"
 	"github.com/ZetoOfficial/meal-planner/internal/postgres/sqlc"

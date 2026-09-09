@@ -11,7 +11,7 @@ import (
 	nethttpmiddleware "github.com/oapi-codegen/nethttp-middleware"
 
 	"github.com/ZetoOfficial/meal-planner/api/sdk/go/api"
-	apperr "github.com/ZetoOfficial/meal-planner/internal/errors"
+	"github.com/ZetoOfficial/meal-planner/internal/apperr"
 )
 
 type Deps struct {

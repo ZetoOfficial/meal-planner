@@ -8,10 +8,10 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/ZetoOfficial/meal-planner/internal/apperr"
 	eaterdom "github.com/ZetoOfficial/meal-planner/internal/domain/eater"
 	feedbackdom "github.com/ZetoOfficial/meal-planner/internal/domain/feedback"
 	recipedom "github.com/ZetoOfficial/meal-planner/internal/domain/recipe"
-	apperr "github.com/ZetoOfficial/meal-planner/internal/errors"
 	"github.com/ZetoOfficial/meal-planner/internal/postgres"
 	"github.com/ZetoOfficial/meal-planner/internal/postgres/dberror"
 	"github.com/ZetoOfficial/meal-planner/internal/postgres/pgvalue"

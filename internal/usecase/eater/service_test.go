@@ -10,8 +10,8 @@ import (
 
 	"go.uber.org/mock/gomock"
 
+	"github.com/ZetoOfficial/meal-planner/internal/apperr"
 	eaterdom "github.com/ZetoOfficial/meal-planner/internal/domain/eater"
-	apperr "github.com/ZetoOfficial/meal-planner/internal/errors"
 	"github.com/ZetoOfficial/meal-planner/internal/usecase/eater/mocks"
 )
 
