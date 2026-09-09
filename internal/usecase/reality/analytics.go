@@ -4,13 +4,12 @@ import (
 	"context"
 	"time"
 
-	catalogdom "github.com/ZetoOfficial/meal-planner/internal/domain/catalog"
 	eaterdom "github.com/ZetoOfficial/meal-planner/internal/domain/eater"
 	"github.com/ZetoOfficial/meal-planner/internal/domain/nutrition"
 	planningdom "github.com/ZetoOfficial/meal-planner/internal/domain/planning"
-	recipedom "github.com/ZetoOfficial/meal-planner/internal/domain/recipe"
 	apperr "github.com/ZetoOfficial/meal-planner/internal/errors"
 	"github.com/ZetoOfficial/meal-planner/internal/quality"
+	"github.com/ZetoOfficial/meal-planner/internal/usecase/reference"
 )
 
 const dayDuration = 24 * time.Hour
@@ -216,7 +215,7 @@ func (s *Service) refreshActualSummaries(ctx context.Context, period Period) err
 	if err != nil {
 		return err
 	}
-	catalogue, err := s.catalogue(ctx, plans)
+	catalogue, err := reference.LoadCatalogue(ctx, s.reference, plans)
 	if err != nil {
 		return err
 	}
@@ -318,54 +317,6 @@ const (
 	defaultTopRecipes = 10
 	defaultWindowDays = 7
 )
-
-// catalogue loads the reference data every plan in the period points at.
-func (s *Service) catalogue(ctx context.Context, plans []planningdom.Plan) (quality.Catalogue, error) {
-	products, err := s.reference.ListProducts(ctx)
-	if err != nil {
-		return quality.Catalogue{}, err
-	}
-	templates, err := s.reference.ListRecipeTemplates(ctx)
-	if err != nil {
-		return quality.Catalogue{}, err
-	}
-
-	catalogue := quality.Catalogue{
-		Products:   make(map[catalogdom.ProductID]catalogdom.Product, len(products)),
-		Templates:  make(map[recipedom.ID]recipedom.Template, len(templates)),
-		Eaters:     make(map[eaterdom.ID]eaterdom.Eater),
-		FixedMeals: make(map[eaterdom.FixedMealID]eaterdom.FixedMeal),
-	}
-	for i := range products {
-		catalogue.Products[products[i].ID] = products[i]
-	}
-	for i := range templates {
-		catalogue.Templates[templates[i].ID] = templates[i]
-	}
-
-	for i := range plans {
-		for j := range plans[i].EaterDays {
-			eaterID := plans[i].EaterDays[j].EaterID
-			if _, loaded := catalogue.Eaters[eaterID]; loaded {
-				continue
-			}
-			eater, err := s.reference.GetEater(ctx, eaterID)
-			if err != nil {
-				return quality.Catalogue{}, err
-			}
-			catalogue.Eaters[eaterID] = eater
-
-			fixedMeals, err := s.reference.ListFixedMeals(ctx, eaterID)
-			if err != nil {
-				return quality.Catalogue{}, err
-			}
-			for k := range fixedMeals {
-				catalogue.FixedMeals[fixedMeals[k].ID] = fixedMeals[k]
-			}
-		}
-	}
-	return catalogue, nil
-}
 
 func (s *Service) ruleset() quality.Ruleset { return quality.DefaultRuleset() }
 

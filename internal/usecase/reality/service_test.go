@@ -325,7 +325,9 @@ type realityDeps struct {
 	meals     *mocks.MockMealRepository
 	feedback  *mocks.MockFeedbackRepository
 	analytics *fakeAnalytics
-	reference *mocks.MockCatalogueRepository
+	products  *mocks.MockProductRepository
+	recipes   *mocks.MockRecipeRepository
+	eaters    *mocks.MockEaterRepository
 }
 
 func newRealityDeps(t *testing.T) *realityDeps {
@@ -335,7 +337,9 @@ func newRealityDeps(t *testing.T) *realityDeps {
 		meals:     mocks.NewMockMealRepository(controller),
 		feedback:  mocks.NewMockFeedbackRepository(controller),
 		analytics: &fakeAnalytics{},
-		reference: mocks.NewMockCatalogueRepository(controller),
+		products:  mocks.NewMockProductRepository(controller),
+		recipes:   mocks.NewMockRecipeRepository(controller),
+		eaters:    mocks.NewMockEaterRepository(controller),
 	}
 	transactions := mocks.NewMockTxRunner(controller)
 	transactions.EXPECT().
@@ -345,7 +349,10 @@ func newRealityDeps(t *testing.T) *realityDeps {
 	clock := mocks.NewMockClock(controller)
 	clock.EXPECT().Now().Return(analyticsDay(0)).AnyTimes()
 
-	deps.service = NewService(deps.meals, deps.feedback, deps.analytics, deps.reference, transactions, clock)
+	deps.service = NewService(
+		deps.meals, deps.feedback, deps.analytics,
+		deps.products, deps.recipes, deps.eaters, transactions, clock,
+	)
 	return deps
 }
 

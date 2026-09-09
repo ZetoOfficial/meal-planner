@@ -8,13 +8,14 @@ import (
 	eaterdom "github.com/ZetoOfficial/meal-planner/internal/domain/eater"
 	planningdom "github.com/ZetoOfficial/meal-planner/internal/domain/planning"
 	apperr "github.com/ZetoOfficial/meal-planner/internal/errors"
+	"github.com/ZetoOfficial/meal-planner/internal/usecase/reference"
 )
 
 type Service struct {
 	meals        MealRepository
 	feedback     FeedbackRepository
 	analytics    AnalyticsRepository
-	reference    CatalogueRepository
+	reference    reference.Readers
 	transactions TxRunner
 	clock        Clock
 }
@@ -23,15 +24,21 @@ func NewService(
 	meals MealRepository,
 	feedback FeedbackRepository,
 	analytics AnalyticsRepository,
-	reference CatalogueRepository,
+	products ProductRepository,
+	recipes RecipeRepository,
+	eaters EaterRepository,
 	transactions TxRunner,
 	clock Clock,
 ) *Service {
 	return &Service{
-		meals:        meals,
-		feedback:     feedback,
-		analytics:    analytics,
-		reference:    reference,
+		meals:     meals,
+		feedback:  feedback,
+		analytics: analytics,
+		reference: reference.Readers{
+			Products: products,
+			Recipes:  recipes,
+			Eaters:   eaters,
+		},
 		transactions: transactions,
 		clock:        clock,
 	}

@@ -211,47 +211,125 @@ func (mr *MockMealRepositoryMockRecorder) SaveQualitySnapshots(ctx, planID, snap
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SaveQualitySnapshots", reflect.TypeOf((*MockMealRepository)(nil).SaveQualitySnapshots), ctx, planID, snapshots)
 }
 
-// MockCatalogueRepository is a mock of CatalogueRepository interface.
-type MockCatalogueRepository struct {
+// MockProductRepository is a mock of ProductRepository interface.
+type MockProductRepository struct {
 	ctrl     *gomock.Controller
-	recorder *MockCatalogueRepositoryMockRecorder
+	recorder *MockProductRepositoryMockRecorder
 	isgomock struct{}
 }
 
-// MockCatalogueRepositoryMockRecorder is the mock recorder for MockCatalogueRepository.
-type MockCatalogueRepositoryMockRecorder struct {
-	mock *MockCatalogueRepository
+// MockProductRepositoryMockRecorder is the mock recorder for MockProductRepository.
+type MockProductRepositoryMockRecorder struct {
+	mock *MockProductRepository
 }
 
-// NewMockCatalogueRepository creates a new mock instance.
-func NewMockCatalogueRepository(ctrl *gomock.Controller) *MockCatalogueRepository {
-	mock := &MockCatalogueRepository{ctrl: ctrl}
-	mock.recorder = &MockCatalogueRepositoryMockRecorder{mock}
+// NewMockProductRepository creates a new mock instance.
+func NewMockProductRepository(ctrl *gomock.Controller) *MockProductRepository {
+	mock := &MockProductRepository{ctrl: ctrl}
+	mock.recorder = &MockProductRepositoryMockRecorder{mock}
 	return mock
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MockCatalogueRepository) EXPECT() *MockCatalogueRepositoryMockRecorder {
+func (m *MockProductRepository) EXPECT() *MockProductRepositoryMockRecorder {
 	return m.recorder
 }
 
-// GetEater mocks base method.
-func (m *MockCatalogueRepository) GetEater(ctx context.Context, id eater.ID) (eater.Eater, error) {
+// List mocks base method.
+func (m *MockProductRepository) List(ctx context.Context, roleCode string) ([]catalog.Product, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetEater", ctx, id)
+	ret := m.ctrl.Call(m, "List", ctx, roleCode)
+	ret0, _ := ret[0].([]catalog.Product)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// List indicates an expected call of List.
+func (mr *MockProductRepositoryMockRecorder) List(ctx, roleCode any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockProductRepository)(nil).List), ctx, roleCode)
+}
+
+// MockRecipeRepository is a mock of RecipeRepository interface.
+type MockRecipeRepository struct {
+	ctrl     *gomock.Controller
+	recorder *MockRecipeRepositoryMockRecorder
+	isgomock struct{}
+}
+
+// MockRecipeRepositoryMockRecorder is the mock recorder for MockRecipeRepository.
+type MockRecipeRepositoryMockRecorder struct {
+	mock *MockRecipeRepository
+}
+
+// NewMockRecipeRepository creates a new mock instance.
+func NewMockRecipeRepository(ctrl *gomock.Controller) *MockRecipeRepository {
+	mock := &MockRecipeRepository{ctrl: ctrl}
+	mock.recorder = &MockRecipeRepositoryMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockRecipeRepository) EXPECT() *MockRecipeRepositoryMockRecorder {
+	return m.recorder
+}
+
+// List mocks base method.
+func (m *MockRecipeRepository) List(ctx context.Context, status *recipe.Status) ([]recipe.Template, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "List", ctx, status)
+	ret0, _ := ret[0].([]recipe.Template)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// List indicates an expected call of List.
+func (mr *MockRecipeRepositoryMockRecorder) List(ctx, status any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockRecipeRepository)(nil).List), ctx, status)
+}
+
+// MockEaterRepository is a mock of EaterRepository interface.
+type MockEaterRepository struct {
+	ctrl     *gomock.Controller
+	recorder *MockEaterRepositoryMockRecorder
+	isgomock struct{}
+}
+
+// MockEaterRepositoryMockRecorder is the mock recorder for MockEaterRepository.
+type MockEaterRepositoryMockRecorder struct {
+	mock *MockEaterRepository
+}
+
+// NewMockEaterRepository creates a new mock instance.
+func NewMockEaterRepository(ctrl *gomock.Controller) *MockEaterRepository {
+	mock := &MockEaterRepository{ctrl: ctrl}
+	mock.recorder = &MockEaterRepositoryMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockEaterRepository) EXPECT() *MockEaterRepositoryMockRecorder {
+	return m.recorder
+}
+
+// Get mocks base method.
+func (m *MockEaterRepository) Get(ctx context.Context, id eater.ID) (eater.Eater, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Get", ctx, id)
 	ret0, _ := ret[0].(eater.Eater)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// GetEater indicates an expected call of GetEater.
-func (mr *MockCatalogueRepositoryMockRecorder) GetEater(ctx, id any) *gomock.Call {
+// Get indicates an expected call of Get.
+func (mr *MockEaterRepositoryMockRecorder) Get(ctx, id any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetEater", reflect.TypeOf((*MockCatalogueRepository)(nil).GetEater), ctx, id)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockEaterRepository)(nil).Get), ctx, id)
 }
 
 // ListFixedMeals mocks base method.
-func (m *MockCatalogueRepository) ListFixedMeals(ctx context.Context, eaterID eater.ID) ([]eater.FixedMeal, error) {
+func (m *MockEaterRepository) ListFixedMeals(ctx context.Context, eaterID eater.ID) ([]eater.FixedMeal, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ListFixedMeals", ctx, eaterID)
 	ret0, _ := ret[0].([]eater.FixedMeal)
@@ -260,39 +338,9 @@ func (m *MockCatalogueRepository) ListFixedMeals(ctx context.Context, eaterID ea
 }
 
 // ListFixedMeals indicates an expected call of ListFixedMeals.
-func (mr *MockCatalogueRepositoryMockRecorder) ListFixedMeals(ctx, eaterID any) *gomock.Call {
+func (mr *MockEaterRepositoryMockRecorder) ListFixedMeals(ctx, eaterID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListFixedMeals", reflect.TypeOf((*MockCatalogueRepository)(nil).ListFixedMeals), ctx, eaterID)
-}
-
-// ListProducts mocks base method.
-func (m *MockCatalogueRepository) ListProducts(ctx context.Context) ([]catalog.Product, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListProducts", ctx)
-	ret0, _ := ret[0].([]catalog.Product)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// ListProducts indicates an expected call of ListProducts.
-func (mr *MockCatalogueRepositoryMockRecorder) ListProducts(ctx any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListProducts", reflect.TypeOf((*MockCatalogueRepository)(nil).ListProducts), ctx)
-}
-
-// ListRecipeTemplates mocks base method.
-func (m *MockCatalogueRepository) ListRecipeTemplates(ctx context.Context) ([]recipe.Template, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListRecipeTemplates", ctx)
-	ret0, _ := ret[0].([]recipe.Template)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// ListRecipeTemplates indicates an expected call of ListRecipeTemplates.
-func (mr *MockCatalogueRepositoryMockRecorder) ListRecipeTemplates(ctx any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListRecipeTemplates", reflect.TypeOf((*MockCatalogueRepository)(nil).ListRecipeTemplates), ctx)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListFixedMeals", reflect.TypeOf((*MockEaterRepository)(nil).ListFixedMeals), ctx, eaterID)
 }
 
 // MockFeedbackRepository is a mock of FeedbackRepository interface.

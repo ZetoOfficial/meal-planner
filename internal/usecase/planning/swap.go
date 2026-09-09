@@ -8,10 +8,10 @@ import (
 	eaterdom "github.com/ZetoOfficial/meal-planner/internal/domain/eater"
 	"github.com/ZetoOfficial/meal-planner/internal/domain/nutrition"
 	planningdom "github.com/ZetoOfficial/meal-planner/internal/domain/planning"
-	recipedom "github.com/ZetoOfficial/meal-planner/internal/domain/recipe"
 	apperr "github.com/ZetoOfficial/meal-planner/internal/errors"
 	"github.com/ZetoOfficial/meal-planner/internal/quality"
 	"github.com/ZetoOfficial/meal-planner/internal/swap"
+	"github.com/ZetoOfficial/meal-planner/internal/usecase/reference"
 )
 
 // SwapCommand asks to replace the product of one stored slot fill. Recipe and
@@ -139,7 +139,11 @@ func swapSnapshots(preview swap.Preview) []planningdom.QualitySnapshot {
 // swapInput assembles the catalogue and the rolling-window history a stored
 // plan needs to be re-evaluated the same way it was built.
 func (s *Service) swapInput(ctx context.Context, plan planningdom.Plan) (swap.Input, error) {
-	catalogue, err := s.catalogue(ctx, plan)
+	catalogue, err := reference.LoadCatalogue(ctx, reference.Readers{
+		Products: s.products,
+		Recipes:  s.recipes,
+		Eaters:   s.eaters,
+	}, []planningdom.Plan{plan})
 	if err != nil {
 		return swap.Input{}, err
 	}
@@ -162,49 +166,4 @@ func (s *Service) swapInput(ctx context.Context, plan planningdom.Plan) (swap.In
 		RollingWindowDays: s.options.RollingWindowDays,
 		History:           history,
 	}, nil
-}
-
-func (s *Service) catalogue(ctx context.Context, plan planningdom.Plan) (quality.Catalogue, error) {
-	products, err := s.products.List(ctx, "")
-	if err != nil {
-		return quality.Catalogue{}, err
-	}
-	templates, err := s.recipes.List(ctx, nil)
-	if err != nil {
-		return quality.Catalogue{}, err
-	}
-
-	catalogue := quality.Catalogue{
-		Products:   make(map[catalogdom.ProductID]catalogdom.Product, len(products)),
-		Templates:  make(map[recipedom.ID]recipedom.Template, len(templates)),
-		Eaters:     make(map[eaterdom.ID]eaterdom.Eater),
-		FixedMeals: make(map[eaterdom.FixedMealID]eaterdom.FixedMeal),
-	}
-	for i := range products {
-		catalogue.Products[products[i].ID] = products[i]
-	}
-	for i := range templates {
-		catalogue.Templates[templates[i].ID] = templates[i]
-	}
-
-	for i := range plan.EaterDays {
-		eaterID := plan.EaterDays[i].EaterID
-		if _, loaded := catalogue.Eaters[eaterID]; loaded {
-			continue
-		}
-		eater, err := s.eaters.Get(ctx, eaterID)
-		if err != nil {
-			return quality.Catalogue{}, err
-		}
-		catalogue.Eaters[eaterID] = eater
-
-		fixedMeals, err := s.eaters.ListFixedMeals(ctx, eaterID)
-		if err != nil {
-			return quality.Catalogue{}, err
-		}
-		for j := range fixedMeals {
-			catalogue.FixedMeals[fixedMeals[j].ID] = fixedMeals[j]
-		}
-	}
-	return catalogue, nil
 }

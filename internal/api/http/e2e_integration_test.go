@@ -16,9 +16,6 @@ import (
 	"github.com/ZetoOfficial/meal-planner/api/sdk/go/model"
 	httpapi "github.com/ZetoOfficial/meal-planner/internal/api/http"
 	"github.com/ZetoOfficial/meal-planner/internal/clock"
-	catalogdom "github.com/ZetoOfficial/meal-planner/internal/domain/catalog"
-	eaterdom "github.com/ZetoOfficial/meal-planner/internal/domain/eater"
-	recipedom "github.com/ZetoOfficial/meal-planner/internal/domain/recipe"
 	postgresdb "github.com/ZetoOfficial/meal-planner/internal/postgres"
 	analyticsrepo "github.com/ZetoOfficial/meal-planner/internal/postgres/analytics"
 	catalogrepo "github.com/ZetoOfficial/meal-planner/internal/postgres/catalog"
@@ -308,33 +305,10 @@ func newSmokeAPI(t *testing.T) (http.Handler, testpostgres.Database) {
 		Shopping: usecaseshopping.NewService(shoppingrepo.New(store), plans, products, transactions),
 		Reality: usecasereality.NewService(
 			plans, feedbackrepo.New(store), analyticsrepo.New(store),
-			smokeReference{products: products, recipes: recipes, eaters: eaters},
-			transactions, clock.System{},
+			products, recipes, eaters, transactions, clock.System{},
 		),
 	})
 	return handler, database
-}
-
-type smokeReference struct {
-	products *catalogrepo.Repository
-	recipes  *reciperepo.Repository
-	eaters   *eaterrepo.Repository
-}
-
-func (r smokeReference) ListProducts(ctx context.Context) ([]catalogdom.Product, error) {
-	return r.products.List(ctx, "")
-}
-
-func (r smokeReference) ListRecipeTemplates(ctx context.Context) ([]recipedom.Template, error) {
-	return r.recipes.List(ctx, nil)
-}
-
-func (r smokeReference) GetEater(ctx context.Context, id eaterdom.ID) (eaterdom.Eater, error) {
-	return r.eaters.Get(ctx, id)
-}
-
-func (r smokeReference) ListFixedMeals(ctx context.Context, id eaterdom.ID) ([]eaterdom.FixedMeal, error) {
-	return r.eaters.ListFixedMeals(ctx, id)
 }
 
 func seededEaterID(t *testing.T, ctx context.Context, database testpostgres.Database, name string) int64 {

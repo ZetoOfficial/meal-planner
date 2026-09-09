@@ -30,12 +30,19 @@ type MealRepository interface {
 	SaveQualitySnapshots(ctx context.Context, planID planningdom.PlanID, snapshots []planningdom.QualitySnapshot) error
 }
 
-// CatalogueRepository serves the reference data an actual-basis recomputation
-// needs to read a stored plan back as quality input.
-type CatalogueRepository interface {
-	ListProducts(ctx context.Context) ([]catalogdom.Product, error)
-	ListRecipeTemplates(ctx context.Context) ([]recipedom.Template, error)
-	GetEater(ctx context.Context, id eaterdom.ID) (eaterdom.Eater, error)
+// An actual-basis recomputation reads a stored plan back as quality input, so
+// it needs the products, templates and eater profiles the plan points at. The
+// three ports match the repositories as they are, without a glue adapter.
+type ProductRepository interface {
+	List(ctx context.Context, roleCode string) ([]catalogdom.Product, error)
+}
+
+type RecipeRepository interface {
+	List(ctx context.Context, status *recipedom.Status) ([]recipedom.Template, error)
+}
+
+type EaterRepository interface {
+	Get(ctx context.Context, id eaterdom.ID) (eaterdom.Eater, error)
 	ListFixedMeals(ctx context.Context, eaterID eaterdom.ID) ([]eaterdom.FixedMeal, error)
 }
 
