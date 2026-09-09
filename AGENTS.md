@@ -38,7 +38,6 @@ Agent workflow:
 
 - When the owner corrects behavior that can recur, distill it into one concise, enforceable rule here. Do not paste chat history or task-specific acceptance criteria.
 - Do not create or commit agent-generated plans or specs unless the owner explicitly requests them. Keep working plans in task state.
-- Work in the current checkout and feature branch. Do not create or use Git worktrees unless the owner explicitly asks for one.
 
 HTTP and OpenAPI:
 

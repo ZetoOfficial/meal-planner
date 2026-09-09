@@ -58,151 +58,55 @@ domain, solver, quality
 
 ---
 
-## 4. Рекомендуемая структура проекта
+## 4. Структура проекта
+
+Так дерево выглядит сейчас. Правило зависимостей важнее дерева: ядро не
+импортирует адаптеры, адаптеры реализуют порты use case'ов.
 
 ```text
-cmd/
-  api/
-    main.go
+cmd/api/                    composition root
 
 internal/
-  app/
-    app.go
-    config.go
+  app/                      config
+  apperr/                   типизированные ошибки приложения
+  clock/                    источник времени
 
-  api/
-    openapi/
-      generated.go
-    http/
-      server.go
-      eater_handlers.go
-      eater_mapping.go
-      catalog_handlers.go
-      catalog_mapping.go
-      recipe_handlers.go
-      recipe_mapping.go
-      planning_handlers.go
-      planning_mapping.go
-      analytics_handlers.go
-      analytics_mapping.go
+  # ядро: чистая доменная логика, без HTTP, БД и провайдеров
+  domain/                   catalog, eater, feedback, meal, nutrition,
+                            planning, recipe, shopping
+  solver/                   поиск плана и диагностика невозможности
+  quality/                  правила качества, rolling-окно, coverage
+  swap/                     детерминированный diff свопа и фиксации количества
 
-  domain/
-    meal/
-      type.go
-    eater/
-      eater.go
-      macro_goal.go
-      fixed_meal.go
-    catalog/
-      product.go
-      role_tag.go
-      allergen.go
-      nutrition_facts.go
-    recipe/
-      template.go
-      slot.go
-      storage.go
-    planning/
-      plan.go
-      plan_eater_day.go
-      meal.go
-      component_allocation.go
-      slot_fill.go
-      swap.go
-      prep_dependency.go
-    nutrition/
-      macros.go
-      summary.go
-      rule_result.go
-      coverage.go
-    feedback/
-      feedback.go
-    shopping/
-      shopping_list.go
-
+  # use cases: оркестрация через порты (ports.go на стороне потребителя)
   usecase/
-    eater/
-      service.go
-      ports.go
-    catalog/
-      service.go
-      ports.go
-    recipe/
-      service.go
-      ports.go
-    planning/
-      generate_plan.go
-      preview_swap.go
-      apply_swap.go
-      ports.go
-    meal_log/
-      log_meal.go
-      ports.go
-    feedback/
-      create_feedback.go
-      ports.go
-    analytics/
-      get_macros.go
-      get_quality.go
-      top_recipes.go
-      ports.go
+    catalog/                продукты и role tags
+    eater/                  профили, цели, фиксированные приёмы, исключения
+    recipe/                 шаблоны рецептов
+    planning/               генерация плана, свопы, корректировка количества
+    shopping/               список покупок
+    reality/                лог приёмов, фидбек, аналитика
+    reference/              общий загрузчик quality.Catalogue
 
-  solver/
-    planner.go
-    candidates.go
-    constraints.go
-    objective.go
-    result.go
-    explain.go
+  # адаптеры
+  api/http/                 OpenAPI-сервер: *_handlers.go и *_mapping.go
+  postgres/                 store, tx, sqlc, pgvalue, dberror и
+                            capability-пакеты: analytics, catalog, eater,
+                            feedback, llm, planning, recipe, shopping
+  llm/                      HTTP-клиент провайдера и генератор рецептов
 
-  quality/
-    ruleset.go
-    evaluator.go
-    rolling.go
-    coverage.go
-    explain.go
+  testkit/postgres/         изолированная схема для integration-тестов
 
-  llm/
-    client.go
-    recipe_generator.go
-    prompt.go
-    prompts/
-      recipe_generation.md
-
-  postgres/
-    db.go
-    store.go
-    tx.go
-    sqlc/
-      generated.go
-    pgvalue/
-      numeric.go
-    dberror/
-      error.go
-    catalog/
-      repository.go
-      mapping.go
-    eater/
-      repository.go
-      mapping.go
-    recipe/
-      repository.go
-      mapping.go
-    planning/
-      repository.go
-      mapping.go
-    analytics/
-      repository.go
-      mapping.go
-    llm/
-      repository.go
-      mapping.go
-
-  clock/
-  errors/
+api/openapi/                контракт (source of truth)
+api/sdk/go/                 сгенерированный SDK (отдельный Go-модуль)
+migrations/                 tern-миграции и dev seed
+docs/                       DESIGN, SPEC, ARCHITECTURE, schema.sql
 ```
 
-Эта структура не обязана появиться вся в первый день. Если папка пустая или содержит один файл «на будущее», её лучше пока не создавать.
+E2E-тест владельческого сценария лежит рядом с HTTP-адаптером
+(`internal/api/http/e2e_integration_test.go`, build tag `integration`):
+он собирается против SDK и use case'ов, поэтому ловит дрейф контракта уже
+на компиляции.
 
 ---
 
@@ -584,6 +488,8 @@ candidates, повторяет solver и сохраняет допустимый
 /eaters/{eaterId}
 /eaters/{eaterId}/goals
 /eaters/{eaterId}/fixed-meals
+/eaters/{eaterId}/exclusions
+/exclusions/{exclusionId}
   → usecase/eater
 
 /products
@@ -600,6 +506,8 @@ candidates, повторяет solver и сохраняет допустимый
 /plans/{planId}
 /plans/{planId}/swap/preview
 /plans/{planId}/swap
+/plans/{planId}/quantity/preview
+/plans/{planId}/quantity
   → usecase/planning
 
 /plans/{planId}/shopping-list
@@ -608,15 +516,11 @@ candidates, повторяет solver и сохраняет допустимый
 
 /plans/{planId}/meals
 /meals/{mealId}/log
-  → usecase/meal_log
-
 /feedback
-  → usecase/feedback
-
 /analytics/macros
 /analytics/nutrition-quality
 /analytics/top-recipes
-  → usecase/analytics
+  → usecase/reality
 ```
 
 ---
