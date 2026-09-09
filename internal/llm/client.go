@@ -17,8 +17,6 @@ import (
 	apperr "github.com/ZetoOfficial/meal-planner/internal/errors"
 )
 
-//go:generate go tool mockgen -source=client.go -destination=mocks/client.go -package=mocks
-
 const (
 	defaultTimeout     = 30 * time.Second
 	defaultMaxAttempts = 3

@@ -57,6 +57,9 @@ type daySearch struct {
 	mealComponentCount []int
 	visited            int
 	limited            bool
+	// suffixMeals records which meals the variables from each position onwards
+	// can still serve, so a branch that can no longer fill an empty meal is cut.
+	suffixMeals []uint32
 
 	evaluator dayEvaluator
 	ruleset   quality.Ruleset
@@ -111,6 +114,7 @@ func searchDay(
 		target:             day.Goal.Range,
 		variables:          variables,
 		suffixMaximums:     suffixMaximums,
+		suffixMeals:        suffixMeals(variables),
 		chosen:             make([]float64, len(variables)),
 		mealComponentCount: make([]int, len(day.GeneratedMealTypes)),
 		evaluator:          evaluator,
@@ -165,6 +169,9 @@ func (search *daySearch) enter(ctx context.Context, index int, total nutrition.M
 	if exceedsMaximum(total, search.target) || cannotReachMinimum(total, search.suffixMaximums[index], search.target) {
 		return true, nil
 	}
+	if search.cannotPopulateRemainingMeals(index) {
+		return true, nil
+	}
 	if index == len(search.variables) {
 		if !allMealsPopulated(search.mealComponentCount) || !search.target.Contains(total) {
 			return true, nil
@@ -205,6 +212,30 @@ func (search *daySearch) consider() error {
 		return errCandidateBudget
 	}
 	return nil
+}
+
+// cannotPopulateRemainingMeals prunes a branch whose remaining variables can no
+// longer fill a meal that is still empty. Without it the search walks every
+// combination of the last meal's components before ever touching the first
+// meal's, which exhausts the budget on a library of realistic size.
+func (search *daySearch) cannotPopulateRemainingMeals(index int) bool {
+	available := search.suffixMeals[index]
+	for mealIndex, count := range search.mealComponentCount {
+		if count == 0 && available&(1<<uint(mealIndex)) == 0 {
+			return true
+		}
+	}
+	return false
+}
+
+// suffixMeals records, for each position, which meals the variables from that
+// position onwards can still serve.
+func suffixMeals(variables []searchVariable) []uint32 {
+	result := make([]uint32, len(variables)+1)
+	for i := len(variables) - 1; i >= 0; i-- {
+		result[i] = result[i+1] | 1<<uint(variables[i].mealIndex)
+	}
+	return result
 }
 
 func (search *daySearch) tryMultiplier(
