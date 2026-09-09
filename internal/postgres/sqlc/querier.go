@@ -32,6 +32,9 @@ type Querier interface {
 	CreateSlotFill(ctx context.Context, arg CreateSlotFillParams) (SlotFill, error)
 	DeleteEaterAllergens(ctx context.Context, eaterID int64) error
 	DeleteEaterExclusion(ctx context.Context, id int64) (EaterExclusion, error)
+	// A rebalance rewrites the whole allocation set of a meal, so the old rows go
+	// first: the portions and even the batches a meal draws from can change.
+	DeleteMealComponentAllocations(ctx context.Context, mealID int64) error
 	DeleteProduct(ctx context.Context, id int64) (int64, error)
 	DeleteProductAllergens(ctx context.Context, productID int64) error
 	DeleteProductRoles(ctx context.Context, productID int64) error

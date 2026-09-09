@@ -530,6 +530,11 @@ func (r *Repository) ReplacePlanAllocations(
 		if _, err := query.UpdateMealPlannedMacros(ctx, mealMacroParams(*meal)); err != nil {
 			return planningdom.Plan{}, dberror.Map(err, "meal")
 		}
+		// (meal_id, plan_recipe_id) is the allocation primary key, so the old
+		// rows have to go before the rebalanced ones are written.
+		if err := query.DeleteMealComponentAllocations(ctx, int64(meal.ID)); err != nil {
+			return planningdom.Plan{}, dberror.Map(err, "meal component allocation")
+		}
 		for _, component := range meal.Components {
 			if component.PlanRecipeIndex >= len(plan.Recipes) {
 				return planningdom.Plan{}, apperr.Conflict("allocation points to a plan recipe outside the plan")

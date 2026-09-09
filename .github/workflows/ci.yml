@@ -29,6 +29,26 @@ jobs:
     name: Build and test
     runs-on: ubuntu-latest
 
+    # Integration and e2e tests run against a real database: without it the
+    # suite silently skips exactly the adapter bugs it exists to catch.
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: meal_planner_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d meal_planner_test"
+          --health-interval 3s
+          --health-timeout 3s
+          --health-retries 20
+
+    env:
+      TEST_DATABASE_URL: postgres://postgres:postgres@localhost:5432/meal_planner_test?sslmode=disable
+
     steps:
       - name: Check out repository
         uses: actions/checkout@v7

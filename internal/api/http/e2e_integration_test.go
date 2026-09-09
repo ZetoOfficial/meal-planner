@@ -5,6 +5,7 @@ package httpapi_test
 import (
 	"context"
 	"encoding/json"
+	"math"
 	"net/http"
 	"net/http/httptest"
 	"strconv"
@@ -81,6 +82,12 @@ func TestOwnerWorkflowSmoke(t *testing.T) {
 		t.Fatalf("reloaded plan = %d meals, want the %d it was saved with", len(reloaded.Meals), len(plan.Meals))
 	}
 
+	adjusted := lockPlannedQuantity(t, handler, planPath, reloaded)
+	swapped := swapOneFill(t, handler, planPath, adjusted, products)
+	if !swapped.ShoppingListStale {
+		t.Fatal("plan after swap is not marked shopping_list_stale, want the list flagged for regeneration")
+	}
+
 	list := decode[model.ShoppingList](t, call(t, handler, http.MethodGet, planPath+"/shopping-list", ""))
 	if len(list.Items) == 0 {
 		t.Fatal("shopping list is empty, want the plan's products")
@@ -138,6 +145,129 @@ func TestOwnerWorkflowSmoke(t *testing.T) {
 	if archived.Code != http.StatusNoContent {
 		t.Fatalf("archive status = %d, body = %s; want 204", archived.Code, archived.Body.String())
 	}
+}
+
+// lockPlannedQuantity exercises FR-3/FR-5 over HTTP: preview the locked
+// quantity, then apply it with confirm=true and check the plan really moved.
+func lockPlannedQuantity(t *testing.T, handler http.Handler, planPath string, plan model.Plan) model.Plan {
+	t.Helper()
+	recipe, fill := firstFill(t, plan)
+	locked := float64(fill.PlannedInputQtyG) * 1.2
+	body := `{"slot_fill_id":` + itoa(*fill.Id) + `,"planned_input_qty_g":` +
+		strconv.FormatFloat(locked, 'f', 1, 64) + `,"confirm":true}`
+
+	preview := decode[model.QuantityAdjustmentPreview](t,
+		call(t, handler, http.MethodPost, planPath+"/quantity/preview", body))
+	if preview.Summary == "" {
+		t.Fatalf("quantity preview = %#v, want a readable summary", preview)
+	}
+
+	response := call(t, handler, http.MethodPost, planPath+"/quantity", body)
+	if response.Code != http.StatusOK {
+		t.Fatalf("apply quantity status = %d, body = %s; want 200", response.Code, response.Body.String())
+	}
+	applied := decode[model.Plan](t, response)
+	stored := fillByID(t, applied, *fill.Id)
+	if math.Abs(float64(stored.PlannedInputQtyG)-locked) > 0.05 {
+		t.Fatalf("stored quantity = %v, want the locked %v g", stored.PlannedInputQtyG, locked)
+	}
+	if !applied.ShoppingListStale {
+		t.Fatalf("plan recipe %d adjusted but the shopping list is not stale", recipe.Id)
+	}
+	return applied
+}
+
+// swapOneFill exercises FR-4: preview the blast radius of a fill swap and then
+// apply it with confirm=true.
+func swapOneFill(t *testing.T, handler http.Handler, planPath string, plan model.Plan, products []model.Product) model.Plan {
+	t.Helper()
+	fillID, newProductID := swapCandidate(t, plan, products)
+	body := `{"level":"fill","slot_fill_id":` + itoa(fillID) +
+		`,"new_product_id":` + itoa(newProductID) + `,"confirm":true}`
+
+	preview := decode[model.SwapPreview](t,
+		call(t, handler, http.MethodPost, planPath+"/swap/preview", body))
+	if preview.Summary == "" {
+		t.Fatalf("swap preview = %#v, want a readable blast radius", preview)
+	}
+
+	response := call(t, handler, http.MethodPost, planPath+"/swap", body)
+	if response.Code != http.StatusOK {
+		t.Fatalf("apply swap status = %d, body = %s; want 200", response.Code, response.Body.String())
+	}
+	applied := decode[model.Plan](t, response)
+	if fillByID(t, applied, fillID).ProductId != newProductID {
+		t.Fatalf("swapped fill still points at the old product, want %d", newProductID)
+	}
+	return applied
+}
+
+// swapCandidate finds a fill whose product shares a role tag with another
+// purchasable product, so the swap stays inside the slot's role.
+func swapCandidate(t *testing.T, plan model.Plan, products []model.Product) (int64, int64) {
+	t.Helper()
+	byID := make(map[int64]model.Product, len(products))
+	for _, product := range products {
+		byID[product.Id] = product
+	}
+	for _, recipe := range plan.Recipes {
+		for _, fill := range recipe.Fills {
+			if fill.Id == nil {
+				continue
+			}
+			current, known := byID[fill.ProductId]
+			if !known || current.Roles == nil {
+				continue
+			}
+			for _, candidate := range products {
+				if candidate.Id == fill.ProductId || candidate.Roles == nil {
+					continue
+				}
+				if shareRole(*current.Roles, *candidate.Roles) {
+					return *fill.Id, candidate.Id
+				}
+			}
+		}
+	}
+	t.Fatal("no fill in the plan has an alternative product with the same role")
+	return 0, 0
+}
+
+func shareRole(left, right []string) bool {
+	for _, l := range left {
+		for _, r := range right {
+			if l == r {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func firstFill(t *testing.T, plan model.Plan) (model.PlanRecipe, model.SlotFill) {
+	t.Helper()
+	for _, recipe := range plan.Recipes {
+		for _, fill := range recipe.Fills {
+			if fill.Id != nil {
+				return recipe, fill
+			}
+		}
+	}
+	t.Fatal("plan has no persisted slot fill")
+	return model.PlanRecipe{}, model.SlotFill{}
+}
+
+func fillByID(t *testing.T, plan model.Plan, id int64) model.SlotFill {
+	t.Helper()
+	for _, recipe := range plan.Recipes {
+		for _, fill := range recipe.Fills {
+			if fill.Id != nil && *fill.Id == id {
+				return fill
+			}
+		}
+	}
+	t.Fatalf("plan has no slot fill %d", id)
+	return model.SlotFill{}
 }
 
 func newSmokeAPI(t *testing.T) (http.Handler, testpostgres.Database) {

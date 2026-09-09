@@ -113,7 +113,11 @@ func planRecipesResponse(plan planningdom.Plan) []model.PlanRecipe {
 	for i, recipe := range plan.Recipes {
 		fills := make([]model.SlotFill, 0, len(recipe.Fills))
 		for _, fill := range recipe.Fills {
+			// The fill identity is what quantity and swap commands address, so a
+			// persisted plan must expose it.
+			id := int64(fill.ID)
 			fills = append(fills, model.SlotFill{
+				Id:               &id,
 				SlotId:           int64(fill.SlotID),
 				ProductId:        int64(fill.ProductID),
 				PlannedInputQtyG: float32(fill.PlannedInputQtyG),

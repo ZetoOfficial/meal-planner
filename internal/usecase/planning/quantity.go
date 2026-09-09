@@ -53,14 +53,16 @@ func (s *Service) ApplyQuantityAdjustment(
 		}
 
 		snapshots := quantitySnapshots(preview)
+		// The stale flag is part of the plan ReplacePlanAllocations reads back,
+		// so it has to be set before the plan is re-read for the response.
+		if err := s.plans.MarkShoppingListStale(ctx, planID, true); err != nil {
+			return err
+		}
 		saved, err := s.plans.ReplacePlanAllocations(ctx, planID, preview.Plan)
 		if err != nil {
 			return err
 		}
 		if err := s.plans.SaveQualitySnapshots(ctx, planID, snapshots); err != nil {
-			return err
-		}
-		if err := s.plans.MarkShoppingListStale(ctx, planID, true); err != nil {
 			return err
 		}
 		result = PlanResult{Plan: saved, Snapshots: snapshots}

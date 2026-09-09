@@ -456,3 +456,46 @@ func (f *planFixture) snapshots() []planningdom.QualitySnapshot {
 		}},
 	}}
 }
+
+func TestReplacePlanAllocationsRewritesTheStoredAllocations(t *testing.T) {
+	fixture := newPlanFixture(t)
+	saved, err := fixture.repository.Save(fixture.ctx, fixture.plan())
+	if err != nil {
+		t.Fatalf("Save() error = %v", err)
+	}
+
+	adjusted := saved
+	adjusted.Recipes[0].Fills[0].PlannedInputQtyG = 260
+	serving := 260.0
+	for i := range adjusted.Meals {
+		for j := range adjusted.Meals[i].Components {
+			adjusted.Meals[i].Components[j].PortionFactor = 0.4
+			adjusted.Meals[i].Components[j].PlannedServingG = &serving
+		}
+	}
+
+	replaced, err := fixture.repository.ReplacePlanAllocations(fixture.ctx, saved.ID, adjusted)
+	if err != nil {
+		t.Fatalf("ReplacePlanAllocations() error = %v", err)
+	}
+	if replaced.Recipes[0].Fills[0].PlannedInputQtyG != 260 {
+		t.Fatalf("fill quantity = %v, want the locked 260 g", replaced.Recipes[0].Fills[0].PlannedInputQtyG)
+	}
+
+	generated := mealOfType(t, replaced, mealdom.TypeLunch)
+	if len(generated.Components) != 1 {
+		t.Fatalf("allocations after replace = %#v, want one row per meal, not a duplicate", generated.Components)
+	}
+	if generated.Components[0].PortionFactor != 0.4 {
+		t.Fatalf("portion factor = %v, want the rebalanced 0.4", generated.Components[0].PortionFactor)
+	}
+
+	var rows int
+	if err := fixture.database.Pool.QueryRow(fixture.ctx,
+		"SELECT count(*) FROM meal_component_allocation").Scan(&rows); err != nil {
+		t.Fatalf("count allocations: %v", err)
+	}
+	if rows != 2 {
+		t.Fatalf("stored allocations = %d, want the two generated meals to keep one row each", rows)
+	}
+}

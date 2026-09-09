@@ -387,6 +387,18 @@ func (q *Queries) CreateSlotFill(ctx context.Context, arg CreateSlotFillParams) 
 	return i, err
 }
 
+const deleteMealComponentAllocations = `-- name: DeleteMealComponentAllocations :exec
+DELETE FROM meal_component_allocation
+WHERE meal_id = $1
+`
+
+// A rebalance rewrites the whole allocation set of a meal, so the old rows go
+// first: the portions and even the batches a meal draws from can change.
+func (q *Queries) DeleteMealComponentAllocations(ctx context.Context, mealID int64) error {
+	_, err := q.db.Exec(ctx, deleteMealComponentAllocations, mealID)
+	return err
+}
+
 const getPlan = `-- name: GetPlan :one
 SELECT id, label, start_date, days, cook_date, novelty_level, status, quality_score, quality_warnings_count, shopping_list_stale, created_at
 FROM plan
