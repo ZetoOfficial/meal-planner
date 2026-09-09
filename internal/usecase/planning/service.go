@@ -94,42 +94,48 @@ func NewService(
 }
 
 // GeneratePlan builds a plan from permanent recipes only and stores it with its
-// quality snapshot in one transaction. No LLM is involved: novelty is accepted
-// and recorded, but candidates come from the saved library.
+// quality snapshot in one short write transaction. No LLM is involved on the
+// happy path: novelty is accepted and recorded, but candidates come from the
+// saved library.
+//
+// Reading the snapshot, searching and asking the LLM all happen without an open
+// transaction: a pooled connection must not be held for the search budget plus
+// the provider attempts, and the LLM audit rows must survive an outcome that
+// stores no plan at all (ARCHITECTURE §8, §11).
 func (s *Service) GeneratePlan(ctx context.Context, command GeneratePlanCommand) (PlanResult, error) {
 	command, err := normalizeCommand(command)
 	if err != nil {
 		return PlanResult{}, err
 	}
 
+	input, err := s.solverInput(ctx, command)
+	if err != nil {
+		return PlanResult{}, err
+	}
+	solved, err := s.planner.BuildPlan(ctx, input)
+	if err != nil {
+		return PlanResult{}, err
+	}
+	solved, err = s.withGeneratedCandidates(ctx, command, input, solved)
+	if err != nil {
+		return PlanResult{}, err
+	}
+	if solved.Failure != nil {
+		return PlanResult{}, &InfeasibleError{Failure: *solved.Failure}
+	}
+
+	plan := solved.Plan
+	plan.Label = command.Label
+	plan.Status = planningdom.PlanStatusDraft
+	plan.QualityScore, plan.QualityWarningsCount = planQuality(solved.Quality)
+	snapshots := qualitySnapshots(solved.Quality)
+
 	var result PlanResult
 	err = s.transactions.WithTx(ctx, func(ctx context.Context) error {
-		input, err := s.solverInput(ctx, command)
-		if err != nil {
-			return err
-		}
-		solved, err := s.planner.BuildPlan(ctx, input)
-		if err != nil {
-			return err
-		}
-		solved, err = s.withGeneratedCandidates(ctx, command, input, solved)
-		if err != nil {
-			return err
-		}
-		if solved.Failure != nil {
-			return &InfeasibleError{Failure: *solved.Failure}
-		}
-
-		plan := solved.Plan
-		plan.Label = command.Label
-		plan.Status = planningdom.PlanStatusDraft
-		plan.QualityScore, plan.QualityWarningsCount = planQuality(solved.Quality)
-
 		saved, err := s.plans.Save(ctx, plan)
 		if err != nil {
 			return err
 		}
-		snapshots := qualitySnapshots(solved.Quality)
 		if err := s.plans.SaveQualitySnapshots(ctx, saved.ID, snapshots); err != nil {
 			return err
 		}

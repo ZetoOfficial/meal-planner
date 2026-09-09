@@ -233,6 +233,7 @@ type deps struct {
 	generator    *fakeGenerator
 	storedDraft  recipedom.Template
 	committed    bool
+	txDepth      int
 }
 
 func newDeps(t *testing.T) *deps {
@@ -250,7 +251,9 @@ func newDeps(t *testing.T) *deps {
 	transactions.EXPECT().
 		WithTx(gomock.Any(), gomock.Any()).
 		DoAndReturn(func(ctx context.Context, fn func(context.Context) error) error {
+			result.txDepth++
 			err := fn(ctx)
+			result.txDepth--
 			result.committed = err == nil
 			return err
 		}).
@@ -492,10 +495,12 @@ func validCandidate() recipedom.Template {
 }
 
 type fakeGenerator struct {
-	calls      int
-	candidates []recipedom.Template
-	err        error
-	request    RecipeCandidateRequest
+	calls       int
+	candidates  []recipedom.Template
+	err         error
+	request     RecipeCandidateRequest
+	depth       *int
+	depthAtCall int
 }
 
 func (g *fakeGenerator) GenerateCandidates(
@@ -504,6 +509,9 @@ func (g *fakeGenerator) GenerateCandidates(
 ) ([]recipedom.Template, error) {
 	g.calls++
 	g.request = request
+	if g.depth != nil {
+		g.depthAtCall = *g.depth
+	}
 	if g.err != nil {
 		return nil, g.err
 	}
@@ -569,4 +577,44 @@ func (d *deps) expectSwapCatalogue() {
 	d.recipes.EXPECT().List(gomock.Any(), nil).Return([]recipedom.Template{{ID: 1}}, nil)
 	d.eaters.EXPECT().Get(gomock.Any(), eaterdom.ID(1)).Return(eaterdom.Eater{ID: 1}, nil)
 	d.eaters.EXPECT().ListFixedMeals(gomock.Any(), eaterdom.ID(1)).Return(nil, nil)
+}
+
+// A pooled connection must not be held for the search budget plus the provider
+// attempts, and the LLM audit rows must outlive an infeasible outcome, so
+// neither the solver nor the generator may run inside a transaction.
+func TestGeneratePlanRunsTheSearchAndTheLLMOutsideAnyTransaction(t *testing.T) {
+	deps := newDepsWithGenerator(t)
+	deps.expectInputs()
+	deps.generator.candidates = []recipedom.Template{validCandidate()}
+	deps.generator.depth = &deps.txDepth
+	deps.expectRoleTagsAndDraftStorage()
+
+	searchDepths := make([]int, 0, 2)
+	deps.planner.EXPECT().
+		BuildPlan(gomock.Any(), gomock.Any()).
+		DoAndReturn(func(_ context.Context, _ solver.Input) (solver.Result, error) {
+			searchDepths = append(searchDepths, deps.txDepth)
+			if len(searchDepths) == 1 {
+				return solver.Result{Failure: &solver.Failure{
+					Code: solver.FailureMacroInfeasible, EaterID: 1, Date: planStartDate(),
+				}}, nil
+			}
+			return solvedResult(), nil
+		}).
+		Times(2)
+	deps.expectPersistence()
+
+	if _, err := deps.service.GeneratePlan(t.Context(), validCommand()); err != nil {
+		t.Fatalf("GeneratePlan() error = %v", err)
+	}
+
+	for i, depth := range searchDepths {
+		if depth != 0 {
+			t.Fatalf("solver call %d ran at transaction depth %d, want no open transaction", i+1, depth)
+		}
+	}
+	if deps.generator.depthAtCall != 0 {
+		t.Fatalf("generator ran at transaction depth %d, want its audit rows outside the plan transaction",
+			deps.generator.depthAtCall)
+	}
 }
