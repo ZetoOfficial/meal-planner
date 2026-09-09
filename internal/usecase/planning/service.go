@@ -3,6 +3,7 @@ package planning
 import (
 	"context"
 	"fmt"
+	"sort"
 	"time"
 
 	eaterdom "github.com/ZetoOfficial/meal-planner/internal/domain/eater"
@@ -337,11 +338,67 @@ func (s *Service) eaterInput(
 		})
 	}
 
+	history, err := s.eaterHistory(ctx, target.EaterID, command.StartDate)
+	if err != nil {
+		return solver.EaterInput{}, err
+	}
+
 	return solver.EaterInput{
 		Eater:      profile,
 		Days:       days,
 		FixedMeals: activeFixedMeals(fixedMeals),
+		History:    history,
 	}, nil
+}
+
+// eaterHistory loads the days that already fall inside the rolling window when
+// the plan starts, oldest first. The logged basis wins for a day that has one;
+// the planned basis covers the days that were never logged (SPEC §3.2).
+func (s *Service) eaterHistory(
+	ctx context.Context,
+	eaterID eaterdom.ID,
+	start time.Time,
+) ([]nutrition.DaySummary, error) {
+	window := s.options.RollingWindowDays
+	if window <= 1 {
+		return nil, nil
+	}
+	from := start.AddDate(0, 0, -(window - 1))
+	to := start.AddDate(0, 0, -1)
+
+	planned, err := s.plans.ListEaterDaySummaries(ctx, eaterID, nutrition.SummaryBasisPlanned, from, to)
+	if err != nil {
+		return nil, err
+	}
+	actual, err := s.plans.ListEaterDaySummaries(ctx, eaterID, nutrition.SummaryBasisActual, from, to)
+	if err != nil {
+		return nil, err
+	}
+	return mergeDayHistory(planned, actual), nil
+}
+
+// mergeDayHistory prefers the logged summary of a day over the planned one and
+// returns the result oldest first, which is the order rolling rules expect.
+func mergeDayHistory(planned, actual []planningdom.QualitySnapshot) []nutrition.DaySummary {
+	byDay := make(map[string]nutrition.DaySummary, len(planned)+len(actual))
+	for i := range planned {
+		byDay[planned[i].Date.UTC().Format(time.DateOnly)] = planned[i].Day
+	}
+	for i := range actual {
+		byDay[actual[i].Date.UTC().Format(time.DateOnly)] = actual[i].Day
+	}
+
+	days := make([]string, 0, len(byDay))
+	for day := range byDay {
+		days = append(days, day)
+	}
+	sort.Strings(days)
+
+	history := make([]nutrition.DaySummary, 0, len(days))
+	for _, day := range days {
+		history = append(history, byDay[day])
+	}
+	return history
 }
 
 func activeFixedMeals(fixedMeals []eaterdom.FixedMeal) []eaterdom.FixedMeal {

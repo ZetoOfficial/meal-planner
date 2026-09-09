@@ -6,6 +6,7 @@ import (
 
 	catalogdom "github.com/ZetoOfficial/meal-planner/internal/domain/catalog"
 	eaterdom "github.com/ZetoOfficial/meal-planner/internal/domain/eater"
+	"github.com/ZetoOfficial/meal-planner/internal/domain/nutrition"
 	planningdom "github.com/ZetoOfficial/meal-planner/internal/domain/planning"
 	recipedom "github.com/ZetoOfficial/meal-planner/internal/domain/recipe"
 	apperr "github.com/ZetoOfficial/meal-planner/internal/errors"
@@ -135,17 +136,31 @@ func swapSnapshots(preview swap.Preview) []planningdom.QualitySnapshot {
 	return snapshots
 }
 
-// swapInput assembles the catalogue a stored plan needs to be re-evaluated.
+// swapInput assembles the catalogue and the rolling-window history a stored
+// plan needs to be re-evaluated the same way it was built.
 func (s *Service) swapInput(ctx context.Context, plan planningdom.Plan) (swap.Input, error) {
 	catalogue, err := s.catalogue(ctx, plan)
 	if err != nil {
 		return swap.Input{}, err
+	}
+	history := make(map[eaterdom.ID][]nutrition.DaySummary, len(plan.EaterDays))
+	for i := range plan.EaterDays {
+		eaterID := plan.EaterDays[i].EaterID
+		if _, loaded := history[eaterID]; loaded {
+			continue
+		}
+		days, err := s.eaterHistory(ctx, eaterID, plan.StartDate)
+		if err != nil {
+			return swap.Input{}, err
+		}
+		history[eaterID] = days
 	}
 	return swap.Input{
 		Plan:              plan,
 		Catalogue:         catalogue,
 		Ruleset:           quality.DefaultRuleset(),
 		RollingWindowDays: s.options.RollingWindowDays,
+		History:           history,
 	}, nil
 }
 

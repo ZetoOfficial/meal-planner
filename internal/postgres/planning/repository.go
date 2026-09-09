@@ -548,6 +548,34 @@ func (r *Repository) ReplacePlanAllocations(
 	return r.Get(ctx, planID)
 }
 
+// ListEaterDaySummaries reads the stored day summaries of one eater in a date
+// range, across plans: a rolling window reaches back past the plan being built.
+func (r *Repository) ListEaterDaySummaries(
+	ctx context.Context,
+	eaterID eaterdom.ID,
+	basis nutrition.SummaryBasis,
+	from, to time.Time,
+) ([]planningdom.QualitySnapshot, error) {
+	rows, err := r.store.Queries(ctx).ListEaterDaySummariesForPeriod(ctx, sqlc.ListEaterDaySummariesForPeriodParams{
+		EaterID:  int64(eaterID),
+		Basis:    sqlc.SummaryBasis(basis),
+		FromDate: dateValue(from),
+		ToDate:   dateValue(to),
+	})
+	if err != nil {
+		return nil, dberror.Map(err, "day nutrition summary")
+	}
+	summaries := make([]planningdom.QualitySnapshot, 0, len(rows))
+	for i := range rows {
+		summary, err := daySummaryFromRow(rows[i])
+		if err != nil {
+			return nil, err
+		}
+		summaries = append(summaries, summary)
+	}
+	return summaries, nil
+}
+
 // ListPlanMeals returns the meals of a plan, optionally for one eater.
 func (r *Repository) ListPlanMeals(
 	ctx context.Context,

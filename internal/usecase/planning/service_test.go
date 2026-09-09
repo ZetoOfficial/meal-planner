@@ -206,6 +206,10 @@ func TestGeneratePlanPassesOnlyActiveFixedMealsToTheSolver(t *testing.T) {
 		{ID: 1, EaterID: 1, MealType: mealdom.TypeBreakfast, Active: true},
 		{ID: 2, EaterID: 1, MealType: mealdom.TypeSnack, Active: false},
 	}, nil)
+	deps.plans.EXPECT().
+		ListEaterDaySummaries(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+		Return(nil, nil).
+		AnyTimes()
 
 	var input solver.Input
 	deps.planner.EXPECT().
@@ -267,6 +271,14 @@ func newDeps(t *testing.T) *deps {
 }
 
 func (d *deps) expectInputs() {
+	d.expectInputsWithoutHistory()
+	d.plans.EXPECT().
+		ListEaterDaySummaries(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+		Return(nil, nil).
+		AnyTimes()
+}
+
+func (d *deps) expectInputsWithoutHistory() {
 	d.products.EXPECT().List(gomock.Any(), "").Return([]catalogdom.Product{{
 		ID: 1, Roles: []catalogdom.RoleTag{{Code: "protein:lean"}},
 	}}, nil)
@@ -577,6 +589,34 @@ func (d *deps) expectSwapCatalogue() {
 	d.recipes.EXPECT().List(gomock.Any(), nil).Return([]recipedom.Template{{ID: 1}}, nil)
 	d.eaters.EXPECT().Get(gomock.Any(), eaterdom.ID(1)).Return(eaterdom.Eater{ID: 1}, nil)
 	d.eaters.EXPECT().ListFixedMeals(gomock.Any(), eaterdom.ID(1)).Return(nil, nil)
+	d.plans.EXPECT().
+		ListEaterDaySummaries(gomock.Any(), eaterdom.ID(1), gomock.Any(), gomock.Any(), gomock.Any()).
+		Return(nil, nil).
+		AnyTimes()
+}
+
+// A swap re-evaluates the same weekly rules the plan was built against, so it
+// needs the same window of stored days.
+func TestPreviewSwapReadsTheRollingWindowHistory(t *testing.T) {
+	deps := newDeps(t)
+	deps.plans.EXPECT().Get(gomock.Any(), planningdom.PlanID(7)).Return(swappablePlan(), nil)
+	deps.products.EXPECT().List(gomock.Any(), "").Return([]catalogdom.Product{{ID: 1}}, nil)
+	deps.recipes.EXPECT().List(gomock.Any(), nil).Return([]recipedom.Template{{ID: 1}}, nil)
+	deps.eaters.EXPECT().Get(gomock.Any(), eaterdom.ID(1)).Return(eaterdom.Eater{ID: 1}, nil)
+	deps.eaters.EXPECT().ListFixedMeals(gomock.Any(), eaterdom.ID(1)).Return(nil, nil)
+
+	from := planStartDate().AddDate(0, 0, -6)
+	to := planStartDate().AddDate(0, 0, -1)
+	deps.plans.EXPECT().
+		ListEaterDaySummaries(gomock.Any(), eaterdom.ID(1), nutrition.SummaryBasisPlanned, from, to).
+		Return(nil, nil)
+	deps.plans.EXPECT().
+		ListEaterDaySummaries(gomock.Any(), eaterdom.ID(1), nutrition.SummaryBasisActual, from, to).
+		Return(nil, nil)
+
+	if _, err := deps.service.PreviewSwap(t.Context(), 7, SwapCommand{SlotFillID: 11, NewProductID: 1}); err != nil {
+		t.Fatalf("PreviewSwap() error = %v", err)
+	}
 }
 
 // A pooled connection must not be held for the search budget plus the provider
@@ -617,4 +657,62 @@ func TestGeneratePlanRunsTheSearchAndTheLLMOutsideAnyTransaction(t *testing.T) {
 		t.Fatalf("generator ran at transaction depth %d, want its audit rows outside the plan transaction",
 			deps.generator.depthAtCall)
 	}
+}
+
+// Weekly rules are projected over a rolling window that starts before the plan
+// does. Without the stored days the solver judges red meat on the plan alone.
+func TestGeneratePlanFeedsTheStoredHistoryToTheSolver(t *testing.T) {
+	deps := newDeps(t)
+	deps.expectInputsWithoutHistory()
+	deps.expectHistory()
+
+	var solverInput solver.Input
+	deps.planner.EXPECT().
+		BuildPlan(gomock.Any(), gomock.Any()).
+		DoAndReturn(func(_ context.Context, input solver.Input) (solver.Result, error) {
+			solverInput = input
+			return solvedResult(), nil
+		})
+	deps.expectPersistence()
+
+	if _, err := deps.service.GeneratePlan(t.Context(), validCommand()); err != nil {
+		t.Fatalf("GeneratePlan() error = %v", err)
+	}
+
+	history := solverInput.Eaters[0].History
+	if len(history) != 2 {
+		t.Fatalf("history = %#v, want the two stored days before the plan", history)
+	}
+	if history[0].Totals.RedMeatG != 100 || history[1].Totals.RedMeatG != 250 {
+		t.Fatalf("history = %#v, want the stored days oldest first", history)
+	}
+	if history[1].Basis != nutrition.SummaryBasisActual {
+		t.Fatalf("history[1] basis = %q, want the logged day to win over the planned one", history[1].Basis)
+	}
+}
+
+// expectHistory serves two stored days before the plan starts: one that was
+// only planned, and one that was logged differently than planned.
+func (d *deps) expectHistory() {
+	plannedOnly := planStartDate().AddDate(0, 0, -3)
+	logged := planStartDate().AddDate(0, 0, -1)
+	d.plans.EXPECT().
+		ListEaterDaySummaries(gomock.Any(), eaterdom.ID(1), nutrition.SummaryBasisPlanned, gomock.Any(), gomock.Any()).
+		Return([]planningdom.QualitySnapshot{
+			{EaterID: 1, Date: plannedOnly, Basis: nutrition.SummaryBasisPlanned, Day: nutrition.DaySummary{
+				Basis: nutrition.SummaryBasisPlanned, Totals: nutrition.DailyTotals{RedMeatG: 100},
+			}},
+			{EaterID: 1, Date: logged, Basis: nutrition.SummaryBasisPlanned, Day: nutrition.DaySummary{
+				Basis: nutrition.SummaryBasisPlanned, Totals: nutrition.DailyTotals{RedMeatG: 40},
+			}},
+		}, nil).
+		AnyTimes()
+	d.plans.EXPECT().
+		ListEaterDaySummaries(gomock.Any(), eaterdom.ID(1), nutrition.SummaryBasisActual, gomock.Any(), gomock.Any()).
+		Return([]planningdom.QualitySnapshot{
+			{EaterID: 1, Date: logged, Basis: nutrition.SummaryBasisActual, Day: nutrition.DaySummary{
+				Basis: nutrition.SummaryBasisActual, Totals: nutrition.DailyTotals{RedMeatG: 250},
+			}},
+		}, nil).
+		AnyTimes()
 }
