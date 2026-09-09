@@ -143,6 +143,20 @@ func (mr *MockPlanRepositoryMockRecorder) ListQualitySnapshots(ctx, planID, basi
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListQualitySnapshots", reflect.TypeOf((*MockPlanRepository)(nil).ListQualitySnapshots), ctx, planID, basis)
 }
 
+// MarkShoppingListStale mocks base method.
+func (m *MockPlanRepository) MarkShoppingListStale(ctx context.Context, planID planning.PlanID, stale bool) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "MarkShoppingListStale", ctx, planID, stale)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// MarkShoppingListStale indicates an expected call of MarkShoppingListStale.
+func (mr *MockPlanRepositoryMockRecorder) MarkShoppingListStale(ctx, planID, stale any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MarkShoppingListStale", reflect.TypeOf((*MockPlanRepository)(nil).MarkShoppingListStale), ctx, planID, stale)
+}
+
 // Save mocks base method.
 func (m *MockPlanRepository) Save(ctx context.Context, plan planning.Plan) (planning.Plan, error) {
 	m.ctrl.T.Helper()
@@ -170,6 +184,20 @@ func (m *MockPlanRepository) SaveQualitySnapshots(ctx context.Context, planID pl
 func (mr *MockPlanRepositoryMockRecorder) SaveQualitySnapshots(ctx, planID, snapshots any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SaveQualitySnapshots", reflect.TypeOf((*MockPlanRepository)(nil).SaveQualitySnapshots), ctx, planID, snapshots)
+}
+
+// SwapSlotFill mocks base method.
+func (m *MockPlanRepository) SwapSlotFill(ctx context.Context, planID planning.PlanID, fillID planning.SlotFillID, productID catalog.ProductID) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SwapSlotFill", ctx, planID, fillID, productID)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// SwapSlotFill indicates an expected call of SwapSlotFill.
+func (mr *MockPlanRepositoryMockRecorder) SwapSlotFill(ctx, planID, fillID, productID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SwapSlotFill", reflect.TypeOf((*MockPlanRepository)(nil).SwapSlotFill), ctx, planID, fillID, productID)
 }
 
 // MockEaterRepository is a mock of EaterRepository interface.
@@ -332,6 +360,21 @@ func (m *MockRecipeRepository) Create(ctx context.Context, template recipe.Templ
 func (mr *MockRecipeRepositoryMockRecorder) Create(ctx, template, roles any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockRecipeRepository)(nil).Create), ctx, template, roles)
+}
+
+// List mocks base method.
+func (m *MockRecipeRepository) List(ctx context.Context, status *recipe.Status) ([]recipe.Template, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "List", ctx, status)
+	ret0, _ := ret[0].([]recipe.Template)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// List indicates an expected call of List.
+func (mr *MockRecipeRepositoryMockRecorder) List(ctx, status any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockRecipeRepository)(nil).List), ctx, status)
 }
 
 // ListPermanentCandidates mocks base method.

@@ -17,6 +17,8 @@ import (
 	eater "github.com/ZetoOfficial/meal-planner/internal/domain/eater"
 	planning "github.com/ZetoOfficial/meal-planner/internal/domain/planning"
 	recipe "github.com/ZetoOfficial/meal-planner/internal/domain/recipe"
+	shopping "github.com/ZetoOfficial/meal-planner/internal/domain/shopping"
+	swap "github.com/ZetoOfficial/meal-planner/internal/swap"
 	catalog0 "github.com/ZetoOfficial/meal-planner/internal/usecase/catalog"
 	eater0 "github.com/ZetoOfficial/meal-planner/internal/usecase/eater"
 	planning0 "github.com/ZetoOfficial/meal-planner/internal/usecase/planning"
@@ -433,6 +435,21 @@ func (m *MockPlanningUseCases) EXPECT() *MockPlanningUseCasesMockRecorder {
 	return m.recorder
 }
 
+// ApplySwap mocks base method.
+func (m *MockPlanningUseCases) ApplySwap(arg0 context.Context, arg1 planning.PlanID, arg2 planning0.SwapCommand, arg3 bool) (planning0.PlanResult, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ApplySwap", arg0, arg1, arg2, arg3)
+	ret0, _ := ret[0].(planning0.PlanResult)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ApplySwap indicates an expected call of ApplySwap.
+func (mr *MockPlanningUseCasesMockRecorder) ApplySwap(arg0, arg1, arg2, arg3 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ApplySwap", reflect.TypeOf((*MockPlanningUseCases)(nil).ApplySwap), arg0, arg1, arg2, arg3)
+}
+
 // ArchivePlan mocks base method.
 func (m *MockPlanningUseCases) ArchivePlan(arg0 context.Context, arg1 planning.PlanID) error {
 	m.ctrl.T.Helper()
@@ -490,4 +507,102 @@ func (m *MockPlanningUseCases) ListPlans(arg0 context.Context) ([]planning.Plan,
 func (mr *MockPlanningUseCasesMockRecorder) ListPlans(arg0 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListPlans", reflect.TypeOf((*MockPlanningUseCases)(nil).ListPlans), arg0)
+}
+
+// PreviewSwap mocks base method.
+func (m *MockPlanningUseCases) PreviewSwap(arg0 context.Context, arg1 planning.PlanID, arg2 planning0.SwapCommand) (swap.Preview, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "PreviewSwap", arg0, arg1, arg2)
+	ret0, _ := ret[0].(swap.Preview)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// PreviewSwap indicates an expected call of PreviewSwap.
+func (mr *MockPlanningUseCasesMockRecorder) PreviewSwap(arg0, arg1, arg2 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PreviewSwap", reflect.TypeOf((*MockPlanningUseCases)(nil).PreviewSwap), arg0, arg1, arg2)
+}
+
+// MockShoppingUseCases is a mock of ShoppingUseCases interface.
+type MockShoppingUseCases struct {
+	ctrl     *gomock.Controller
+	recorder *MockShoppingUseCasesMockRecorder
+	isgomock struct{}
+}
+
+// MockShoppingUseCasesMockRecorder is the mock recorder for MockShoppingUseCases.
+type MockShoppingUseCasesMockRecorder struct {
+	mock *MockShoppingUseCases
+}
+
+// NewMockShoppingUseCases creates a new mock instance.
+func NewMockShoppingUseCases(ctrl *gomock.Controller) *MockShoppingUseCases {
+	mock := &MockShoppingUseCases{ctrl: ctrl}
+	mock.recorder = &MockShoppingUseCasesMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockShoppingUseCases) EXPECT() *MockShoppingUseCasesMockRecorder {
+	return m.recorder
+}
+
+// GetItem mocks base method.
+func (m *MockShoppingUseCases) GetItem(arg0 context.Context, arg1 shopping.ItemID) (shopping.Item, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetItem", arg0, arg1)
+	ret0, _ := ret[0].(shopping.Item)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetItem indicates an expected call of GetItem.
+func (mr *MockShoppingUseCasesMockRecorder) GetItem(arg0, arg1 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetItem", reflect.TypeOf((*MockShoppingUseCases)(nil).GetItem), arg0, arg1)
+}
+
+// GetList mocks base method.
+func (m *MockShoppingUseCases) GetList(arg0 context.Context, arg1 planning.PlanID) (shopping.List, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetList", arg0, arg1)
+	ret0, _ := ret[0].(shopping.List)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetList indicates an expected call of GetList.
+func (mr *MockShoppingUseCasesMockRecorder) GetList(arg0, arg1 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetList", reflect.TypeOf((*MockShoppingUseCases)(nil).GetList), arg0, arg1)
+}
+
+// Regenerate mocks base method.
+func (m *MockShoppingUseCases) Regenerate(arg0 context.Context, arg1 planning.PlanID) (shopping.List, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Regenerate", arg0, arg1)
+	ret0, _ := ret[0].(shopping.List)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Regenerate indicates an expected call of Regenerate.
+func (mr *MockShoppingUseCasesMockRecorder) Regenerate(arg0, arg1 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Regenerate", reflect.TypeOf((*MockShoppingUseCases)(nil).Regenerate), arg0, arg1)
+}
+
+// SetChecked mocks base method.
+func (m *MockShoppingUseCases) SetChecked(arg0 context.Context, arg1 shopping.ItemID, arg2 bool) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SetChecked", arg0, arg1, arg2)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// SetChecked indicates an expected call of SetChecked.
+func (mr *MockShoppingUseCasesMockRecorder) SetChecked(arg0, arg1, arg2 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetChecked", reflect.TypeOf((*MockShoppingUseCases)(nil).SetChecked), arg0, arg1, arg2)
 }

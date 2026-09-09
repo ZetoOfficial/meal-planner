@@ -26,6 +26,9 @@ type PlanRepository interface {
 	List(ctx context.Context) ([]planningdom.Plan, error)
 	Archive(ctx context.Context, id planningdom.PlanID) error
 
+	SwapSlotFill(ctx context.Context, planID planningdom.PlanID, fillID planningdom.SlotFillID, productID catalogdom.ProductID) error
+	MarkShoppingListStale(ctx context.Context, planID planningdom.PlanID, stale bool) error
+
 	SaveQualitySnapshots(ctx context.Context, planID planningdom.PlanID, snapshots []planningdom.QualitySnapshot) error
 	ListQualitySnapshots(ctx context.Context, planID planningdom.PlanID, basis nutrition.SummaryBasis) ([]planningdom.QualitySnapshot, error)
 }
@@ -47,6 +50,7 @@ type ProductRepository interface {
 // stores accepted LLM candidates as drafts.
 type RecipeRepository interface {
 	ListPermanentCandidates(ctx context.Context) ([]recipedom.Template, error)
+	List(ctx context.Context, status *recipedom.Status) ([]recipedom.Template, error)
 	ResolveRoleTags(ctx context.Context, codes []string) (map[string]catalogdom.RoleTag, error)
 	Create(ctx context.Context, template recipedom.Template, roles map[string]catalogdom.RoleTag) (recipedom.Template, error)
 }

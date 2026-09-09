@@ -87,6 +87,20 @@ type Preview struct {
 	Summary            string
 	// Plan is the swapped plan. Preview never persists it; ApplySwap does.
 	Plan planningdom.Plan
+	// EaterDays is the post-swap evaluation, ready to replace the stored
+	// quality snapshot when the swap is applied.
+	EaterDays []DaySnapshot
+}
+
+// DaySnapshot is one eater-day of the swapped plan as it would be stored.
+type DaySnapshot struct {
+	EaterID      eaterdom.ID
+	Date         time.Time
+	Basis        nutrition.SummaryBasis
+	Day          nutrition.DaySummary
+	Rolling      nutrition.RollingSummary
+	DayRules     []nutrition.RuleEvaluationResult
+	RollingRules []nutrition.RuleEvaluationResult
 }
 
 // Input carries everything the deterministic diff needs. History holds the days
@@ -131,6 +145,7 @@ func Compute(input Input, request Request) (Preview, error) {
 		ShoppingDelta:      shoppingDelta(input.Plan, swapped, oldProductID, request.NewProductID),
 		QualityDiff:        qualityDiff(before, after),
 		Plan:               swapped,
+		EaterDays:          snapshots(after),
 	}
 	preview.Summary = summarise(input.Catalogue, oldProductID, request.NewProductID, preview)
 	return preview, nil
@@ -225,6 +240,45 @@ func rollingWindow(history []nutrition.DaySummary, candidate *nutrition.DaySumma
 		days = append(days, &history[i])
 	}
 	return append(days, candidate)
+}
+
+func snapshots(days []dayEvaluation) []DaySnapshot {
+	result := make([]DaySnapshot, 0, len(days))
+	for i := range days {
+		day := &days[i]
+		result = append(result, DaySnapshot{
+			EaterID:      day.eaterID,
+			Date:         day.date,
+			Basis:        nutrition.SummaryBasisPlanned,
+			Day:          day.day,
+			Rolling:      day.rolling,
+			DayRules:     partitionRules(day.rules, false),
+			RollingRules: partitionRules(day.rules, true),
+		})
+	}
+	return result
+}
+
+// partitionRules splits the flat verdict list into the daily and weekly groups
+// the snapshot tables store separately.
+func partitionRules(rules []nutrition.RuleEvaluationResult, rolling bool) []nutrition.RuleEvaluationResult {
+	result := make([]nutrition.RuleEvaluationResult, 0, len(rules))
+	for _, rule := range rules {
+		if isRollingRule(rule.RuleCode) != rolling {
+			continue
+		}
+		result = append(result, rule)
+	}
+	return result
+}
+
+func isRollingRule(code string) bool {
+	switch code {
+	case quality.RuleRedMeat, quality.RuleProcessedMeat, quality.RuleLegumes:
+		return true
+	default:
+		return false
+	}
 }
 
 func ruleResults(evaluation quality.Evaluation) []nutrition.RuleEvaluationResult {

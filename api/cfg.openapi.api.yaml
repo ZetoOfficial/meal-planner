@@ -16,3 +16,5 @@ output-options:
     - products
     - recipes
     - plans
+    - swaps
+    - shopping

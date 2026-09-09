@@ -9,6 +9,8 @@ import (
 	eaterdom "github.com/ZetoOfficial/meal-planner/internal/domain/eater"
 	planningdom "github.com/ZetoOfficial/meal-planner/internal/domain/planning"
 	recipedom "github.com/ZetoOfficial/meal-planner/internal/domain/recipe"
+	shoppingdom "github.com/ZetoOfficial/meal-planner/internal/domain/shopping"
+	"github.com/ZetoOfficial/meal-planner/internal/swap"
 	usecasecatalog "github.com/ZetoOfficial/meal-planner/internal/usecase/catalog"
 	usecaseeater "github.com/ZetoOfficial/meal-planner/internal/usecase/eater"
 	usecaseplanning "github.com/ZetoOfficial/meal-planner/internal/usecase/planning"
@@ -50,6 +52,15 @@ type PlanningUseCases interface {
 	GetPlan(context.Context, planningdom.PlanID) (usecaseplanning.PlanResult, error)
 	ListPlans(context.Context) ([]planningdom.Plan, error)
 	ArchivePlan(context.Context, planningdom.PlanID) error
+	PreviewSwap(context.Context, planningdom.PlanID, usecaseplanning.SwapCommand) (swap.Preview, error)
+	ApplySwap(context.Context, planningdom.PlanID, usecaseplanning.SwapCommand, bool) (usecaseplanning.PlanResult, error)
+}
+
+type ShoppingUseCases interface {
+	GetList(context.Context, planningdom.PlanID) (shoppingdom.List, error)
+	Regenerate(context.Context, planningdom.PlanID) (shoppingdom.List, error)
+	SetChecked(context.Context, shoppingdom.ItemID, bool) error
+	GetItem(context.Context, shoppingdom.ItemID) (shoppingdom.Item, error)
 }
 
 type server struct {
@@ -57,8 +68,15 @@ type server struct {
 	eater    EaterUseCases
 	recipe   RecipeUseCases
 	planning PlanningUseCases
+	shopping ShoppingUseCases
 }
 
-func newServer(catalog CatalogUseCases, eater EaterUseCases, recipe RecipeUseCases, planning PlanningUseCases) *server {
-	return &server{catalog: catalog, eater: eater, recipe: recipe, planning: planning}
+func newServer(
+	catalog CatalogUseCases,
+	eater EaterUseCases,
+	recipe RecipeUseCases,
+	planning PlanningUseCases,
+	shopping ShoppingUseCases,
+) *server {
+	return &server{catalog: catalog, eater: eater, recipe: recipe, planning: planning, shopping: shopping}
 }

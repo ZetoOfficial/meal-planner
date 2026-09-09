@@ -155,3 +155,32 @@ UPDATE plan
 SET status = 'archived'
 WHERE id = sqlc.arg(id)
 RETURNING *;
+
+-- name: CreatePrepDependency :one
+INSERT INTO prep_dependency (plan_id, dependent_recipe_id, source_recipe_id, note)
+VALUES (
+    sqlc.arg(plan_id),
+    sqlc.arg(dependent_recipe_id),
+    sqlc.arg(source_recipe_id),
+    sqlc.arg(note)
+)
+ON CONFLICT (dependent_recipe_id, source_recipe_id) DO UPDATE SET note = EXCLUDED.note
+RETURNING *;
+
+-- name: ListPrepDependencies :many
+SELECT *
+FROM prep_dependency
+WHERE plan_id = sqlc.arg(plan_id)
+ORDER BY id;
+
+-- name: UpdateSlotFillProduct :one
+UPDATE slot_fill
+SET product_id = sqlc.arg(product_id)
+WHERE id = sqlc.arg(id)
+RETURNING *;
+
+-- name: MarkShoppingListStale :one
+UPDATE plan
+SET shopping_list_stale = sqlc.arg(stale)
+WHERE id = sqlc.arg(id)
+RETURNING *;

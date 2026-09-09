@@ -310,6 +310,43 @@ func (q *Queries) CreatePlanRecipe(ctx context.Context, arg CreatePlanRecipePara
 	return i, err
 }
 
+const createPrepDependency = `-- name: CreatePrepDependency :one
+INSERT INTO prep_dependency (plan_id, dependent_recipe_id, source_recipe_id, note)
+VALUES (
+    $1,
+    $2,
+    $3,
+    $4
+)
+ON CONFLICT (dependent_recipe_id, source_recipe_id) DO UPDATE SET note = EXCLUDED.note
+RETURNING id, plan_id, dependent_recipe_id, source_recipe_id, note
+`
+
+type CreatePrepDependencyParams struct {
+	PlanID            int64   `json:"plan_id"`
+	DependentRecipeID int64   `json:"dependent_recipe_id"`
+	SourceRecipeID    int64   `json:"source_recipe_id"`
+	Note              *string `json:"note"`
+}
+
+func (q *Queries) CreatePrepDependency(ctx context.Context, arg CreatePrepDependencyParams) (PrepDependency, error) {
+	row := q.db.QueryRow(ctx, createPrepDependency,
+		arg.PlanID,
+		arg.DependentRecipeID,
+		arg.SourceRecipeID,
+		arg.Note,
+	)
+	var i PrepDependency
+	err := row.Scan(
+		&i.ID,
+		&i.PlanID,
+		&i.DependentRecipeID,
+		&i.SourceRecipeID,
+		&i.Note,
+	)
+	return i, err
+}
+
 const createSlotFill = `-- name: CreateSlotFill :one
 INSERT INTO slot_fill (
     plan_recipe_id,
@@ -593,4 +630,93 @@ func (q *Queries) ListPlans(ctx context.Context) ([]Plan, error) {
 		return nil, err
 	}
 	return items, nil
+}
+
+const listPrepDependencies = `-- name: ListPrepDependencies :many
+SELECT id, plan_id, dependent_recipe_id, source_recipe_id, note
+FROM prep_dependency
+WHERE plan_id = $1
+ORDER BY id
+`
+
+func (q *Queries) ListPrepDependencies(ctx context.Context, planID int64) ([]PrepDependency, error) {
+	rows, err := q.db.Query(ctx, listPrepDependencies, planID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []PrepDependency{}
+	for rows.Next() {
+		var i PrepDependency
+		if err := rows.Scan(
+			&i.ID,
+			&i.PlanID,
+			&i.DependentRecipeID,
+			&i.SourceRecipeID,
+			&i.Note,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const markShoppingListStale = `-- name: MarkShoppingListStale :one
+UPDATE plan
+SET shopping_list_stale = $1
+WHERE id = $2
+RETURNING id, label, start_date, days, cook_date, novelty_level, status, quality_score, quality_warnings_count, shopping_list_stale, created_at
+`
+
+type MarkShoppingListStaleParams struct {
+	Stale bool  `json:"stale"`
+	ID    int64 `json:"id"`
+}
+
+func (q *Queries) MarkShoppingListStale(ctx context.Context, arg MarkShoppingListStaleParams) (Plan, error) {
+	row := q.db.QueryRow(ctx, markShoppingListStale, arg.Stale, arg.ID)
+	var i Plan
+	err := row.Scan(
+		&i.ID,
+		&i.Label,
+		&i.StartDate,
+		&i.Days,
+		&i.CookDate,
+		&i.NoveltyLevel,
+		&i.Status,
+		&i.QualityScore,
+		&i.QualityWarningsCount,
+		&i.ShoppingListStale,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const updateSlotFillProduct = `-- name: UpdateSlotFillProduct :one
+UPDATE slot_fill
+SET product_id = $1
+WHERE id = $2
+RETURNING id, plan_recipe_id, slot_id, product_id, planned_input_qty_g
+`
+
+type UpdateSlotFillProductParams struct {
+	ProductID int64 `json:"product_id"`
+	ID        int64 `json:"id"`
+}
+
+func (q *Queries) UpdateSlotFillProduct(ctx context.Context, arg UpdateSlotFillProductParams) (SlotFill, error) {
+	row := q.db.QueryRow(ctx, updateSlotFillProduct, arg.ProductID, arg.ID)
+	var i SlotFill
+	err := row.Scan(
+		&i.ID,
+		&i.PlanRecipeID,
+		&i.SlotID,
+		&i.ProductID,
+		&i.PlannedInputQtyG,
+	)
+	return i, err
 }

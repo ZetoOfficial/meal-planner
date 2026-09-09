@@ -19,8 +19,10 @@ import (
 	"github.com/ZetoOfficial/meal-planner/internal/domain/nutrition"
 	planningdom "github.com/ZetoOfficial/meal-planner/internal/domain/planning"
 	recipedom "github.com/ZetoOfficial/meal-planner/internal/domain/recipe"
+	shoppingdom "github.com/ZetoOfficial/meal-planner/internal/domain/shopping"
 	apperr "github.com/ZetoOfficial/meal-planner/internal/errors"
 	"github.com/ZetoOfficial/meal-planner/internal/solver"
+	"github.com/ZetoOfficial/meal-planner/internal/swap"
 	usecasecatalog "github.com/ZetoOfficial/meal-planner/internal/usecase/catalog"
 	usecaseplanning "github.com/ZetoOfficial/meal-planner/internal/usecase/planning"
 	usecaserecipe "github.com/ZetoOfficial/meal-planner/internal/usecase/recipe"
@@ -438,4 +440,163 @@ func doRequest(t *testing.T, handler http.Handler, method, target, body string) 
 	response := httptest.NewRecorder()
 	handler.ServeHTTP(response, request)
 	return response
+}
+
+func TestPreviewSwapHTTPContract(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	planning := mocks.NewMockPlanningUseCases(ctrl)
+	start := time.Date(2026, time.August, 10, 0, 0, 0, 0, time.UTC)
+
+	var command usecaseplanning.SwapCommand
+	planning.EXPECT().
+		PreviewSwap(gomock.Any(), planningdom.PlanID(7), gomock.Any()).
+		DoAndReturn(func(_ context.Context, _ planningdom.PlanID, cmd usecaseplanning.SwapCommand) (swap.Preview, error) {
+			command = cmd
+			return swap.Preview{
+				Level:         swap.LevelProteinChange,
+				Summary:       "swap Salmon for Tuna",
+				AffectedMeals: []planningdom.MealID{21},
+				MacroDiff: []swap.EaterDayMacroDelta{{
+					EaterID: 1, Date: start,
+					Delta: swap.MacroDelta{ProteinG: 10, Kcal: 40},
+				}},
+				InvalidatedRecipes: []swap.InvalidatedRecipe{{PlanRecipeID: 12, Reason: "uses the roast"}},
+				ShoppingDelta: swap.ShoppingDelta{
+					Added:   []catalogdom.ProductID{3},
+					Removed: []catalogdom.ProductID{1},
+				},
+				QualityDiff: swap.QualityDelta{
+					FiberG:        -12,
+					CoverageScore: -0.25,
+					ChangedRules: []swap.RuleChange{{
+						EaterID: 1, Date: start,
+						Before: nutrition.RuleEvaluationResult{RuleCode: "fiber_min_g", Status: nutrition.StatusPass},
+						After:  nutrition.RuleEvaluationResult{RuleCode: "fiber_min_g", Status: nutrition.StatusSoftFail, Coverage: 1},
+					}},
+				},
+			}, nil
+		})
+
+	handler := httpapi.New(httpapi.Deps{APIToken: "secret", Planning: planning})
+	body := `{"level":"fill","slot_fill_id":5,"new_product_id":3}`
+	response := doRequest(t, handler, http.MethodPost, "/plans/7/swap/preview", body)
+
+	if response.Code != http.StatusOK {
+		t.Fatalf("status = %d, body = %s; want 200", response.Code, response.Body.String())
+	}
+	if command.SlotFillID != 5 || command.NewProductID != 3 {
+		t.Fatalf("mapped command = %#v, want the requested fill swap", command)
+	}
+
+	var preview model.SwapPreview
+	if err := json.Unmarshal(response.Body.Bytes(), &preview); err != nil {
+		t.Fatalf("decode preview: %v", err)
+	}
+	if preview.Level != "protein_change" || preview.Summary == "" {
+		t.Fatalf("preview = %#v, want the blast radius level and summary", preview)
+	}
+	if preview.AffectedMeals == nil || len(*preview.AffectedMeals) != 1 {
+		t.Fatalf("affected meals = %#v, want the meal eating from the batch", preview.AffectedMeals)
+	}
+	if preview.InvalidatedRecipes == nil || len(*preview.InvalidatedRecipes) != 1 {
+		t.Fatalf("invalidated = %#v, want the dependent dish reported", preview.InvalidatedRecipes)
+	}
+	if preview.QualityDiff == nil || preview.QualityDiff.FiberG == nil || *preview.QualityDiff.FiberG != -12 {
+		t.Fatalf("quality diff = %#v, want the fibre movement", preview.QualityDiff)
+	}
+	if preview.QualityDiff.ChangedRules == nil || len(*preview.QualityDiff.ChangedRules) != 1 {
+		t.Fatalf("changed rules = %#v, want the moved verdict", preview.QualityDiff.ChangedRules)
+	}
+	if preview.ShoppingDelta == nil || preview.ShoppingDelta.Added == nil || len(*preview.ShoppingDelta.Added) != 1 {
+		t.Fatalf("shopping delta = %#v, want the added product", preview.ShoppingDelta)
+	}
+	if preview.MacroDiff == nil || preview.MacroDiff.ByEater == nil || len(*preview.MacroDiff.ByEater) != 1 {
+		t.Fatalf("macro diff = %#v, want the eater-day delta", preview.MacroDiff)
+	}
+}
+
+func TestPreviewSwapRejectsUnsupportedLevels(t *testing.T) {
+	handler := httpapi.New(httpapi.Deps{APIToken: "secret", Planning: mocks.NewMockPlanningUseCases(gomock.NewController(t))})
+
+	response := doRequest(t, handler, http.MethodPost, "/plans/7/swap/preview", `{"level":"rotation"}`)
+
+	if response.Code != http.StatusUnprocessableEntity {
+		t.Fatalf("status = %d, body = %s; want 422 for an unsupported swap level", response.Code, response.Body.String())
+	}
+}
+
+func TestApplySwapReturns409WithoutConfirmation(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	planning := mocks.NewMockPlanningUseCases(ctrl)
+	planning.EXPECT().
+		ApplySwap(gomock.Any(), planningdom.PlanID(7), gomock.Any(), false).
+		Return(usecaseplanning.PlanResult{}, &usecaseplanning.UnconfirmedSwapError{
+			Preview: swap.Preview{Level: swap.LevelFillToFill, Summary: "confirm first"},
+		})
+
+	handler := httpapi.New(httpapi.Deps{APIToken: "secret", Planning: planning})
+	body := `{"level":"fill","slot_fill_id":5,"new_product_id":3,"confirm":false}`
+	response := doRequest(t, handler, http.MethodPost, "/plans/7/swap", body)
+
+	if response.Code != http.StatusConflict {
+		t.Fatalf("status = %d, body = %s; want 409", response.Code, response.Body.String())
+	}
+	var preview model.SwapPreview
+	if err := json.Unmarshal(response.Body.Bytes(), &preview); err != nil {
+		t.Fatalf("decode preview: %v", err)
+	}
+	if preview.Summary != "confirm first" {
+		t.Fatalf("preview = %#v, want the pending blast radius returned", preview)
+	}
+}
+
+func TestShoppingListHTTPContract(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	shopping := mocks.NewMockShoppingUseCases(ctrl)
+	cost := 4.0
+	shopping.EXPECT().
+		GetList(gomock.Any(), planningdom.PlanID(7)).
+		Return(shoppingdom.List{
+			ID: 3, PlanID: 7,
+			Items: []shoppingdom.Item{{
+				ID: 10, ProductID: 1, ProductName: "Chicken breast",
+				TotalQtyG: 500, Unit: "g", EstCost: &cost, Checked: true,
+			}},
+		}, nil)
+
+	handler := httpapi.New(httpapi.Deps{APIToken: "secret", Shopping: shopping})
+	response := doRequest(t, handler, http.MethodGet, "/plans/7/shopping-list", "")
+
+	if response.Code != http.StatusOK {
+		t.Fatalf("status = %d, body = %s; want 200", response.Code, response.Body.String())
+	}
+	var list model.ShoppingList
+	if err := json.Unmarshal(response.Body.Bytes(), &list); err != nil {
+		t.Fatalf("decode list: %v", err)
+	}
+	if list.Id != 3 || len(list.Items) != 1 {
+		t.Fatalf("list = %#v, want the stored list", list)
+	}
+	if list.Items[0].TotalQtyG != 500 || !list.Items[0].Checked {
+		t.Fatalf("item = %#v, want the aggregated quantity and its check", list.Items[0])
+	}
+	if list.EstTotal == nil || *list.EstTotal != 4 {
+		t.Fatalf("estimated total = %v, want the summed known costs", list.EstTotal)
+	}
+}
+
+func TestUpdateShoppingListItemHTTPContract(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	shopping := mocks.NewMockShoppingUseCases(ctrl)
+	shopping.EXPECT().SetChecked(gomock.Any(), shoppingdom.ItemID(10), true).Return(nil)
+	shopping.EXPECT().
+		GetItem(gomock.Any(), shoppingdom.ItemID(10)).
+		Return(shoppingdom.Item{ID: 10, ProductID: 1, TotalQtyG: 500, Unit: "g", Checked: true}, nil)
+
+	handler := httpapi.New(httpapi.Deps{APIToken: "secret", Shopping: shopping})
+	response := doRequest(t, handler, http.MethodPatch, "/shopping-list-items/10", `{"checked":true}`)
+
+	if response.Code != http.StatusOK {
+		t.Fatalf("status = %d, body = %s; want 200", response.Code, response.Body.String())
+	}
 }

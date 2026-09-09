@@ -21,11 +21,13 @@ import (
 	llmrepo "github.com/ZetoOfficial/meal-planner/internal/postgres/llm"
 	planningrepo "github.com/ZetoOfficial/meal-planner/internal/postgres/planning"
 	reciperepo "github.com/ZetoOfficial/meal-planner/internal/postgres/recipe"
+	shoppingrepo "github.com/ZetoOfficial/meal-planner/internal/postgres/shopping"
 	"github.com/ZetoOfficial/meal-planner/internal/solver"
 	usecasecatalog "github.com/ZetoOfficial/meal-planner/internal/usecase/catalog"
 	usecaseeater "github.com/ZetoOfficial/meal-planner/internal/usecase/eater"
 	usecaseplanning "github.com/ZetoOfficial/meal-planner/internal/usecase/planning"
 	usecaserecipe "github.com/ZetoOfficial/meal-planner/internal/usecase/recipe"
+	usecaseshopping "github.com/ZetoOfficial/meal-planner/internal/usecase/shopping"
 )
 
 const readHeaderTimeout = 10 * time.Second
@@ -81,6 +83,7 @@ func run() error {
 	store := postgres.NewStore(pool)
 	tx := postgres.NewTxManager(pool)
 	eaters := eaterrepo.New(store)
+	plans := planningrepo.New(store)
 	products := catalogrepo.New(store)
 	recipes := reciperepo.New(store)
 	generator, err := recipeGenerator(cfg, store)
@@ -93,8 +96,9 @@ func run() error {
 		Catalog:  usecasecatalog.NewService(products, tx),
 		Eater:    usecaseeater.NewService(eaters, tx, clock.System{}),
 		Recipe:   usecaserecipe.NewService(recipes, tx, clock.System{}),
+		Shopping: usecaseshopping.NewService(shoppingrepo.New(store), plans, products, tx),
 		Planning: usecaseplanning.NewService(
-			planningrepo.New(store), eaters, products, recipes, solver.New(), generator, tx,
+			plans, eaters, products, recipes, solver.New(), generator, tx,
 			usecaseplanning.Options{
 				AvailableEquipment: cfg.PlannerEquipment,
 				RollingWindowDays:  cfg.RollingWindowDays,

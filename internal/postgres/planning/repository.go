@@ -5,6 +5,7 @@ import (
 	"sort"
 	"strconv"
 
+	catalogdom "github.com/ZetoOfficial/meal-planner/internal/domain/catalog"
 	eaterdom "github.com/ZetoOfficial/meal-planner/internal/domain/eater"
 	"github.com/ZetoOfficial/meal-planner/internal/domain/nutrition"
 	planningdom "github.com/ZetoOfficial/meal-planner/internal/domain/planning"
@@ -48,6 +49,9 @@ func (r *Repository) Save(ctx context.Context, plan planningdom.Plan) (planningd
 		return planningdom.Plan{}, err
 	}
 	if err := r.saveMeals(ctx, query, planID, plan.Meals, recipeIDs); err != nil {
+		return planningdom.Plan{}, err
+	}
+	if err := r.savePrepDependencies(ctx, query, planID, plan, recipeIDs); err != nil {
 		return planningdom.Plan{}, err
 	}
 	return r.Get(ctx, planID)
@@ -104,6 +108,34 @@ func (r *Repository) saveMeals(
 	return nil
 }
 
+// savePrepDependencies stores the graph using the ids the plan recipes just
+// received; the aggregate addresses them by slice index before it is saved.
+func (r *Repository) savePrepDependencies(
+	ctx context.Context,
+	query *sqlc.Queries,
+	planID planningdom.PlanID,
+	plan planningdom.Plan,
+	recipeIDs []planningdom.PlanRecipeID,
+) error {
+	positions := make(map[planningdom.PlanRecipeID]planningdom.PlanRecipeID, len(recipeIDs))
+	for i, id := range recipeIDs {
+		positions[plan.Recipes[i].ID] = id
+	}
+	for _, dependency := range plan.PrepDependencies {
+		stored := dependency
+		if mapped, ok := positions[dependency.DependentRecipeID]; ok {
+			stored.DependentRecipeID = mapped
+		}
+		if mapped, ok := positions[dependency.SourceRecipeID]; ok {
+			stored.SourceRecipeID = mapped
+		}
+		if _, err := query.CreatePrepDependency(ctx, prepDependencyParams(planID, stored)); err != nil {
+			return dberror.Map(err, "prep dependency")
+		}
+	}
+	return nil
+}
+
 func (r *Repository) Get(ctx context.Context, id planningdom.PlanID) (planningdom.Plan, error) {
 	query := r.store.Queries(ctx)
 	row, err := query.GetPlan(ctx, int64(id))
@@ -124,6 +156,14 @@ func (r *Repository) Get(ctx context.Context, id planningdom.PlanID) (planningdo
 	}
 	if err := r.loadMeals(ctx, query, id, &plan, recipeIndex); err != nil {
 		return planningdom.Plan{}, err
+	}
+	dependencies, err := query.ListPrepDependencies(ctx, int64(id))
+	if err != nil {
+		return planningdom.Plan{}, dberror.Map(err, "prep dependency")
+	}
+	plan.PrepDependencies = make([]planningdom.PrepDependency, 0, len(dependencies))
+	for i := range dependencies {
+		plan.PrepDependencies = append(plan.PrepDependencies, prepDependencyFromRow(dependencies[i]))
 	}
 	return plan, nil
 }
@@ -416,6 +456,42 @@ func (r *Repository) List(ctx context.Context) ([]planningdom.Plan, error) {
 
 func (r *Repository) Archive(ctx context.Context, id planningdom.PlanID) error {
 	if _, err := r.store.Queries(ctx).ArchivePlan(ctx, int64(id)); err != nil {
+		return dberror.Map(err, "plan")
+	}
+	return nil
+}
+
+// SwapSlotFill changes the product of one stored fill and marks the shopping
+// list stale, because the plan now buys something else.
+func (r *Repository) SwapSlotFill(
+	ctx context.Context,
+	planID planningdom.PlanID,
+	fillID planningdom.SlotFillID,
+	productID catalogdom.ProductID,
+) error {
+	query := r.store.Queries(ctx)
+	if _, err := query.UpdateSlotFillProduct(ctx, sqlc.UpdateSlotFillProductParams{
+		ID:        int64(fillID),
+		ProductID: int64(productID),
+	}); err != nil {
+		return dberror.Map(err, "slot fill")
+	}
+	if _, err := query.MarkShoppingListStale(ctx, sqlc.MarkShoppingListStaleParams{
+		ID:    int64(planID),
+		Stale: true,
+	}); err != nil {
+		return dberror.Map(err, "plan")
+	}
+	return nil
+}
+
+// MarkShoppingListStale records whether the plan still matches its list.
+func (r *Repository) MarkShoppingListStale(ctx context.Context, planID planningdom.PlanID, stale bool) error {
+	_, err := r.store.Queries(ctx).MarkShoppingListStale(ctx, sqlc.MarkShoppingListStaleParams{
+		ID:    int64(planID),
+		Stale: stale,
+	})
+	if err != nil {
 		return dberror.Map(err, "plan")
 	}
 	return nil

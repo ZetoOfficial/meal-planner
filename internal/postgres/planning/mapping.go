@@ -163,6 +163,7 @@ func slotFillFromRow(row sqlc.SlotFill) (planningdom.SlotFill, error) {
 		return planningdom.SlotFill{}, err
 	}
 	return planningdom.SlotFill{
+		ID:               planningdom.SlotFillID(row.ID),
 		SlotID:           recipedom.SlotID(row.SlotID),
 		ProductID:        catalogdom.ProductID(row.ProductID),
 		PlannedInputQtyG: qtyG,
@@ -221,6 +222,24 @@ func allocationFromRow(row sqlc.MealComponentAllocation, planRecipeIndex int) (p
 }
 
 const dayDuration = 24 * time.Hour
+
+func prepDependencyParams(planID planningdom.PlanID, dependency planningdom.PrepDependency) sqlc.CreatePrepDependencyParams {
+	return sqlc.CreatePrepDependencyParams{
+		PlanID:            int64(planID),
+		DependentRecipeID: int64(dependency.DependentRecipeID),
+		SourceRecipeID:    int64(dependency.SourceRecipeID),
+		Note:              dependency.Note,
+	}
+}
+
+func prepDependencyFromRow(row sqlc.PrepDependency) planningdom.PrepDependency {
+	return planningdom.PrepDependency{
+		ID:                row.ID,
+		DependentRecipeID: planningdom.PlanRecipeID(row.DependentRecipeID),
+		SourceRecipeID:    planningdom.PlanRecipeID(row.SourceRecipeID),
+		Note:              row.Note,
+	}
+}
 
 func dateValue(value time.Time) pgtype.Date {
 	return pgtype.Date{Time: value.UTC().Truncate(dayDuration), Valid: true}

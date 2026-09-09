@@ -21,6 +21,7 @@ type Querier interface {
 	CreatePlan(ctx context.Context, arg CreatePlanParams) (Plan, error)
 	CreatePlanEaterDay(ctx context.Context, arg CreatePlanEaterDayParams) (PlanEaterDay, error)
 	CreatePlanRecipe(ctx context.Context, arg CreatePlanRecipeParams) (PlanRecipe, error)
+	CreatePrepDependency(ctx context.Context, arg CreatePrepDependencyParams) (PrepDependency, error)
 	CreateProduct(ctx context.Context, arg CreateProductParams) (Product, error)
 	CreateProductAllergen(ctx context.Context, arg CreateProductAllergenParams) error
 	CreateProductRole(ctx context.Context, arg CreateProductRoleParams) error
@@ -32,6 +33,7 @@ type Querier interface {
 	DeleteProduct(ctx context.Context, id int64) (int64, error)
 	DeleteProductAllergens(ctx context.Context, productID int64) error
 	DeleteProductRoles(ctx context.Context, productID int64) error
+	DeleteShoppingItemsOutsideProducts(ctx context.Context, arg DeleteShoppingItemsOutsideProductsParams) error
 	GetCurrentMacroGoal(ctx context.Context, eaterID int64) (EaterMacroGoal, error)
 	GetEater(ctx context.Context, id int64) (Eater, error)
 	GetPlan(ctx context.Context, id int64) (Plan, error)
@@ -39,6 +41,8 @@ type Querier interface {
 	GetProductFoodClassification(ctx context.Context, productID int64) (ProductFoodClassification, error)
 	GetRecipeTemplate(ctx context.Context, id int64) (RecipeTemplate, error)
 	GetRoleTagByCode(ctx context.Context, code string) (RoleTag, error)
+	GetShoppingItem(ctx context.Context, id int64) (GetShoppingItemRow, error)
+	GetShoppingListByPlan(ctx context.Context, planID int64) (ShoppingList, error)
 	ListActiveFixedMeals(ctx context.Context, eaterID int64) ([]FixedMeal, error)
 	ListEaterAllergens(ctx context.Context, eaterID int64) ([]string, error)
 	ListEaterExclusions(ctx context.Context, eaterID int64) ([]EaterExclusion, error)
@@ -53,6 +57,7 @@ type Querier interface {
 	ListPlanRollingSummaries(ctx context.Context, arg ListPlanRollingSummariesParams) ([]RollingNutritionSummary, error)
 	ListPlanSlotFills(ctx context.Context, planID int64) ([]SlotFill, error)
 	ListPlans(ctx context.Context) ([]Plan, error)
+	ListPrepDependencies(ctx context.Context, planID int64) ([]PrepDependency, error)
 	ListProductAllergens(ctx context.Context, productID int64) ([]string, error)
 	ListProductRoleTags(ctx context.Context, productID int64) ([]RoleTag, error)
 	ListProducts(ctx context.Context) ([]Product, error)
@@ -62,18 +67,24 @@ type Querier interface {
 	ListRecipeTemplatesByStatus(ctx context.Context, status RecipeStatus) ([]RecipeTemplate, error)
 	ListRoleTags(ctx context.Context) ([]RoleTag, error)
 	ListRuleEvaluationResults(ctx context.Context, arg ListRuleEvaluationResultsParams) ([]RuleEvaluationResult, error)
+	ListShoppingItems(ctx context.Context, listID int64) ([]ListShoppingItemsRow, error)
 	LookupLLMCache(ctx context.Context, promptHash string) (LlmCache, error)
+	MarkShoppingListStale(ctx context.Context, arg MarkShoppingListStaleParams) (Plan, error)
 	ProductExists(ctx context.Context, id int64) (bool, error)
 	PromoteRecipeTemplate(ctx context.Context, arg PromoteRecipeTemplateParams) (RecipeTemplate, error)
 	ResolveRecipeRoleTags(ctx context.Context, codes []string) ([]RoleTag, error)
 	RoleTagExists(ctx context.Context, code string) (bool, error)
+	SetShoppingItemChecked(ctx context.Context, arg SetShoppingItemCheckedParams) (ShoppingListItem, error)
 	UpdateEater(ctx context.Context, arg UpdateEaterParams) (Eater, error)
 	UpdateProduct(ctx context.Context, arg UpdateProductParams) (Product, error)
+	UpdateSlotFillProduct(ctx context.Context, arg UpdateSlotFillProductParams) (SlotFill, error)
 	UpsertDayNutritionSummary(ctx context.Context, arg UpsertDayNutritionSummaryParams) (DayNutritionSummary, error)
 	UpsertLLMCache(ctx context.Context, arg UpsertLLMCacheParams) (LlmCache, error)
 	UpsertProductFoodClassification(ctx context.Context, arg UpsertProductFoodClassificationParams) (ProductFoodClassification, error)
 	UpsertRollingNutritionSummary(ctx context.Context, arg UpsertRollingNutritionSummaryParams) (RollingNutritionSummary, error)
 	UpsertRuleEvaluationResult(ctx context.Context, arg UpsertRuleEvaluationResultParams) (RuleEvaluationResult, error)
+	UpsertShoppingItem(ctx context.Context, arg UpsertShoppingItemParams) (ShoppingListItem, error)
+	UpsertShoppingList(ctx context.Context, planID int64) (ShoppingList, error)
 }
 
 var _ Querier = (*Queries)(nil)
