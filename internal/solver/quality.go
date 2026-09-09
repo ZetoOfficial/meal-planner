@@ -74,7 +74,7 @@ type dayEvaluator struct {
 func newDayEvaluator(input Input, eaterInput EaterInput, history []nutrition.DaySummary) dayEvaluator {
 	return dayEvaluator{
 		ruleset:    input.ruleset(),
-		sex:        sexOrUnspecified(eaterInput.Eater.Sex),
+		sex:        eaterInput.Eater.Sex.OrUnspecified(),
 		windowDays: input.rollingWindowDays(),
 		fixedMeals: fixedQualityMeals(eaterInput.FixedMeals, eaterInput.Eater.ID),
 		history:    history,
@@ -172,13 +172,6 @@ func distinctLegumeComponents(solution daySolution) int {
 		count++
 	}
 	return count
-}
-
-func sexOrUnspecified(sex eaterdom.Sex) eaterdom.Sex {
-	if sex.Valid() {
-		return sex
-	}
-	return eaterdom.SexUnspecified
 }
 
 func (i Input) ruleset() quality.Ruleset {

@@ -61,21 +61,12 @@ func compareFloat(left, right float64) (higher, decided bool) {
 	return false, false
 }
 
-func isRollingRule(code string) bool {
-	switch code {
-	case quality.RuleRedMeat, quality.RuleProcessedMeat, quality.RuleLegumes:
-		return true
-	default:
-		return false
-	}
-}
-
 func scoreDay(ruleset quality.Ruleset, evaluation quality.Evaluation, solution daySolution, priorUses map[int64]int) dayScore {
 	daily := make([]quality.RuleOutcome, 0, len(evaluation.Outcomes))
 	rolling := make([]quality.RuleOutcome, 0, len(evaluation.Outcomes))
 	score := dayScore{}
 	for _, outcome := range evaluation.Outcomes {
-		if isRollingRule(outcome.Code) {
+		if quality.IsRollingRule(outcome.Code) {
 			rolling = append(rolling, outcome)
 			if outcome.Status == nutrition.StatusSoftFail {
 				score.rollingSoftFails++

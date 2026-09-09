@@ -26,9 +26,9 @@ func planParams(plan planningdom.Plan) sqlc.CreatePlanParams {
 	}
 	return sqlc.CreatePlanParams{
 		Label:                plan.Label,
-		StartDate:            dateValue(plan.StartDate),
+		StartDate:            pgvalue.Date(plan.StartDate),
 		Days:                 int32(days),
-		CookDate:             dateValue(plan.CookDate),
+		CookDate:             pgvalue.Date(plan.CookDate),
 		NoveltyLevel:         int16(plan.Novelty),
 		Status:               sqlc.PlanStatus(statusOrDraft(plan.Status)),
 		QualityScore:         pgvalue.OptionalNumeric(plan.QualityScore),
@@ -45,7 +45,7 @@ func eaterDayParams(planID planningdom.PlanID, day planningdom.EaterDay) sqlc.Cr
 	return sqlc.CreatePlanEaterDayParams{
 		PlanID:             int64(planID),
 		EaterID:            int64(day.EaterID),
-		PlanDate:           dateValue(day.Date),
+		PlanDate:           pgvalue.Date(day.Date),
 		MacroGoalID:        int64(day.MacroGoalID),
 		GeneratedMealTypes: types,
 	}
@@ -83,7 +83,7 @@ func mealParams(planID planningdom.PlanID, meal planningdom.Meal) sqlc.CreateMea
 	return sqlc.CreateMealParams{
 		PlanID:          int64(planID),
 		EaterID:         int64(meal.EaterID),
-		MealDate:        dateValue(meal.Date),
+		MealDate:        pgvalue.Date(meal.Date),
 		MealType:        sqlc.MealType(meal.Type),
 		FixedMealID:     fixedMealID,
 		PlannedProteinG: pgvalue.Numeric(meal.Planned.ProteinG),
@@ -302,8 +302,6 @@ func allocationFromRow(row sqlc.MealComponentAllocation, planRecipeIndex int) (p
 	}, nil
 }
 
-const dayDuration = 24 * time.Hour
-
 func mealMacroParams(meal planningdom.Meal) sqlc.UpdateMealPlannedMacrosParams {
 	kcal := meal.Planned.Kcal
 	if kcal < 0 || int64(kcal) > math.MaxInt32 {
@@ -334,10 +332,6 @@ func prepDependencyFromRow(row sqlc.PrepDependency) planningdom.PrepDependency {
 		SourceRecipeID:    planningdom.PlanRecipeID(row.SourceRecipeID),
 		Note:              row.Note,
 	}
-}
-
-func dateValue(value time.Time) pgtype.Date {
-	return pgtype.Date{Time: value.UTC().Truncate(dayDuration), Valid: true}
 }
 
 func statusOrDraft(status planningdom.PlanStatus) planningdom.PlanStatus {

@@ -559,8 +559,8 @@ func (r *Repository) ListEaterDaySummaries(
 	rows, err := r.store.Queries(ctx).ListEaterDaySummariesForPeriod(ctx, sqlc.ListEaterDaySummariesForPeriodParams{
 		EaterID:  int64(eaterID),
 		Basis:    sqlc.SummaryBasis(basis),
-		FromDate: dateValue(from),
-		ToDate:   dateValue(to),
+		FromDate: pgvalue.Date(from),
+		ToDate:   pgvalue.Date(to),
 	})
 	if err != nil {
 		return nil, dberror.Map(err, "day nutrition summary")
@@ -606,8 +606,8 @@ func (r *Repository) ListEaterMeals(
 ) ([]planningdom.Meal, error) {
 	rows, err := r.store.Queries(ctx).ListMealsForEaterPeriod(ctx, sqlc.ListMealsForEaterPeriodParams{
 		EaterID:  int64(eaterID),
-		FromDate: dateValue(from),
-		ToDate:   dateValue(to),
+		FromDate: pgvalue.Date(from),
+		ToDate:   pgvalue.Date(to),
 	})
 	if err != nil {
 		return nil, dberror.Map(err, "meal")
@@ -651,8 +651,8 @@ func (r *Repository) ListPlansForEaterPeriod(
 ) ([]planningdom.Plan, error) {
 	rows, err := r.store.Queries(ctx).ListPlansForEaterPeriod(ctx, sqlc.ListPlansForEaterPeriodParams{
 		EaterID:  int64(eaterID),
-		FromDate: dateValue(from),
-		ToDate:   dateValue(to),
+		FromDate: pgvalue.Date(from),
+		ToDate:   pgvalue.Date(to),
 	})
 	if err != nil {
 		return nil, dberror.Map(err, "plan")

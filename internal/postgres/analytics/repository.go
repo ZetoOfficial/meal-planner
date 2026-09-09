@@ -19,8 +19,6 @@ import (
 	"github.com/ZetoOfficial/meal-planner/internal/usecase/reality"
 )
 
-const dayDuration = 24 * time.Hour
-
 type Repository struct {
 	store *postgres.Store
 }
@@ -38,8 +36,8 @@ func (r *Repository) ListDaySummaries(
 	rows, err := r.store.Queries(ctx).ListEaterDaySummariesForPeriod(ctx, sqlc.ListEaterDaySummariesForPeriodParams{
 		EaterID:  int64(eaterID),
 		Basis:    sqlc.SummaryBasis(basis),
-		FromDate: dateValue(from),
-		ToDate:   dateValue(to),
+		FromDate: pgvalue.Date(from),
+		ToDate:   pgvalue.Date(to),
 	})
 	if err != nil {
 		return nil, dberror.Map(err, "day nutrition summary")
@@ -64,8 +62,8 @@ func (r *Repository) ListRollingSummaries(
 	rows, err := r.store.Queries(ctx).ListEaterRollingSummariesForPeriod(ctx, sqlc.ListEaterRollingSummariesForPeriodParams{
 		EaterID:  int64(eaterID),
 		Basis:    sqlc.SummaryBasis(basis),
-		FromDate: dateValue(from),
-		ToDate:   dateValue(to),
+		FromDate: pgvalue.Date(from),
+		ToDate:   pgvalue.Date(to),
 	})
 	if err != nil {
 		return nil, dberror.Map(err, "rolling nutrition summary")
@@ -94,8 +92,8 @@ func (r *Repository) ListRuleEvaluations(
 	rows, err := r.store.Queries(ctx).ListEaterRuleEvaluationsForPeriod(ctx, sqlc.ListEaterRuleEvaluationsForPeriodParams{
 		EaterID:  &id,
 		Basis:    sqlc.SummaryBasis(basis),
-		FromDate: dateValue(from),
-		ToDate:   dateValue(to),
+		FromDate: pgvalue.Date(from),
+		ToDate:   pgvalue.Date(to),
 	})
 	if err != nil {
 		return nil, dberror.Map(err, "rule evaluation result")
@@ -112,7 +110,7 @@ func (r *Repository) ListRuleEvaluations(
 }
 
 func ruleEvaluationFromRow(row sqlc.RuleEvaluationResult) (reality.RuleEvaluation, error) {
-	values, err := numericFields(map[string]pgtype.Numeric{"coverage": row.CoverageScore})
+	values, err := pgvalue.NumericFields(map[string]pgtype.Numeric{"coverage": row.CoverageScore})
 	if err != nil {
 		return reality.RuleEvaluation{}, err
 	}
@@ -171,7 +169,7 @@ func (r *Repository) ListTopRecipes(ctx context.Context, limit int) ([]reality.T
 }
 
 func daySummaryFromRow(row sqlc.DayNutritionSummary) (nutrition.DaySummary, error) {
-	values, err := numericFields(map[string]pgtype.Numeric{
+	values, err := pgvalue.NumericFields(map[string]pgtype.Numeric{
 		"protein": row.ProteinG, "fat": row.FatG, "carb": row.CarbG,
 		"satFat": row.SaturatedFatG, "transFat": row.TransFatG, "fiber": row.FiberG,
 		"sodium": row.SodiumMg, "addedSugars": row.AddedSugarsG, "freeSugars": row.FreeSugarsG,
@@ -182,7 +180,7 @@ func daySummaryFromRow(row sqlc.DayNutritionSummary) (nutrition.DaySummary, erro
 	if err != nil {
 		return nutrition.DaySummary{}, err
 	}
-	coverage, err := coverageFromScore(values["coverage"])
+	coverage, err := nutrition.CoverageFromScore(values["coverage"])
 	if err != nil {
 		return nutrition.DaySummary{}, err
 	}
@@ -205,7 +203,7 @@ func daySummaryFromRow(row sqlc.DayNutritionSummary) (nutrition.DaySummary, erro
 }
 
 func rollingSummaryFromRow(row sqlc.RollingNutritionSummary) (nutrition.RollingSummary, error) {
-	values, err := numericFields(map[string]pgtype.Numeric{
+	values, err := pgvalue.NumericFields(map[string]pgtype.Numeric{
 		"redMeat": row.RedMeatG, "processed": row.ProcessedMeatG, "legume": row.LegumeServings,
 		"fiber": row.FiberGAvg, "sodium": row.SodiumMgAvg, "satFat": row.SaturatedFatGAvg,
 		"addedSugars": row.AddedSugarsGAvg, "fruitVeg": row.FruitVegGAvg,
@@ -214,7 +212,7 @@ func rollingSummaryFromRow(row sqlc.RollingNutritionSummary) (nutrition.RollingS
 	if err != nil {
 		return nutrition.RollingSummary{}, err
 	}
-	coverage, err := coverageFromScore(values["coverage"])
+	coverage, err := nutrition.CoverageFromScore(values["coverage"])
 	if err != nil {
 		return nutrition.RollingSummary{}, err
 	}
@@ -225,36 +223,4 @@ func rollingSummaryFromRow(row sqlc.RollingNutritionSummary) (nutrition.RollingS
 		AddedSugarsGAvg: values["addedSugars"], FruitVegGAvg: values["fruitVeg"],
 		Coverage: coverage, RuleCoverage: map[string]nutrition.Coverage{},
 	}, nil
-}
-
-func numericFields(fields map[string]pgtype.Numeric) (map[string]float64, error) {
-	result := make(map[string]float64, len(fields))
-	for name, value := range fields {
-		if !value.Valid {
-			result[name] = 0
-			continue
-		}
-		converted, err := pgvalue.Float64(value)
-		if err != nil {
-			return nil, err
-		}
-		result[name] = converted
-	}
-	return result, nil
-}
-
-func coverageFromScore(score float64) (nutrition.Coverage, error) {
-	known, err := nutrition.CoverageForInput(true, score)
-	if err != nil {
-		return nutrition.Coverage{}, err
-	}
-	unknown, err := nutrition.CoverageForInput(false, 1-score)
-	if err != nil {
-		return nutrition.Coverage{}, err
-	}
-	return known.Add(unknown), nil
-}
-
-func dateValue(value time.Time) pgtype.Date {
-	return pgtype.Date{Time: value.UTC().Truncate(dayDuration), Valid: true}
 }

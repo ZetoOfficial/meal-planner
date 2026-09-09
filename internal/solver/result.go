@@ -202,7 +202,7 @@ func (q EaterDayQuality) RollingRules() []nutrition.RuleEvaluationResult {
 func (q EaterDayQuality) rules(rolling bool) []nutrition.RuleEvaluationResult {
 	results := make([]nutrition.RuleEvaluationResult, 0, len(q.Evaluation.Outcomes))
 	for _, outcome := range q.Evaluation.Outcomes {
-		if isRollingRule(outcome.Code) != rolling {
+		if quality.IsRollingRule(outcome.Code) != rolling {
 			continue
 		}
 		results = append(results, outcome.Result())

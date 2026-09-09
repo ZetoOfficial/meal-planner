@@ -6,6 +6,7 @@ import (
 	"time"
 
 	eaterdom "github.com/ZetoOfficial/meal-planner/internal/domain/eater"
+	mealdom "github.com/ZetoOfficial/meal-planner/internal/domain/meal"
 	"github.com/ZetoOfficial/meal-planner/internal/domain/nutrition"
 	planningdom "github.com/ZetoOfficial/meal-planner/internal/domain/planning"
 	"github.com/ZetoOfficial/meal-planner/internal/solver"
@@ -127,7 +128,7 @@ func eaterDays(plan planningdom.Plan) []planDayKey {
 	for i := range plan.EaterDays {
 		days = append(days, planDayKey{
 			eaterID: plan.EaterDays[i].EaterID,
-			date:    dayOf(plan.EaterDays[i].Date),
+			date:    mealdom.DayOf(plan.EaterDays[i].Date),
 		})
 	}
 	return days
@@ -144,7 +145,7 @@ func macrosOutsideBatch(
 	total := nutrition.Macros{}
 	for i := range plan.Meals {
 		meal := &plan.Meals[i]
-		if meal.EaterID != day.eaterID || !dayOf(meal.Date).Equal(day.date) {
+		if meal.EaterID != day.eaterID || !mealdom.DayOf(meal.Date).Equal(day.date) {
 			continue
 		}
 		if meal.FixedMealID != nil {
@@ -181,7 +182,7 @@ func currentPortion(
 ) (portion float64, mealID planningdom.MealID, found bool) {
 	for i := range plan.Meals {
 		meal := &plan.Meals[i]
-		if meal.EaterID != day.eaterID || !dayOf(meal.Date).Equal(day.date) {
+		if meal.EaterID != day.eaterID || !mealdom.DayOf(meal.Date).Equal(day.date) {
 			continue
 		}
 		for _, component := range meal.Components {
@@ -202,13 +203,7 @@ func goalIndex(goals []GoalTarget) map[string]eaterdom.MacroRange {
 }
 
 func dayKey(eaterID eaterdom.ID, date time.Time) string {
-	return dayOf(date).Format(time.DateOnly) + "#" + strconv.FormatInt(int64(eaterID), 10)
-}
-
-const dayDuration = 24 * time.Hour
-
-func dayOf(date time.Time) time.Time {
-	return date.UTC().Truncate(dayDuration)
+	return mealdom.DayOf(date).Format(time.DateOnly) + "#" + strconv.FormatInt(int64(eaterID), 10)
 }
 
 // round2 keeps portion factors at the two decimals the database stores.

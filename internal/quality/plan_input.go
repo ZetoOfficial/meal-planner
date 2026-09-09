@@ -6,6 +6,7 @@ import (
 
 	catalogdom "github.com/ZetoOfficial/meal-planner/internal/domain/catalog"
 	eaterdom "github.com/ZetoOfficial/meal-planner/internal/domain/eater"
+	mealdom "github.com/ZetoOfficial/meal-planner/internal/domain/meal"
 	"github.com/ZetoOfficial/meal-planner/internal/domain/nutrition"
 	planningdom "github.com/ZetoOfficial/meal-planner/internal/domain/planning"
 	recipedom "github.com/ZetoOfficial/meal-planner/internal/domain/recipe"
@@ -53,8 +54,8 @@ func BuildPlanDaysForBasis(
 		positions[dayKey(day.EaterID, day.Date)] = len(days)
 		days = append(days, PlanDay{
 			EaterID: day.EaterID,
-			Date:    dayOf(day.Date),
-			Input:   DayInput{Sex: sexOrUnspecified(eater.Sex)},
+			Date:    mealdom.DayOf(day.Date),
+			Input:   DayInput{Sex: eater.Sex.OrUnspecified()},
 		})
 	}
 
@@ -150,18 +151,5 @@ func slotQualityInputs(recipe planningdom.PlanRecipe, catalogue Catalogue) ([]Sl
 }
 
 func dayKey(eaterID eaterdom.ID, date time.Time) string {
-	return fmt.Sprintf("%d@%s", eaterID, dayOf(date).Format(time.DateOnly))
-}
-
-const dayDuration = 24 * time.Hour
-
-func dayOf(date time.Time) time.Time {
-	return date.UTC().Truncate(dayDuration)
-}
-
-func sexOrUnspecified(sex eaterdom.Sex) eaterdom.Sex {
-	if sex.Valid() {
-		return sex
-	}
-	return eaterdom.SexUnspecified
+	return fmt.Sprintf("%d@%s", eaterID, mealdom.DayOf(date).Format(time.DateOnly))
 }

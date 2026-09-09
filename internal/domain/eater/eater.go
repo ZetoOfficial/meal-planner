@@ -18,6 +18,15 @@ func (s Sex) Valid() bool {
 	return s == SexMale || s == SexFemale || s == SexUnspecified
 }
 
+// OrUnspecified normalizes an unset or unknown value. Quality rules that differ
+// by sex fall back to the neutral thresholds rather than guessing.
+func (s Sex) OrUnspecified() Sex {
+	if s.Valid() {
+		return s
+	}
+	return SexUnspecified
+}
+
 type Eater struct {
 	ID         ID
 	Name       string

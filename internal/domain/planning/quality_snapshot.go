@@ -4,6 +4,7 @@ import (
 	"time"
 
 	eaterdom "github.com/ZetoOfficial/meal-planner/internal/domain/eater"
+	mealdom "github.com/ZetoOfficial/meal-planner/internal/domain/meal"
 	"github.com/ZetoOfficial/meal-planner/internal/domain/nutrition"
 )
 
@@ -36,9 +37,9 @@ type QualitySnapshot struct {
 // this snapshot.
 func (s QualitySnapshot) WindowStart() time.Time {
 	if s.Rolling.WindowDays <= 1 {
-		return dayOf(s.Date)
+		return mealdom.DayOf(s.Date)
 	}
-	return dayOf(s.Date).AddDate(0, 0, -(s.Rolling.WindowDays - 1))
+	return mealdom.DayOf(s.Date).AddDate(0, 0, -(s.Rolling.WindowDays - 1))
 }
 
 // BasisOrPlanned defaults an unset basis to the planned snapshot.

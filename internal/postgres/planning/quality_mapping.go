@@ -26,7 +26,7 @@ func daySummaryParams(
 	return sqlc.UpsertDayNutritionSummaryParams{
 		PlanID:            int64(planID),
 		EaterID:           int64(snapshot.EaterID),
-		SummaryDate:       dateValue(snapshot.Date),
+		SummaryDate:       pgvalue.Date(snapshot.Date),
 		Basis:             sqlc.SummaryBasis(snapshot.BasisOrPlanned()),
 		ProteinG:          pgvalue.Numeric(snapshot.Day.Macros.ProteinG),
 		FatG:              pgvalue.Numeric(snapshot.Day.Macros.FatG),
@@ -60,7 +60,7 @@ func rollingSummaryParams(
 	return sqlc.UpsertRollingNutritionSummaryParams{
 		PlanID:            int64(planID),
 		EaterID:           int64(snapshot.EaterID),
-		AsOfDate:          dateValue(snapshot.Date),
+		AsOfDate:          pgvalue.Date(snapshot.Date),
 		WindowDays:        int16(rolling.WindowDays),
 		Basis:             sqlc.SummaryBasis(snapshot.BasisOrPlanned()),
 		RedMeatG:          pgvalue.Numeric(rolling.RedMeatG),
@@ -96,16 +96,16 @@ func ruleResultParams(
 		Message:       optionalText(result.Message),
 	}
 	if entityType == planningdom.RuleEntityRollingWindow {
-		params.WindowStart = dateValue(snapshot.WindowStart())
-		params.WindowEnd = dateValue(snapshot.Date)
+		params.WindowStart = pgvalue.Date(snapshot.WindowStart())
+		params.WindowEnd = pgvalue.Date(snapshot.Date)
 		return params
 	}
-	params.EvalDate = dateValue(snapshot.Date)
+	params.EvalDate = pgvalue.Date(snapshot.Date)
 	return params
 }
 
 func daySummaryFromRow(row sqlc.DayNutritionSummary) (planningdom.QualitySnapshot, error) {
-	values, err := numericFields(map[string]pgtype.Numeric{
+	values, err := pgvalue.NumericFields(map[string]pgtype.Numeric{
 		"protein":      row.ProteinG,
 		"fat":          row.FatG,
 		"carb":         row.CarbG,
@@ -126,7 +126,7 @@ func daySummaryFromRow(row sqlc.DayNutritionSummary) (planningdom.QualitySnapsho
 	if err != nil {
 		return planningdom.QualitySnapshot{}, err
 	}
-	coverage, err := coverageFromScore(values["coverageOnly"])
+	coverage, err := nutrition.CoverageFromScore(values["coverageOnly"])
 	if err != nil {
 		return planningdom.QualitySnapshot{}, err
 	}
@@ -163,7 +163,7 @@ func daySummaryFromRow(row sqlc.DayNutritionSummary) (planningdom.QualitySnapsho
 }
 
 func rollingSummaryFromRow(row sqlc.RollingNutritionSummary) (nutrition.RollingSummary, error) {
-	values, err := numericFields(map[string]pgtype.Numeric{
+	values, err := pgvalue.NumericFields(map[string]pgtype.Numeric{
 		"redMeat":      row.RedMeatG,
 		"processed":    row.ProcessedMeatG,
 		"legume":       row.LegumeServings,
@@ -177,7 +177,7 @@ func rollingSummaryFromRow(row sqlc.RollingNutritionSummary) (nutrition.RollingS
 	if err != nil {
 		return nutrition.RollingSummary{}, err
 	}
-	coverage, err := coverageFromScore(values["coverageOnly"])
+	coverage, err := nutrition.CoverageFromScore(values["coverageOnly"])
 	if err != nil {
 		return nutrition.RollingSummary{}, err
 	}
@@ -221,35 +221,8 @@ func ruleResultFromRow(row sqlc.RuleEvaluationResult) (nutrition.RuleEvaluationR
 	}, nil
 }
 
-func numericFields(fields map[string]pgtype.Numeric) (map[string]float64, error) {
-	result := make(map[string]float64, len(fields))
-	for name, value := range fields {
-		if !value.Valid {
-			result[name] = 0
-			continue
-		}
-		converted, err := pgvalue.Float64(value)
-		if err != nil {
-			return nil, err
-		}
-		result[name] = converted
-	}
-	return result, nil
-}
-
 // coverageFromScore rebuilds an aggregate coverage from its stored score; the
 // per-rule weights behind it are not persisted because only the score is used.
-func coverageFromScore(score float64) (nutrition.Coverage, error) {
-	known, err := nutrition.CoverageForInput(true, score)
-	if err != nil {
-		return nutrition.Coverage{}, err
-	}
-	unknown, err := nutrition.CoverageForInput(false, 1-score)
-	if err != nil {
-		return nutrition.Coverage{}, err
-	}
-	return known.Add(unknown), nil
-}
 
 func optionalText(value string) *string {
 	if value == "" {

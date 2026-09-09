@@ -274,21 +274,12 @@ func actualSnapshots(
 func splitRules(evaluation quality.Evaluation, rolling bool) []nutrition.RuleEvaluationResult {
 	results := make([]nutrition.RuleEvaluationResult, 0, len(evaluation.Outcomes))
 	for _, outcome := range evaluation.Outcomes {
-		if isRollingRule(outcome.Code) != rolling {
+		if quality.IsRollingRule(outcome.Code) != rolling {
 			continue
 		}
 		results = append(results, outcome.Result())
 	}
 	return results
-}
-
-func isRollingRule(code string) bool {
-	switch code {
-	case quality.RuleRedMeat, quality.RuleProcessedMeat, quality.RuleLegumes:
-		return true
-	default:
-		return false
-	}
 }
 
 func (s *Service) TopRecipes(ctx context.Context, limit int) ([]TopRecipe, error) {

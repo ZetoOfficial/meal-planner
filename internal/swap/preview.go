@@ -271,21 +271,12 @@ func snapshots(days []dayEvaluation) []DaySnapshot {
 func partitionRules(rules []nutrition.RuleEvaluationResult, rolling bool) []nutrition.RuleEvaluationResult {
 	result := make([]nutrition.RuleEvaluationResult, 0, len(rules))
 	for _, rule := range rules {
-		if isRollingRule(rule.RuleCode) != rolling {
+		if quality.IsRollingRule(rule.RuleCode) != rolling {
 			continue
 		}
 		result = append(result, rule)
 	}
 	return result
-}
-
-func isRollingRule(code string) bool {
-	switch code {
-	case quality.RuleRedMeat, quality.RuleProcessedMeat, quality.RuleLegumes:
-		return true
-	default:
-		return false
-	}
 }
 
 func ruleResults(evaluation quality.Evaluation) []nutrition.RuleEvaluationResult {

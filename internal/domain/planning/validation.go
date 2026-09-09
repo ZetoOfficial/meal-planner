@@ -77,7 +77,7 @@ func (p Plan) validateMeals() error {
 }
 
 func (p Plan) validateMeal(meal *Meal, days map[eaterDayKey][]mealdom.Type, portions []float64) error {
-	types, ok := days[eaterDayKey{eaterID: meal.EaterID, date: dayOf(meal.Date)}]
+	types, ok := days[eaterDayKey{eaterID: meal.EaterID, date: mealdom.DayOf(meal.Date)}]
 	if !ok {
 		return fmt.Errorf("meal for eater %d on %s has no plan eater day", meal.EaterID, meal.Date.Format(time.DateOnly))
 	}
@@ -133,7 +133,7 @@ func (p Plan) eaterDayIndex() map[eaterDayKey][]mealdom.Type {
 	result := make(map[eaterDayKey][]mealdom.Type, len(p.EaterDays))
 	for i := range p.EaterDays {
 		day := &p.EaterDays[i]
-		result[eaterDayKey{eaterID: day.EaterID, date: dayOf(day.Date)}] = day.GeneratedMealTypes
+		result[eaterDayKey{eaterID: day.EaterID, date: mealdom.DayOf(day.Date)}] = day.GeneratedMealTypes
 	}
 	return result
 }
@@ -145,12 +145,6 @@ func containsMealType(types []mealdom.Type, mealType mealdom.Type) bool {
 		}
 	}
 	return false
-}
-
-const dayDuration = 24 * time.Hour
-
-func dayOf(date time.Time) time.Time {
-	return date.UTC().Truncate(dayDuration)
 }
 
 func positive(value float64) bool {
