@@ -21,6 +21,14 @@ linters:
     - unconvert
     - unparam
     - whitespace
+    # enum и SQL-дисциплина
+    - exhaustive
+    - errname
+    - nolintlint
+    - intrange
+    - rowserrcheck
+    - sqlclosecheck
+    - dupl
     # architecture boundaries (форсим правило зависимостей из CLAUDE.md)
     - depguard
     # complexity / size caps (не даём LLM писать простыни)

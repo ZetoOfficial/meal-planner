@@ -22,6 +22,8 @@ func (p StorageProfile) SupportsMultiDay() bool {
 	switch p {
 	case StorageKeeps3d, StorageKeeps3dReheat, StorageAssembleFresh:
 		return true
+	case StorageEatSameDay:
+		return false
 	default:
 		return false
 	}

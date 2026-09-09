@@ -137,6 +137,8 @@ func diagnosticMessage(diagnostic Diagnostic) string {
 			"recipe %d has no allowed product for required role %s",
 			diagnostic.RecipeID, diagnostic.Detail,
 		)
+	case DiagnosticMacroInfeasible, DiagnosticSearchLimit:
+		return fmt.Sprintf("recipe %d was dropped: %s", diagnostic.RecipeID, diagnostic.Detail)
 	default:
 		return fmt.Sprintf("recipe %d was dropped: %s", diagnostic.RecipeID, diagnostic.Detail)
 	}

@@ -411,6 +411,8 @@ func countResults(state *queueState) (done, unsuccessful int) {
 			done++
 		case statusFailed, statusBlocked:
 			unsuccessful++
+		case statusPending, statusRunning:
+			// Not finished yet, so neither column counts it.
 		}
 	}
 	return done, unsuccessful

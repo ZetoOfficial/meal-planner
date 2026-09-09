@@ -52,6 +52,8 @@ func applicationError(w http.ResponseWriter, r *http.Request, err error) {
 			status = http.StatusUnauthorized
 		case apperr.CodeUnavailable:
 			status = http.StatusServiceUnavailable
+		case apperr.CodeInternal:
+			// The 500 the response already carries is the right answer.
 		}
 		if status != http.StatusInternalServerError {
 			var details *[]string

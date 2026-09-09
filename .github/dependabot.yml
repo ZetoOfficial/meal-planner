@@ -1,0 +1,31 @@
+# Owner-only repo: one weekly pass, grouped so a bump is one review, not twenty.
+version: 2
+updates:
+  - package-ecosystem: gomod
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      go-dependencies:
+        patterns:
+          - "*"
+
+  - package-ecosystem: gomod
+    directory: /api/sdk/go
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      sdk-dependencies:
+        patterns:
+          - "*"
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      github-actions:
+        patterns:
+          - "*"

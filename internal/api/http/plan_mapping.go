@@ -340,6 +340,8 @@ func solverConstraint(code solver.DiagnosticCode) model.SolverDiagnosticConstrai
 		return model.SearchBudget
 	case solver.DiagnosticMacroInfeasible:
 		return model.Kcal
+	case solver.DiagnosticMissingRole, solver.DiagnosticStorageConflict, solver.DiagnosticEquipmentConflict:
+		return model.CandidateAvailability
 	default:
 		return model.CandidateAvailability
 	}

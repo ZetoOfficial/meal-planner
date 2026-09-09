@@ -1,11 +1,11 @@
 .DEFAULT_GOAL := help
 
-# Версии кодген-инструментов (воспроизводимая сборка).
-SQLC        := go run github.com/sqlc-dev/sqlc/cmd/sqlc@v1.31.1
-OAPI        := go run github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@v2.7.1
-GOLANGCI    := go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.12.2
-# tern: закрепи конкретную версию после `go list -m -versions github.com/jackc/tern/v2`
-TERN        := go run github.com/jackc/tern/v2@latest
+# Инструменты закреплены tool-директивами в go.mod: одна версия на репозиторий,
+# одинаковая локально, в CI и в docker compose.
+SQLC        := go tool sqlc
+OAPI        := go tool oapi-codegen
+GOLANGCI    := go tool golangci-lint
+TERN        := go tool tern
 
 -include .env
 export
