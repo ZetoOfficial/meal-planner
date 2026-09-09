@@ -184,3 +184,19 @@ UPDATE plan
 SET shopping_list_stale = sqlc.arg(stale)
 WHERE id = sqlc.arg(id)
 RETURNING *;
+
+-- name: UpdateSlotFillQuantity :one
+UPDATE slot_fill
+SET planned_input_qty_g = sqlc.arg(planned_input_qty_g)
+WHERE id = sqlc.arg(id)
+RETURNING *;
+
+-- name: UpdateMealPlannedMacros :one
+UPDATE meal
+SET
+    planned_protein_g = sqlc.arg(planned_protein_g),
+    planned_fat_g = sqlc.arg(planned_fat_g),
+    planned_carb_g = sqlc.arg(planned_carb_g),
+    planned_kcal = sqlc.arg(planned_kcal)
+WHERE id = sqlc.arg(id)
+RETURNING *;

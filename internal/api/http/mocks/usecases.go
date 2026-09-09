@@ -435,6 +435,21 @@ func (m *MockPlanningUseCases) EXPECT() *MockPlanningUseCasesMockRecorder {
 	return m.recorder
 }
 
+// ApplyQuantityAdjustment mocks base method.
+func (m *MockPlanningUseCases) ApplyQuantityAdjustment(arg0 context.Context, arg1 planning.PlanID, arg2 planning0.QuantityCommand, arg3 bool) (planning0.PlanResult, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ApplyQuantityAdjustment", arg0, arg1, arg2, arg3)
+	ret0, _ := ret[0].(planning0.PlanResult)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ApplyQuantityAdjustment indicates an expected call of ApplyQuantityAdjustment.
+func (mr *MockPlanningUseCasesMockRecorder) ApplyQuantityAdjustment(arg0, arg1, arg2, arg3 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ApplyQuantityAdjustment", reflect.TypeOf((*MockPlanningUseCases)(nil).ApplyQuantityAdjustment), arg0, arg1, arg2, arg3)
+}
+
 // ApplySwap mocks base method.
 func (m *MockPlanningUseCases) ApplySwap(arg0 context.Context, arg1 planning.PlanID, arg2 planning0.SwapCommand, arg3 bool) (planning0.PlanResult, error) {
 	m.ctrl.T.Helper()
@@ -507,6 +522,21 @@ func (m *MockPlanningUseCases) ListPlans(arg0 context.Context) ([]planning.Plan,
 func (mr *MockPlanningUseCasesMockRecorder) ListPlans(arg0 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListPlans", reflect.TypeOf((*MockPlanningUseCases)(nil).ListPlans), arg0)
+}
+
+// PreviewQuantityAdjustment mocks base method.
+func (m *MockPlanningUseCases) PreviewQuantityAdjustment(arg0 context.Context, arg1 planning.PlanID, arg2 planning0.QuantityCommand) (swap.QuantityPreview, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "PreviewQuantityAdjustment", arg0, arg1, arg2)
+	ret0, _ := ret[0].(swap.QuantityPreview)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// PreviewQuantityAdjustment indicates an expected call of PreviewQuantityAdjustment.
+func (mr *MockPlanningUseCasesMockRecorder) PreviewQuantityAdjustment(arg0, arg1, arg2 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PreviewQuantityAdjustment", reflect.TypeOf((*MockPlanningUseCases)(nil).PreviewQuantityAdjustment), arg0, arg1, arg2)
 }
 
 // PreviewSwap mocks base method.

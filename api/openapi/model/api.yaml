@@ -643,6 +643,77 @@ components:
           items: { $ref: '#/components/schemas/RuleEvaluation' }
       required: [quality_score, warnings_count, data_coverage_score, rule_evaluations]
 
+    QuantityAdjustmentInput:
+      type: object
+      description: >
+        Зафиксированное количество продукта в слоте до готовки (FR-3/FR-4/FR-5).
+        Введённое число — планировочный вход, план подстраивается под него.
+      properties:
+        slot_fill_id: { type: integer, format: int64 }
+        planned_input_qty_g:
+          type: number
+          format: float
+          exclusiveMinimum: true
+          minimum: 0
+        confirm:
+          type: boolean
+          description: 'Только для apply: должно быть true'
+      required: [slot_fill_id, planned_input_qty_g]
+
+    QuantityAdjustmentPreview:
+      type: object
+      description: Что изменится, если зафиксировать введённое количество
+      properties:
+        summary: { type: string }
+        affected_meals:
+          type: array
+          items: { type: integer, format: int64 }
+        portion_changes:
+          type: array
+          items:
+            type: object
+            properties:
+              meal_id: { type: integer, format: int64 }
+              eater_id: { type: integer, format: int64 }
+              date: { type: string, format: date }
+              before: { type: number, format: float }
+              after: { type: number, format: float }
+            required: [meal_id, eater_id, before, after]
+        macro_diff:
+          type: array
+          items:
+            type: object
+            properties:
+              eater_id: { type: integer, format: int64 }
+              date: { type: string, format: date }
+              delta: { $ref: '#/components/schemas/Macros' }
+            required: [eater_id, delta]
+        shopping_diff:
+          type: array
+          items:
+            type: object
+            properties:
+              product_id: { type: integer, format: int64 }
+              before_g: { type: number, format: float }
+              after_g: { type: number, format: float }
+            required: [product_id, before_g, after_g]
+        quality_diff:
+          type: object
+          properties:
+            fiber_g: { type: number, format: float }
+            sodium_mg: { type: number, format: float }
+            saturated_fat_g: { type: number, format: float }
+            added_sugars_g: { type: number, format: float }
+            fruit_veg_g: { type: number, format: float }
+            coverage_score: { type: number, format: float }
+            changed_rules:
+              type: array
+              items: { $ref: '#/components/schemas/RuleEvaluation' }
+        warnings:
+          type: array
+          items: { type: string }
+      required: [summary, affected_meals, portion_changes, macro_diff, shopping_diff, warnings]
+
     SwapInput:
       type: object
       description: >

@@ -12,6 +12,7 @@ import (
 	apperr "github.com/ZetoOfficial/meal-planner/internal/errors"
 	"github.com/ZetoOfficial/meal-planner/internal/postgres"
 	"github.com/ZetoOfficial/meal-planner/internal/postgres/dberror"
+	"github.com/ZetoOfficial/meal-planner/internal/postgres/pgvalue"
 	"github.com/ZetoOfficial/meal-planner/internal/postgres/sqlc"
 )
 
@@ -495,4 +496,45 @@ func (r *Repository) MarkShoppingListStale(ctx context.Context, planID planningd
 		return dberror.Map(err, "plan")
 	}
 	return nil
+}
+
+// ReplacePlanAllocations rewrites the parts a quantity adjustment moves: the
+// slot fill quantities and the meal component allocations. It runs on the
+// caller's executor, so the whole adjustment commits or rolls back together.
+func (r *Repository) ReplacePlanAllocations(
+	ctx context.Context,
+	planID planningdom.PlanID,
+	plan planningdom.Plan,
+) (planningdom.Plan, error) {
+	query := r.store.Queries(ctx)
+	for i := range plan.Recipes {
+		for _, fill := range plan.Recipes[i].Fills {
+			if _, err := query.UpdateSlotFillQuantity(ctx, sqlc.UpdateSlotFillQuantityParams{
+				ID:               int64(fill.ID),
+				PlannedInputQtyG: pgvalue.Numeric(fill.PlannedInputQtyG),
+			}); err != nil {
+				return planningdom.Plan{}, dberror.Map(err, "slot fill")
+			}
+		}
+	}
+
+	for i := range plan.Meals {
+		meal := &plan.Meals[i]
+		if meal.FixedMealID != nil {
+			continue
+		}
+		if _, err := query.UpdateMealPlannedMacros(ctx, mealMacroParams(*meal)); err != nil {
+			return planningdom.Plan{}, dberror.Map(err, "meal")
+		}
+		for _, component := range meal.Components {
+			if component.PlanRecipeIndex >= len(plan.Recipes) {
+				return planningdom.Plan{}, apperr.Conflict("allocation points to a plan recipe outside the plan")
+			}
+			params := allocationParams(meal.ID, plan.Recipes[component.PlanRecipeIndex].ID, component)
+			if _, err := query.CreateMealComponentAllocation(ctx, params); err != nil {
+				return planningdom.Plan{}, dberror.Map(err, "meal component allocation")
+			}
+		}
+	}
+	return r.Get(ctx, planID)
 }

@@ -223,6 +223,20 @@ func allocationFromRow(row sqlc.MealComponentAllocation, planRecipeIndex int) (p
 
 const dayDuration = 24 * time.Hour
 
+func mealMacroParams(meal planningdom.Meal) sqlc.UpdateMealPlannedMacrosParams {
+	kcal := meal.Planned.Kcal
+	if kcal < 0 || int64(kcal) > math.MaxInt32 {
+		panic("planned meal kcal must be a nonnegative int32")
+	}
+	return sqlc.UpdateMealPlannedMacrosParams{
+		ID:              int64(meal.ID),
+		PlannedProteinG: pgvalue.Numeric(meal.Planned.ProteinG),
+		PlannedFatG:     pgvalue.Numeric(meal.Planned.FatG),
+		PlannedCarbG:    pgvalue.Numeric(meal.Planned.CarbG),
+		PlannedKcal:     int32(kcal),
+	}
+}
+
 func prepDependencyParams(planID planningdom.PlanID, dependency planningdom.PrepDependency) sqlc.CreatePrepDependencyParams {
 	return sqlc.CreatePrepDependencyParams{
 		PlanID:            int64(planID),

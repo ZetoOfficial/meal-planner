@@ -600,3 +600,97 @@ func TestUpdateShoppingListItemHTTPContract(t *testing.T) {
 		t.Fatalf("status = %d, body = %s; want 200", response.Code, response.Body.String())
 	}
 }
+
+func TestPreviewQuantityAdjustmentHTTPContract(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	planning := mocks.NewMockPlanningUseCases(ctrl)
+	start := time.Date(2026, time.August, 10, 0, 0, 0, 0, time.UTC)
+
+	var command usecaseplanning.QuantityCommand
+	planning.EXPECT().
+		PreviewQuantityAdjustment(gomock.Any(), planningdom.PlanID(7), gomock.Any()).
+		DoAndReturn(func(_ context.Context, _ planningdom.PlanID, cmd usecaseplanning.QuantityCommand) (swap.QuantityPreview, error) {
+			command = cmd
+			return swap.QuantityPreview{
+				Summary:       "lock 1200 g to 988 g",
+				AffectedMeals: []planningdom.MealID{21},
+				PortionChanges: []swap.PortionChange{{
+					MealID: 21, EaterID: 1, Date: start, Before: 0.5, After: 0.6,
+				}},
+				MacroDiff: []swap.EaterDayMacroDelta{{
+					EaterID: 1, Date: start, Delta: swap.MacroDelta{ProteinG: -2},
+				}},
+				ShoppingDiff: []swap.ShoppingQuantityChange{{ProductID: 1, BeforeG: 1200, AfterG: 988}},
+				Warnings:     []string{"40% of the batch stays unallocated"},
+			}, nil
+		})
+
+	handler := httpapi.New(httpapi.Deps{APIToken: "secret", Planning: planning})
+	body := `{"slot_fill_id":5,"planned_input_qty_g":988}`
+	response := doRequest(t, handler, http.MethodPost, "/plans/7/quantity/preview", body)
+
+	if response.Code != http.StatusOK {
+		t.Fatalf("status = %d, body = %s; want 200", response.Code, response.Body.String())
+	}
+	if command.SlotFillID != 5 || command.PlannedInputQtyG != 988 {
+		t.Fatalf("mapped command = %#v, want the locked quantity", command)
+	}
+
+	var preview model.QuantityAdjustmentPreview
+	if err := json.Unmarshal(response.Body.Bytes(), &preview); err != nil {
+		t.Fatalf("decode preview: %v", err)
+	}
+	if len(preview.PortionChanges) != 1 || preview.PortionChanges[0].After != 0.6 {
+		t.Fatalf("portion changes = %#v, want the rebalanced share", preview.PortionChanges)
+	}
+	if len(preview.ShoppingDiff) != 1 || preview.ShoppingDiff[0].AfterG != 988 {
+		t.Fatalf("shopping diff = %#v, want the purchased quantity", preview.ShoppingDiff)
+	}
+	if len(preview.Warnings) != 1 {
+		t.Fatalf("warnings = %#v, want the leftover reported", preview.Warnings)
+	}
+}
+
+func TestQuantityAdjustmentReportsInfeasibilityAs422(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	planning := mocks.NewMockPlanningUseCases(ctrl)
+	planning.EXPECT().
+		PreviewQuantityAdjustment(gomock.Any(), planningdom.PlanID(7), gomock.Any()).
+		Return(swap.QuantityPreview{}, &swap.InfeasibleQuantityError{
+			EaterID: 1,
+			Constraints: []solver.MacroConstraint{{
+				Code: solver.MacroProtein, TargetMin: 130, TargetMax: 145, ReachableMax: 11,
+			}},
+		})
+
+	handler := httpapi.New(httpapi.Deps{APIToken: "secret", Planning: planning})
+	response := doRequest(t, handler, http.MethodPost, "/plans/7/quantity/preview", `{"slot_fill_id":5,"planned_input_qty_g":50}`)
+
+	if response.Code != http.StatusUnprocessableEntity {
+		t.Fatalf("status = %d, body = %s; want 422", response.Code, response.Body.String())
+	}
+	var solverError model.SolverError
+	if err := json.Unmarshal(response.Body.Bytes(), &solverError); err != nil {
+		t.Fatalf("decode solver error: %v", err)
+	}
+	if len(solverError.Diagnostics) != 1 || solverError.Diagnostics[0].Constraint != model.ProteinG {
+		t.Fatalf("diagnostics = %#v, want the unsatisfied protein bound", solverError.Diagnostics)
+	}
+}
+
+func TestApplyQuantityAdjustmentNeedsConfirmation(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	planning := mocks.NewMockPlanningUseCases(ctrl)
+	planning.EXPECT().
+		ApplyQuantityAdjustment(gomock.Any(), planningdom.PlanID(7), gomock.Any(), false).
+		Return(usecaseplanning.PlanResult{}, &usecaseplanning.UnconfirmedQuantityError{
+			Preview: swap.QuantityPreview{Summary: "confirm first"},
+		})
+
+	handler := httpapi.New(httpapi.Deps{APIToken: "secret", Planning: planning})
+	response := doRequest(t, handler, http.MethodPost, "/plans/7/quantity", `{"slot_fill_id":5,"planned_input_qty_g":988}`)
+
+	if response.Code != http.StatusConflict {
+		t.Fatalf("status = %d, body = %s; want 409", response.Code, response.Body.String())
+	}
+}

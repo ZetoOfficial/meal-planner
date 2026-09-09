@@ -93,25 +93,7 @@ func qualityDiffResponse(diff swap.QualityDelta) *struct {
 	SaturatedFatG           *float32                `json:"saturated_fat_g,omitempty"`
 	SodiumMg                *float32                `json:"sodium_mg,omitempty"`
 } {
-	changed := make([]model.RuleEvaluation, 0, len(diff.ChangedRules))
-	for i := range diff.ChangedRules {
-		change := &diff.ChangedRules[i]
-		eaterID := int64(change.EaterID)
-		date := openapiDate(change.Date)
-		changed = append(changed, model.RuleEvaluation{
-			RuleCode:      change.After.RuleCode,
-			EntityType:    model.RuleEvaluationEntityType("day"),
-			EaterId:       &eaterID,
-			Basis:         model.RuleEvaluationBasis("planned"),
-			Status:        model.RuleEvaluationStatus(change.After.Status),
-			ActualValue:   float32Pointer(change.After.Actual),
-			TargetValue:   float32Pointer(change.After.Target),
-			Unit:          optionalString(change.After.Unit),
-			CoverageScore: float32(change.After.Coverage),
-			Message:       optionalString(change.After.Message),
-			Date:          &date,
-		})
-	}
+	changed := changedRulesResponse(diff)
 	return &struct {
 		AddedSugarsG            *float32                `json:"added_sugars_g,omitempty"`
 		ChangedRules            *[]model.RuleEvaluation `json:"changed_rules,omitempty"`
@@ -133,6 +115,31 @@ func qualityDiffResponse(diff swap.QualityDelta) *struct {
 		SaturatedFatG:           floatValuePointer(diff.SaturatedFatG),
 		SodiumMg:                floatValuePointer(diff.SodiumMg),
 	}
+}
+
+// changedRulesResponse renders the verdicts that moved, so a diff explains
+// itself rather than only reporting numbers.
+func changedRulesResponse(diff swap.QualityDelta) []model.RuleEvaluation {
+	changed := make([]model.RuleEvaluation, 0, len(diff.ChangedRules))
+	for i := range diff.ChangedRules {
+		change := &diff.ChangedRules[i]
+		eaterID := int64(change.EaterID)
+		date := openapiDate(change.Date)
+		changed = append(changed, model.RuleEvaluation{
+			RuleCode:      change.After.RuleCode,
+			EntityType:    model.RuleEvaluationEntityType("day"),
+			EaterId:       &eaterID,
+			Basis:         model.RuleEvaluationBasis("planned"),
+			Status:        model.RuleEvaluationStatus(change.After.Status),
+			ActualValue:   float32Pointer(change.After.Actual),
+			TargetValue:   float32Pointer(change.After.Target),
+			Unit:          optionalString(change.After.Unit),
+			CoverageScore: float32(change.After.Coverage),
+			Message:       optionalString(change.After.Message),
+			Date:          &date,
+		})
+	}
+	return changed
 }
 
 func productIDs(ids []catalogdom.ProductID) []int64 {

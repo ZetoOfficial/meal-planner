@@ -157,6 +157,21 @@ func (mr *MockPlanRepositoryMockRecorder) MarkShoppingListStale(ctx, planID, sta
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MarkShoppingListStale", reflect.TypeOf((*MockPlanRepository)(nil).MarkShoppingListStale), ctx, planID, stale)
 }
 
+// ReplacePlanAllocations mocks base method.
+func (m *MockPlanRepository) ReplacePlanAllocations(ctx context.Context, planID planning.PlanID, plan planning.Plan) (planning.Plan, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ReplacePlanAllocations", ctx, planID, plan)
+	ret0, _ := ret[0].(planning.Plan)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ReplacePlanAllocations indicates an expected call of ReplacePlanAllocations.
+func (mr *MockPlanRepositoryMockRecorder) ReplacePlanAllocations(ctx, planID, plan any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReplacePlanAllocations", reflect.TypeOf((*MockPlanRepository)(nil).ReplacePlanAllocations), ctx, planID, plan)
+}
+
 // Save mocks base method.
 func (m *MockPlanRepository) Save(ctx context.Context, plan planning.Plan) (planning.Plan, error) {
 	m.ctrl.T.Helper()

@@ -696,6 +696,58 @@ func (q *Queries) MarkShoppingListStale(ctx context.Context, arg MarkShoppingLis
 	return i, err
 }
 
+const updateMealPlannedMacros = `-- name: UpdateMealPlannedMacros :one
+UPDATE meal
+SET
+    planned_protein_g = $1,
+    planned_fat_g = $2,
+    planned_carb_g = $3,
+    planned_kcal = $4
+WHERE id = $5
+RETURNING id, plan_id, eater_id, meal_date, meal_type, fixed_meal_id, planned_protein_g, planned_fat_g, planned_carb_g, planned_kcal, actual_protein_g, actual_fat_g, actual_carb_g, actual_kcal, cooked_by, cooked_at, logged_by, logged_at, log_status
+`
+
+type UpdateMealPlannedMacrosParams struct {
+	PlannedProteinG pgtype.Numeric `json:"planned_protein_g"`
+	PlannedFatG     pgtype.Numeric `json:"planned_fat_g"`
+	PlannedCarbG    pgtype.Numeric `json:"planned_carb_g"`
+	PlannedKcal     int32          `json:"planned_kcal"`
+	ID              int64          `json:"id"`
+}
+
+func (q *Queries) UpdateMealPlannedMacros(ctx context.Context, arg UpdateMealPlannedMacrosParams) (Meal, error) {
+	row := q.db.QueryRow(ctx, updateMealPlannedMacros,
+		arg.PlannedProteinG,
+		arg.PlannedFatG,
+		arg.PlannedCarbG,
+		arg.PlannedKcal,
+		arg.ID,
+	)
+	var i Meal
+	err := row.Scan(
+		&i.ID,
+		&i.PlanID,
+		&i.EaterID,
+		&i.MealDate,
+		&i.MealType,
+		&i.FixedMealID,
+		&i.PlannedProteinG,
+		&i.PlannedFatG,
+		&i.PlannedCarbG,
+		&i.PlannedKcal,
+		&i.ActualProteinG,
+		&i.ActualFatG,
+		&i.ActualCarbG,
+		&i.ActualKcal,
+		&i.CookedBy,
+		&i.CookedAt,
+		&i.LoggedBy,
+		&i.LoggedAt,
+		&i.LogStatus,
+	)
+	return i, err
+}
+
 const updateSlotFillProduct = `-- name: UpdateSlotFillProduct :one
 UPDATE slot_fill
 SET product_id = $1
@@ -710,6 +762,31 @@ type UpdateSlotFillProductParams struct {
 
 func (q *Queries) UpdateSlotFillProduct(ctx context.Context, arg UpdateSlotFillProductParams) (SlotFill, error) {
 	row := q.db.QueryRow(ctx, updateSlotFillProduct, arg.ProductID, arg.ID)
+	var i SlotFill
+	err := row.Scan(
+		&i.ID,
+		&i.PlanRecipeID,
+		&i.SlotID,
+		&i.ProductID,
+		&i.PlannedInputQtyG,
+	)
+	return i, err
+}
+
+const updateSlotFillQuantity = `-- name: UpdateSlotFillQuantity :one
+UPDATE slot_fill
+SET planned_input_qty_g = $1
+WHERE id = $2
+RETURNING id, plan_recipe_id, slot_id, product_id, planned_input_qty_g
+`
+
+type UpdateSlotFillQuantityParams struct {
+	PlannedInputQtyG pgtype.Numeric `json:"planned_input_qty_g"`
+	ID               int64          `json:"id"`
+}
+
+func (q *Queries) UpdateSlotFillQuantity(ctx context.Context, arg UpdateSlotFillQuantityParams) (SlotFill, error) {
+	row := q.db.QueryRow(ctx, updateSlotFillQuantity, arg.PlannedInputQtyG, arg.ID)
 	var i SlotFill
 	err := row.Scan(
 		&i.ID,

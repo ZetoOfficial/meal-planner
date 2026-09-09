@@ -26,10 +26,17 @@ type MacroConstraint struct {
 	ReachableMax float64
 }
 
+// UnreachableMacros compares a target against the widest achievable range and
+// reports the bounds that no combination can reach.
+//
 // unreachableMacros compares the target against the widest achievable range:
 // the fixed meals alone as the floor and the fixed meals plus every candidate
 // at its largest serving as the ceiling. Bounds outside that range are provably
 // impossible, unlike a target that simply has no exact combination.
+func UnreachableMacros(target eaterdom.MacroRange, floor, ceiling nutrition.Macros) []MacroConstraint {
+	return unreachableMacros(target, floor, ceiling)
+}
+
 func unreachableMacros(target eaterdom.MacroRange, floor, ceiling nutrition.Macros) []MacroConstraint {
 	bounds := []MacroConstraint{
 		{Code: MacroProtein, TargetMin: target.ProteinMinG, TargetMax: target.ProteinMaxG, ReachableMin: floor.ProteinG, ReachableMax: ceiling.ProteinG},

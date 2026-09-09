@@ -28,6 +28,7 @@ type PlanRepository interface {
 
 	SwapSlotFill(ctx context.Context, planID planningdom.PlanID, fillID planningdom.SlotFillID, productID catalogdom.ProductID) error
 	MarkShoppingListStale(ctx context.Context, planID planningdom.PlanID, stale bool) error
+	ReplacePlanAllocations(ctx context.Context, planID planningdom.PlanID, plan planningdom.Plan) (planningdom.Plan, error)
 
 	SaveQualitySnapshots(ctx context.Context, planID planningdom.PlanID, snapshots []planningdom.QualitySnapshot) error
 	ListQualitySnapshots(ctx context.Context, planID planningdom.PlanID, basis nutrition.SummaryBasis) ([]planningdom.QualitySnapshot, error)

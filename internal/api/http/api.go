@@ -54,6 +54,8 @@ type PlanningUseCases interface {
 	ArchivePlan(context.Context, planningdom.PlanID) error
 	PreviewSwap(context.Context, planningdom.PlanID, usecaseplanning.SwapCommand) (swap.Preview, error)
 	ApplySwap(context.Context, planningdom.PlanID, usecaseplanning.SwapCommand, bool) (usecaseplanning.PlanResult, error)
+	PreviewQuantityAdjustment(context.Context, planningdom.PlanID, usecaseplanning.QuantityCommand) (swap.QuantityPreview, error)
+	ApplyQuantityAdjustment(context.Context, planningdom.PlanID, usecaseplanning.QuantityCommand, bool) (usecaseplanning.PlanResult, error)
 }
 
 type ShoppingUseCases interface {
