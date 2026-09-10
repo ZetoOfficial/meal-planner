@@ -22,20 +22,9 @@ type Client struct {
 	http     *http.Client
 }
 
-// New builds a client for one of the built-in providers named by
-// Config.Provider; an unknown name is a configuration error, not a runtime one.
-func New(config Config, store CallStore) (*Client, error) {
-	provider, err := providerFor(config.withDefaults().Provider)
-	if err != nil {
-		return nil, apperr.Validation(err.Error())
-	}
-	return NewWithProvider(config, store, provider)
-}
-
-// NewWithProvider builds a client on a caller-supplied wire format. The
-// provider name wins over Config.Provider so audit rows cannot claim a
-// provider that never answered.
-func NewWithProvider(config Config, store CallStore, provider Provider) (*Client, error) {
+// New builds a client on the supplied wire format. The provider name wins over
+// Config.Provider so audit rows cannot claim a provider that never answered.
+func New(config Config, store CallStore, provider Provider) (*Client, error) {
 	config = config.withDefaults()
 	config.Provider = provider.Name()
 	if err := config.Validate(); err != nil {

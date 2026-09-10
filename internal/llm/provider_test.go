@@ -7,23 +7,15 @@ import (
 	"testing"
 )
 
-func TestProviderForRejectsAnUnknownName(t *testing.T) {
-	if _, err := providerFor("llama-on-a-toaster"); err == nil {
-		t.Fatal("providerFor() = nil error, want an error for an unknown provider")
-	}
-}
-
-func TestProviderForResolvesTheBuiltInProviders(t *testing.T) {
-	for _, name := range []string{ProviderAnthropic, ProviderOpenAI} {
-		t.Run(name, func(t *testing.T) {
-			provider, err := providerFor(name)
-			if err != nil {
-				t.Fatalf("providerFor(%q) error = %v", name, err)
+// TestProvidersKnowTheirNameAndEndpoint will move to each provider's own
+// package in the next tasks, alongside the provider it tests.
+func TestProvidersKnowTheirNameAndEndpoint(t *testing.T) {
+	for _, fixture := range providerFixtures() {
+		t.Run(fixture.name, func(t *testing.T) {
+			if fixture.provider.Name() != fixture.name {
+				t.Fatalf("Name() = %q, want %q", fixture.provider.Name(), fixture.name)
 			}
-			if provider.Name() != name {
-				t.Fatalf("Name() = %q, want %q", provider.Name(), name)
-			}
-			if provider.DefaultEndpoint() == "" {
+			if fixture.provider.DefaultEndpoint() == "" {
 				t.Fatal("DefaultEndpoint() = empty, want the provider's own url")
 			}
 		})
@@ -31,7 +23,7 @@ func TestProviderForResolvesTheBuiltInProviders(t *testing.T) {
 }
 
 func TestAnthropicEncodesToolUse(t *testing.T) {
-	payload, err := anthropicProvider{}.EncodeRequest(testConfig(ProviderAnthropic, ""), testRequest())
+	payload, err := anthropicProvider{}.EncodeRequest(testConfig(AnthropicName, ""), testRequest())
 	if err != nil {
 		t.Fatalf("EncodeRequest() error = %v", err)
 	}
@@ -71,7 +63,7 @@ func TestAnthropicEncodesToolUse(t *testing.T) {
 }
 
 func TestOpenAIEncodesFunctionCalling(t *testing.T) {
-	payload, err := openAIProvider{}.EncodeRequest(testConfig(ProviderOpenAI, ""), testRequest())
+	payload, err := openAIProvider{}.EncodeRequest(testConfig(OpenAIName, ""), testRequest())
 	if err != nil {
 		t.Fatalf("EncodeRequest() error = %v", err)
 	}
@@ -121,7 +113,7 @@ func TestOpenAIEncodesPlainPromptsWithoutTools(t *testing.T) {
 	request.ToolName = ""
 	request.System = ""
 
-	payload, err := openAIProvider{}.EncodeRequest(testConfig(ProviderOpenAI, ""), request)
+	payload, err := openAIProvider{}.EncodeRequest(testConfig(OpenAIName, ""), request)
 	if err != nil {
 		t.Fatalf("EncodeRequest() error = %v", err)
 	}
@@ -186,8 +178,8 @@ func TestProvidersAuthorizeWithTheirOwnHeaders(t *testing.T) {
 		header   string
 		want     string
 	}{
-		ProviderAnthropic: {anthropicProvider{}, "x-api-key", "test-key"},
-		ProviderOpenAI:    {openAIProvider{}, "Authorization", "Bearer test-key"},
+		AnthropicName: {anthropicProvider{}, "x-api-key", "test-key"},
+		OpenAIName:    {openAIProvider{}, "Authorization", "Bearer test-key"},
 	}
 	for name, testCase := range cases {
 		t.Run(name, func(t *testing.T) {

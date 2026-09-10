@@ -32,9 +32,6 @@ func (c Config) Validate() error {
 }
 
 func (c Config) withDefaults() Config {
-	if c.Provider == "" {
-		c.Provider = ProviderAnthropic
-	}
 	if c.Timeout <= 0 {
 		c.Timeout = defaultTimeout
 	}

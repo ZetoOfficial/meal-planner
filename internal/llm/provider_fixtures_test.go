@@ -24,7 +24,7 @@ type providerFixture struct {
 func providerFixtures() []providerFixture {
 	return []providerFixture{
 		{
-			name:     ProviderAnthropic,
+			name:     AnthropicName,
 			provider: anthropicProvider{},
 			toolUsePayload: func(t *testing.T, arguments string, tokensIn, tokensOut int) []byte {
 				t.Helper()
@@ -44,7 +44,7 @@ func providerFixtures() []providerFixture {
 			},
 		},
 		{
-			name:     ProviderOpenAI,
+			name:     OpenAIName,
 			provider: openAIProvider{},
 			toolUsePayload: func(t *testing.T, arguments string, tokensIn, tokensOut int) []byte {
 				t.Helper()

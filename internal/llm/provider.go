@@ -27,12 +27,6 @@ type Provider interface {
 	DecodeResponse(payload []byte, toolName string) (Response, error)
 }
 
-// Provider names accepted by Config.Provider.
-const (
-	ProviderAnthropic = "anthropic"
-	ProviderOpenAI    = "openai"
-)
-
 const (
 	defaultMaxTokens  = 4096
 	maxErrorBodyBytes = 4 << 10
@@ -45,20 +39,6 @@ const (
 // with prose instead of the schema: the candidate is unusable, so the call is
 // logged as an error rather than parsed.
 var ErrNoStructuredOutput = errors.New("provider answered without the requested structured output")
-
-// providerFor resolves a provider name. A switch keeps the supported set
-// visible in one place: no registry to consult and no init order to reason
-// about. A custom wire format goes through NewWithProvider instead.
-func providerFor(name string) (Provider, error) {
-	switch name {
-	case ProviderAnthropic:
-		return anthropicProvider{}, nil
-	case ProviderOpenAI:
-		return openAIProvider{}, nil
-	default:
-		return nil, fmt.Errorf("unknown llm provider %q, want %q or %q", name, ProviderAnthropic, ProviderOpenAI)
-	}
-}
 
 // complete performs one provider call: the client times it and classifies the
 // status, the provider decodes the payload.

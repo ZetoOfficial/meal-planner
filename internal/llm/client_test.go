@@ -27,7 +27,7 @@ func TestGenerateReturnsStructuredContentAndLogsTheCall(t *testing.T) {
 			defer server.Close()
 
 			store := &fakeStore{}
-			client := newTestClient(t, fixture.name, server.URL, store)
+			client := newTestClient(t, fixture.provider, server.URL, store)
 
 			response, err := client.Generate(t.Context(), testRequest())
 			if err != nil {
@@ -72,8 +72,8 @@ func TestGenerateReturnsStructuredContentAndLogsTheCall(t *testing.T) {
 // silently shipping.
 func TestGenerateDefaultsMaxTokensWhenUnset(t *testing.T) {
 	maxTokensField := map[string]string{
-		ProviderAnthropic: "max_tokens",
-		ProviderOpenAI:    "max_completion_tokens",
+		AnthropicName: "max_tokens",
+		OpenAIName:    "max_completion_tokens",
 	}
 
 	for _, fixture := range providerFixtures() {
@@ -85,7 +85,7 @@ func TestGenerateDefaultsMaxTokensWhenUnset(t *testing.T) {
 			}))
 			defer server.Close()
 
-			client := newTestClient(t, fixture.name, server.URL, &fakeStore{})
+			client := newTestClient(t, fixture.provider, server.URL, &fakeStore{})
 
 			request := testRequest()
 			request.MaxTokens = 0
@@ -115,7 +115,7 @@ func TestGenerateServesCachedResponsesWithoutCallingTheProvider(t *testing.T) {
 			defer server.Close()
 
 			store := &fakeStore{cached: `{"name":"cached"}`}
-			client := newTestClient(t, fixture.name, server.URL, store)
+			client := newTestClient(t, fixture.provider, server.URL, store)
 
 			response, err := client.Generate(t.Context(), testRequest())
 			if err != nil {
@@ -139,8 +139,8 @@ func TestGenerateServesCachedResponsesWithoutCallingTheProvider(t *testing.T) {
 // hash is salted with the provider name.
 func TestPromptHashSeparatesProviders(t *testing.T) {
 	request := testRequest()
-	anthropic := newTestClient(t, ProviderAnthropic, "http://localhost", &fakeStore{})
-	openAI := newTestClient(t, ProviderOpenAI, "http://localhost", &fakeStore{})
+	anthropic := newTestClient(t, anthropicProvider{}, "http://localhost", &fakeStore{})
+	openAI := newTestClient(t, openAIProvider{}, "http://localhost", &fakeStore{})
 
 	if anthropic.promptHash(request) == openAI.promptHash(request) {
 		t.Fatal("prompt hashes match across providers, want a per-provider cache key")
@@ -160,7 +160,7 @@ func TestGenerateRetriesTransientProviderFailures(t *testing.T) {
 			}))
 			defer server.Close()
 
-			client := newTestClient(t, fixture.name, server.URL, &fakeStore{})
+			client := newTestClient(t, fixture.provider, server.URL, &fakeStore{})
 
 			response, err := client.Generate(t.Context(), testRequest())
 			if err != nil {
@@ -189,7 +189,7 @@ func TestGenerateReportsUnavailableAfterExhaustingRetries(t *testing.T) {
 			defer server.Close()
 
 			store := &fakeStore{}
-			client := newTestClient(t, ProviderOpenAI, server.URL, store)
+			client := newTestClient(t, openAIProvider{}, server.URL, store)
 
 			_, err := client.Generate(t.Context(), testRequest())
 
@@ -215,7 +215,7 @@ func TestGenerateDoesNotRetryClientErrors(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := newTestClient(t, ProviderAnthropic, server.URL, &fakeStore{})
+	client := newTestClient(t, anthropicProvider{}, server.URL, &fakeStore{})
 
 	if _, err := client.Generate(t.Context(), testRequest()); err == nil {
 		t.Fatal("Generate() = nil, want a provider error")
@@ -234,7 +234,7 @@ func TestGenerateFailsWhenTheProviderAnswersWithProse(t *testing.T) {
 			defer server.Close()
 
 			store := &fakeStore{}
-			client := newTestClient(t, fixture.name, server.URL, store)
+			client := newTestClient(t, fixture.provider, server.URL, store)
 
 			if _, err := client.Generate(t.Context(), testRequest()); err == nil {
 				t.Fatal("Generate() = nil, want an error for a response without structured output")
@@ -257,10 +257,10 @@ func TestGenerateHonoursTheConfiguredTimeout(t *testing.T) {
 		server.Close()
 	}()
 
-	config := testConfig(ProviderAnthropic, server.URL)
+	config := testConfig(AnthropicName, server.URL)
 	config.Timeout = 20 * time.Millisecond
 	config.MaxAttempts = 1
-	client, err := New(config, &fakeStore{})
+	client, err := New(config, &fakeStore{}, anthropicProvider{})
 	if err != nil {
 		t.Fatalf("New() error = %v", err)
 	}
@@ -272,14 +272,12 @@ func TestGenerateHonoursTheConfiguredTimeout(t *testing.T) {
 
 func TestNewRejectsIncompleteConfiguration(t *testing.T) {
 	cases := map[string]Config{
-		"no model":           {Endpoint: "http://localhost", APIKey: "k"},
-		"no api key":         {Model: "m", Endpoint: "http://localhost"},
-		"unknown provider":   {Provider: "llama-on-a-toaster", Model: "m", APIKey: "k"},
-		"provider case typo": {Provider: "OpenAI", Model: "m", APIKey: "k"},
+		"no model":   {Endpoint: "http://localhost", APIKey: "k"},
+		"no api key": {Model: "m", Endpoint: "http://localhost"},
 	}
 	for name, config := range cases {
 		t.Run(name, func(t *testing.T) {
-			client, err := New(config, &fakeStore{})
+			client, err := New(config, &fakeStore{}, anthropicProvider{})
 			var appError *apperr.Error
 			if !errors.As(err, &appError) || appError.Code != apperr.CodeValidation {
 				t.Fatalf("New() error = %v, want a validation error for %s", err, name)
@@ -296,7 +294,7 @@ func TestNewRejectsIncompleteConfiguration(t *testing.T) {
 func TestNewFallsBackToTheProviderEndpoint(t *testing.T) {
 	for _, fixture := range providerFixtures() {
 		t.Run(fixture.name, func(t *testing.T) {
-			client, err := New(testConfig(fixture.name, ""), &fakeStore{})
+			client, err := New(testConfig(fixture.name, ""), &fakeStore{}, fixture.provider)
 			if err != nil {
 				t.Fatalf("New() error = %v", err)
 			}
@@ -309,7 +307,7 @@ func TestNewFallsBackToTheProviderEndpoint(t *testing.T) {
 }
 
 func TestNewKeepsAnExplicitEndpoint(t *testing.T) {
-	client, err := New(testConfig(ProviderOpenAI, "http://gateway.internal/v1/chat/completions"), &fakeStore{})
+	client, err := New(testConfig(OpenAIName, "http://gateway.internal/v1/chat/completions"), &fakeStore{}, openAIProvider{})
 	if err != nil {
 		t.Fatalf("New() error = %v", err)
 	}
@@ -318,32 +316,21 @@ func TestNewKeepsAnExplicitEndpoint(t *testing.T) {
 	}
 }
 
-func TestNewDefaultsToAnthropic(t *testing.T) {
-	config := testConfig("", "")
-	client, err := New(config, &fakeStore{})
+// New records the provider that actually answered, so an audit row cannot
+// claim one that was never called.
+func TestNewRecordsTheProviderThatAnswered(t *testing.T) {
+	client, err := New(testConfig("anthropic", "http://localhost"), &fakeStore{}, openAIProvider{})
 	if err != nil {
 		t.Fatalf("New() error = %v", err)
 	}
-	if client.config.Provider != ProviderAnthropic {
-		t.Fatalf("provider = %q, want %q", client.config.Provider, ProviderAnthropic)
+	if client.config.Provider != OpenAIName {
+		t.Fatalf("provider = %q, want %q", client.config.Provider, OpenAIName)
 	}
 }
 
-// NewWithProvider records the provider that actually answered, so an audit row
-// cannot claim one that was never called.
-func TestNewWithProviderOverridesTheConfiguredName(t *testing.T) {
-	client, err := NewWithProvider(testConfig("anthropic", "http://localhost"), &fakeStore{}, openAIProvider{})
-	if err != nil {
-		t.Fatalf("NewWithProvider() error = %v", err)
-	}
-	if client.config.Provider != ProviderOpenAI {
-		t.Fatalf("provider = %q, want %q", client.config.Provider, ProviderOpenAI)
-	}
-}
-
-func newTestClient(t *testing.T, provider, endpoint string, store CallStore) *Client {
+func newTestClient(t *testing.T, provider Provider, endpoint string, store CallStore) *Client {
 	t.Helper()
-	client, err := New(testConfig(provider, endpoint), store)
+	client, err := New(testConfig(provider.Name(), endpoint), store, provider)
 	if err != nil {
 		t.Fatalf("New() error = %v", err)
 	}

@@ -35,6 +35,21 @@ import (
 
 const readHeaderTimeout = 10 * time.Second
 
+// llmProvider resolves the configured provider name. The composition root owns
+// this switch: the core declares the Provider interface, so it cannot import
+// the implementations without a cycle.
+func llmProvider(name string) (llm.Provider, error) {
+	switch name {
+	case llm.AnthropicName:
+		return llm.NewAnthropicProvider(), nil
+	case llm.OpenAIName:
+		return llm.NewOpenAIProvider(), nil
+	default:
+		return nil, fmt.Errorf("unknown llm provider %q, want %q or %q",
+			name, llm.AnthropicName, llm.OpenAIName)
+	}
+}
+
 // recipeGenerator stays nil without an API key: the planner then works
 // reuse-only instead of failing at start-up.
 func recipeGenerator(cfg app.Config, store *postgres.Store) (usecaseplanning.RecipeGenerator, error) {
@@ -42,13 +57,17 @@ func recipeGenerator(cfg app.Config, store *postgres.Store) (usecaseplanning.Rec
 		slog.Warn("llm api key is not set, plan generation stays reuse-only")
 		return nil, nil
 	}
+	provider, err := llmProvider(cfg.LLMProvider)
+	if err != nil {
+		return nil, err
+	}
 	client, err := llm.New(llm.Config{
 		Provider: cfg.LLMProvider,
 		Model:    cfg.LLMModel,
 		Endpoint: cfg.LLMEndpoint,
 		APIKey:   cfg.LLMAPIKey,
 		Timeout:  cfg.LLMTimeout,
-	}, llmrepo.New(store))
+	}, llmrepo.New(store), provider)
 	if err != nil {
 		return nil, err
 	}

@@ -16,7 +16,15 @@ const (
 // unmarshals the arguments instead of parsing prose.
 type anthropicProvider struct{}
 
-func (anthropicProvider) Name() string { return ProviderAnthropic }
+// AnthropicName identifies the provider in config and audit rows.
+// TEMPORARY: moves to anthropic.Name in the next task.
+const AnthropicName = "anthropic"
+
+// NewAnthropicProvider builds the Messages API wire format.
+// TEMPORARY: moves to anthropic.New in the next task.
+func NewAnthropicProvider() Provider { return anthropicProvider{} }
+
+func (anthropicProvider) Name() string { return AnthropicName }
 
 func (anthropicProvider) DefaultEndpoint() string { return anthropicDefaultEndpoint }
 

@@ -17,7 +17,15 @@ const openAIDefaultEndpoint = "https://api.openai.com/v1/chat/completions"
 // novelty dial from DESIGN §11; that is a model choice, not an adapter concern.
 type openAIProvider struct{}
 
-func (openAIProvider) Name() string { return ProviderOpenAI }
+// OpenAIName identifies the provider in config and audit rows.
+// TEMPORARY: moves to openai.Name in the next task.
+const OpenAIName = "openai"
+
+// NewOpenAIProvider builds the Chat Completions wire format.
+// TEMPORARY: moves to openai.New in the next task.
+func NewOpenAIProvider() Provider { return openAIProvider{} }
+
+func (openAIProvider) Name() string { return OpenAIName }
 
 func (openAIProvider) DefaultEndpoint() string { return openAIDefaultEndpoint }
 
