@@ -17,6 +17,7 @@ import (
 	"github.com/ZetoOfficial/meal-planner/internal/llm"
 	"github.com/ZetoOfficial/meal-planner/internal/llm/anthropic"
 	"github.com/ZetoOfficial/meal-planner/internal/llm/openai"
+	recipegen "github.com/ZetoOfficial/meal-planner/internal/llm/recipe"
 	"github.com/ZetoOfficial/meal-planner/internal/postgres"
 	analyticsrepo "github.com/ZetoOfficial/meal-planner/internal/postgres/analytics"
 	catalogrepo "github.com/ZetoOfficial/meal-planner/internal/postgres/catalog"
@@ -73,11 +74,11 @@ func recipeGenerator(cfg app.Config, store *postgres.Store) (usecaseplanning.Rec
 	if err != nil {
 		return nil, err
 	}
-	generator, err := llm.NewRecipeGenerator(client)
+	generator, err := recipegen.New(client)
 	if err != nil {
 		return nil, err
 	}
-	return llm.NewPlanningGenerator(generator), nil
+	return recipegen.NewPlanningGenerator(generator), nil
 }
 
 func main() {
