@@ -42,13 +42,16 @@ func recipeGenerator(cfg app.Config, store *postgres.Store) (usecaseplanning.Rec
 		slog.Warn("llm api key is not set, plan generation stays reuse-only")
 		return nil, nil
 	}
-	client := llm.New(llm.Config{
+	client, err := llm.New(llm.Config{
 		Provider: cfg.LLMProvider,
 		Model:    cfg.LLMModel,
 		Endpoint: cfg.LLMEndpoint,
 		APIKey:   cfg.LLMAPIKey,
 		Timeout:  cfg.LLMTimeout,
 	}, llmrepo.New(store))
+	if err != nil {
+		return nil, err
+	}
 	generator, err := llm.NewRecipeGenerator(client)
 	if err != nil {
 		return nil, err

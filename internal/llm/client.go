@@ -44,16 +44,18 @@ type Config struct {
 	BaseBackoff time.Duration
 }
 
+// Validate leaves the endpoint out: an empty one falls back to the provider's
+// own url, so only the model and the key have to be supplied.
 func (c Config) Validate() error {
-	if c.Model == "" || c.Endpoint == "" || c.APIKey == "" {
-		return errors.New("llm config requires a model, an endpoint and an api key")
+	if c.Model == "" || c.APIKey == "" {
+		return errors.New("llm config requires a model and an api key")
 	}
 	return nil
 }
 
 func (c Config) withDefaults() Config {
 	if c.Provider == "" {
-		c.Provider = "anthropic"
+		c.Provider = ProviderAnthropic
 	}
 	if c.Timeout <= 0 {
 		c.Timeout = defaultTimeout
@@ -127,26 +129,45 @@ type Clock interface {
 }
 
 type Client struct {
-	config Config
-	store  CallStore
-	http   *http.Client
+	config   Config
+	provider Provider
+	store    CallStore
+	http     *http.Client
 }
 
-func New(config Config, store CallStore) *Client {
-	config = config.withDefaults()
-	return &Client{
-		config: config,
-		store:  store,
-		http:   &http.Client{Timeout: config.Timeout},
+// New builds a client for one of the built-in providers named by
+// Config.Provider; an unknown name is a configuration error, not a runtime one.
+func New(config Config, store CallStore) (*Client, error) {
+	provider, err := providerFor(config.withDefaults().Provider)
+	if err != nil {
+		return nil, apperr.Validation(err.Error())
 	}
+	return NewWithProvider(config, store, provider)
+}
+
+// NewWithProvider builds a client on a caller-supplied wire format. The
+// provider name wins over Config.Provider so audit rows cannot claim a
+// provider that never answered.
+func NewWithProvider(config Config, store CallStore, provider Provider) (*Client, error) {
+	config = config.withDefaults()
+	config.Provider = provider.Name()
+	if err := config.Validate(); err != nil {
+		return nil, apperr.Validation(err.Error())
+	}
+	if config.Endpoint == "" {
+		config.Endpoint = provider.DefaultEndpoint()
+	}
+	return &Client{
+		config:   config,
+		provider: provider,
+		store:    store,
+		http:     &http.Client{Timeout: config.Timeout},
+	}, nil
 }
 
 // Generate answers from the cache when the exact prompt was seen before and
 // otherwise calls the provider, retrying only transient failures.
 func (c *Client) Generate(ctx context.Context, request Request) (Response, error) {
-	if err := c.config.Validate(); err != nil {
-		return Response{}, apperr.Validation(err.Error())
-	}
 	hash := c.promptHash(request)
 
 	if cached, found, err := c.store.Lookup(ctx, CacheKey{

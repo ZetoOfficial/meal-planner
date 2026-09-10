@@ -93,7 +93,7 @@ internal/
   postgres/                 store, tx, sqlc, pgvalue, dberror и
                             capability-пакеты: analytics, catalog, eater,
                             feedback, llm, planning, recipe, shopping
-  llm/                      HTTP-клиент провайдера и генератор рецептов
+  llm/                      клиент, провайдер-адаптеры и генератор рецептов
 
   testkit/postgres/         изолированная схема для integration-тестов
 
@@ -411,6 +411,14 @@ LLM может вернуть только структурированный dr
 5. отбраковать невалидное;
 6. залогировать prompt/response/error/tokens/latency/model/temperature;
 7. сохранить валидный draft только после валидации.
+
+Провайдер — это только формат провода. Интерфейс `llm.Provider` (Anthropic
+Messages, OpenAI Chat Completions) кодирует запрос и достаёт структурированный
+ответ; HTTP-вызов, тайминг, кэш по хешу промпта, retry-бюджет и audit-строка
+принадлежат `llm.Client` и одинаковы для всех провайдеров. Structured output
+везде идёт через tool / function calling на одной и той же JSON-схеме, поэтому
+генератор рецептов провайдера не видит. Хеш промпта солится именем провайдера:
+переключение не отдаёт чужой закэшированный ответ.
 
 ---
 
