@@ -22,6 +22,7 @@ Core rules:
 - Put interfaces on the consumer side, usually in `usecase/*/ports.go`.
 - Do not invent fields or endpoints. `docs/schema.sql` and `api/openapi/api/api.yaml` (with schemas in `api/openapi/model/api.yaml`) are the source of truth.
 - Give each contract one normative home: product rules, units and boundaries in `docs/SPEC.md`, persistence in `docs/schema.sql`, and HTTP in `api/openapi/api/api.yaml`. `DESIGN.md`, `ARCHITECTURE.md`, and roadmap entries may explain intent, ownership, scope, or acceptance criteria, but must link to rather than restate formulas, schema details, or implementation-like pseudocode.
+- The declared minimum Go version is always one release behind the latest: when Go N is out, `go.mod`, the `toolchain` line, the Dockerfile, docker-compose and the README all say N-1. Never raise them to the newest release.
 - Keep v1 scope: HTTP API only. Telegram bot, Mini App, voice, vision/barcode, FatSecret sync, inventory, RAG, agents and fine-tuning are v2+ or explicitly out of scope.
 - Comments must justify a non-obvious invariant or decision. Do not add AI-style narration, restate code, or comment routine control flow.
 - OpenAPI handlers return generated strict response objects or errors. Keep error-to-HTTP mapping in the HTTP adapter; do not hand-roll successful JSON responses.
