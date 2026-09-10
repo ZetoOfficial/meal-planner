@@ -22,48 +22,8 @@ func TestProvidersKnowTheirNameAndEndpoint(t *testing.T) {
 	}
 }
 
-func TestAnthropicEncodesToolUse(t *testing.T) {
-	payload, err := anthropicProvider{}.EncodeRequest(testConfig(AnthropicName, ""), testRequest())
-	if err != nil {
-		t.Fatalf("EncodeRequest() error = %v", err)
-	}
-
-	var body struct {
-		Model       string  `json:"model"`
-		MaxTokens   int     `json:"max_tokens"`
-		Temperature float64 `json:"temperature"`
-		System      string  `json:"system"`
-		Messages    []struct {
-			Role    string `json:"role"`
-			Content string `json:"content"`
-		} `json:"messages"`
-		Tools []struct {
-			Name        string          `json:"name"`
-			InputSchema json.RawMessage `json:"input_schema"`
-		} `json:"tools"`
-		ToolChoice struct {
-			Type string `json:"type"`
-			Name string `json:"name"`
-		} `json:"tool_choice"`
-	}
-	decode(t, payload, &body)
-
-	if body.Model != testModel || body.Temperature != 0.2 || body.MaxTokens != defaultMaxTokens {
-		t.Fatalf("body = %#v, want the configured model, temperature and max tokens carried through", body)
-	}
-	if body.System != "You generate recipes." || len(body.Messages) != 1 || body.Messages[0].Role != "user" {
-		t.Fatalf("body = %#v, want the system prompt and one user message", body)
-	}
-	if len(body.Tools) != 1 || body.Tools[0].Name != "emit_recipe" || len(body.Tools[0].InputSchema) == 0 {
-		t.Fatalf("tools = %#v, want the schema carried as the only tool", body.Tools)
-	}
-	if body.ToolChoice.Type != "tool" || body.ToolChoice.Name != "emit_recipe" {
-		t.Fatalf("tool_choice = %#v, want the tool forced by name", body.ToolChoice)
-	}
-}
-
 func TestOpenAIEncodesFunctionCalling(t *testing.T) {
-	payload, err := openAIProvider{}.EncodeRequest(testConfig(OpenAIName, ""), testRequest())
+	payload, err := openAIProvider{}.EncodeRequest(testConfig(""), testRequest())
 	if err != nil {
 		t.Fatalf("EncodeRequest() error = %v", err)
 	}
@@ -113,7 +73,7 @@ func TestOpenAIEncodesPlainPromptsWithoutTools(t *testing.T) {
 	request.ToolName = ""
 	request.System = ""
 
-	payload, err := openAIProvider{}.EncodeRequest(testConfig(OpenAIName, ""), request)
+	payload, err := openAIProvider{}.EncodeRequest(testConfig(""), request)
 	if err != nil {
 		t.Fatalf("EncodeRequest() error = %v", err)
 	}
@@ -178,13 +138,12 @@ func TestProvidersAuthorizeWithTheirOwnHeaders(t *testing.T) {
 		header   string
 		want     string
 	}{
-		AnthropicName: {anthropicProvider{}, "x-api-key", "test-key"},
-		OpenAIName:    {openAIProvider{}, "Authorization", "Bearer test-key"},
+		OpenAIName: {openAIProvider{}, "Authorization", "Bearer test-key"},
 	}
 	for name, testCase := range cases {
 		t.Run(name, func(t *testing.T) {
 			httpRequest := httptest.NewRequest(http.MethodPost, "http://localhost", http.NoBody)
-			testCase.provider.Authorize(httpRequest, testConfig(name, ""))
+			testCase.provider.Authorize(httpRequest, testConfig(""))
 			if got := httpRequest.Header.Get(testCase.header); got != testCase.want {
 				t.Fatalf("%s = %q, want %q", testCase.header, got, testCase.want)
 			}

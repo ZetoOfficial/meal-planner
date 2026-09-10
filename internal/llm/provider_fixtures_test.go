@@ -24,26 +24,6 @@ type providerFixture struct {
 func providerFixtures() []providerFixture {
 	return []providerFixture{
 		{
-			name:     AnthropicName,
-			provider: anthropicProvider{},
-			toolUsePayload: func(t *testing.T, arguments string, tokensIn, tokensOut int) []byte {
-				t.Helper()
-				return encodeFixture(t, map[string]any{
-					"content": []map[string]any{
-						{"type": "tool_use", "name": "emit_recipe", "input": json.RawMessage(arguments)},
-					},
-					"usage": map[string]int{"input_tokens": tokensIn, "output_tokens": tokensOut},
-				})
-			},
-			textPayload: func(t *testing.T, text string) []byte {
-				t.Helper()
-				return encodeFixture(t, map[string]any{
-					"content": []map[string]any{{"type": "text", "text": text}},
-					"usage":   map[string]int{"input_tokens": 1, "output_tokens": 1},
-				})
-			},
-		},
-		{
 			name:     OpenAIName,
 			provider: openAIProvider{},
 			toolUsePayload: func(t *testing.T, arguments string, tokensIn, tokensOut int) []byte {
@@ -69,6 +49,57 @@ func providerFixtures() []providerFixture {
 	}
 }
 
+// stubProvider is the core's stand-in for a wire format: the client's cache,
+// retry budget and audit row must behave identically whatever the provider is,
+// so the core's tests no longer name a real one.
+type stubProvider struct {
+	name     string
+	endpoint string
+	response Response
+	err      error
+}
+
+func newStubProvider(response Response) *stubProvider {
+	return &stubProvider{name: "stub", endpoint: "https://stub.invalid/v1", response: response}
+}
+
+func (s *stubProvider) Name() string { return s.name }
+
+func (s *stubProvider) DefaultEndpoint() string { return s.endpoint }
+
+func (s *stubProvider) EncodeRequest(_ Config, request Request) ([]byte, error) {
+	// max_tokens is echoed because Client.complete is what fills that field in:
+	// TestGenerateDefaultsMaxTokensWhenUnset asserts the value the client handed
+	// over, and the stub is the only wire format the core still has.
+	return json.Marshal(map[string]any{
+		"model":      "stub",
+		"prompt":     request.Prompt,
+		"max_tokens": request.MaxTokens,
+	})
+}
+
+func (s *stubProvider) Authorize(httpRequest *http.Request, config Config) {
+	httpRequest.Header.Set("Authorization", "Bearer "+config.APIKey)
+}
+
+func (s *stubProvider) DecodeResponse(payload []byte, _ string) (Response, error) {
+	if s.err != nil {
+		return Response{}, s.err
+	}
+	response := s.response
+	if response.Content == "" {
+		response.Content = string(payload)
+	}
+	return response, nil
+}
+
+// writeStubPayload answers with the minimum a stub provider needs: the body is
+// irrelevant because stubProvider.DecodeResponse ignores it.
+func writeStubPayload(w http.ResponseWriter) {
+	w.Header().Set("Content-Type", "application/json")
+	_, _ = w.Write([]byte(`{}`))
+}
+
 func encodeFixture(t *testing.T, payload map[string]any) []byte {
 	t.Helper()
 	encoded, err := json.Marshal(payload)
@@ -78,14 +109,8 @@ func encodeFixture(t *testing.T, payload map[string]any) []byte {
 	return encoded
 }
 
-func writePayload(w http.ResponseWriter, payload []byte) {
-	w.Header().Set("Content-Type", "application/json")
-	_, _ = w.Write(payload)
-}
-
-func testConfig(provider, endpoint string) Config {
+func testConfig(endpoint string) Config {
 	return Config{
-		Provider:    provider,
 		Model:       testModel,
 		Endpoint:    endpoint,
 		APIKey:      "test-key",
