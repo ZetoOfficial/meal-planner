@@ -99,6 +99,34 @@ func TestGenerateDefaultsMaxTokensWhenUnset(t *testing.T) {
 	}
 }
 
+// The <= 0 guard in Client.complete must leave an already-set budget alone:
+// only the caller knows why it chose a particular ceiling. This drives a
+// non-zero MaxTokens through the real Generate path (the provider tests that
+// assert 1024 call EncodeRequest directly and never reach the guard), so an
+// unconditional overwrite of request.MaxTokens would fail it.
+func TestGenerateLeavesAnExplicitMaxTokensUnchanged(t *testing.T) {
+	var body map[string]any
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_ = json.NewDecoder(r.Body).Decode(&body)
+		writeStubPayload(w)
+	}))
+	defer server.Close()
+
+	client := newTestClient(t, newStubProvider(Response{Content: "{}"}), server.URL, &fakeStore{})
+
+	request := testRequest()
+	request.MaxTokens = 1024
+
+	if _, err := client.Generate(t.Context(), request); err != nil {
+		t.Fatalf("Generate() error = %v", err)
+	}
+
+	got, _ := body["max_tokens"].(float64)
+	if int(got) != 1024 {
+		t.Fatalf("max_tokens = %v, want the caller's explicit budget of 1024 left untouched", body["max_tokens"])
+	}
+}
+
 func TestGenerateServesCachedResponsesWithoutCallingTheProvider(t *testing.T) {
 	var requests atomic.Int32
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {

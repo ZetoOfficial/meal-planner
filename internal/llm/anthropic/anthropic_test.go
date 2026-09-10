@@ -90,29 +90,22 @@ func TestDecodesStructuredOutputAndUsage(t *testing.T) {
 }
 
 func TestRejectsAnswersWithoutTheRequestedTool(t *testing.T) {
-	cases := map[string][]byte{
-		"prose":      textPayload(t),
-		"other tool": toolUsePayload(t, `{"name":"wrong tool"}`, 1, 1),
-	}
-	for name, payload := range cases {
-		t.Run(name, func(t *testing.T) {
-			toolName := "emit_recipe"
-			if name == "other tool" {
-				toolName = "emit_shopping_list"
-			}
-			_, err := New().DecodeResponse(payload, toolName)
-			if err == nil {
-				t.Fatal("DecodeResponse() = nil error, want an error for an unusable answer")
-			}
-			// Prose specifically must fail with the shared sentinel, not a
-			// local error: the core matches on it with errors.Is to decide how
-			// to log the call, so a package-local error here would still pass
-			// every other check while breaking that classification silently.
-			if name == "prose" && !errors.Is(err, llm.ErrNoStructuredOutput) {
-				t.Fatalf("DecodeResponse() error = %v, want %v", err, llm.ErrNoStructuredOutput)
-			}
-		})
-	}
+	t.Run("prose", func(t *testing.T) {
+		// errors.Is, not just non-nil: this pins the provider to the core's
+		// shared sentinel, so a local one introduced later fails the test
+		// instead of passing it.
+		if _, err := New().DecodeResponse(textPayload(t), "emit_recipe"); !errors.Is(err, llm.ErrNoStructuredOutput) {
+			t.Fatalf("DecodeResponse() error = %v, want llm.ErrNoStructuredOutput for prose", err)
+		}
+	})
+	t.Run("other tool", func(t *testing.T) {
+		// Same sentinel as the prose case: toolArguments has exactly one failure
+		// path, so both subtests pin it and neither can drift onto a local error.
+		payload := toolUsePayload(t, `{"name":"wrong tool"}`, 1, 1)
+		if _, err := New().DecodeResponse(payload, "emit_shopping_list"); !errors.Is(err, llm.ErrNoStructuredOutput) {
+			t.Fatalf("DecodeResponse() error = %v, want llm.ErrNoStructuredOutput when another tool answered", err)
+		}
+	})
 }
 
 func TestAuthorizesWithTheAPIKeyHeader(t *testing.T) {
