@@ -3,6 +3,7 @@ package anthropic
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -99,8 +100,16 @@ func TestRejectsAnswersWithoutTheRequestedTool(t *testing.T) {
 			if name == "other tool" {
 				toolName = "emit_shopping_list"
 			}
-			if _, err := New().DecodeResponse(payload, toolName); err == nil {
+			_, err := New().DecodeResponse(payload, toolName)
+			if err == nil {
 				t.Fatal("DecodeResponse() = nil error, want an error for an unusable answer")
+			}
+			// Prose specifically must fail with the shared sentinel, not a
+			// local error: the core matches on it with errors.Is to decide how
+			// to log the call, so a package-local error here would still pass
+			// every other check while breaking that classification silently.
+			if name == "prose" && !errors.Is(err, llm.ErrNoStructuredOutput) {
+				t.Fatalf("DecodeResponse() error = %v, want %v", err, llm.ErrNoStructuredOutput)
 			}
 		})
 	}
@@ -119,11 +128,14 @@ func TestAuthorizesWithTheAPIKeyHeader(t *testing.T) {
 }
 
 func TestNewReportsItsNameAndEndpoint(t *testing.T) {
-	if New().Name() != Name {
-		t.Fatalf("Name() = %q, want %q", New().Name(), Name)
+	// Asserted against literals, not the constants the methods return: a
+	// rename of Name or defaultEndpoint must fail this test, the way it would
+	// break the config-facing provider name or an already-deployed endpoint.
+	if got := New().Name(); got != "anthropic" {
+		t.Fatalf("Name() = %q, want %q", got, "anthropic")
 	}
-	if New().DefaultEndpoint() != defaultEndpoint {
-		t.Fatalf("DefaultEndpoint() = %q, want %q", New().DefaultEndpoint(), defaultEndpoint)
+	if got := New().DefaultEndpoint(); got != "https://api.anthropic.com/v1/messages" {
+		t.Fatalf("DefaultEndpoint() = %q, want %q", got, "https://api.anthropic.com/v1/messages")
 	}
 }
 

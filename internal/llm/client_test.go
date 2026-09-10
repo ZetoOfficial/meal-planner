@@ -15,7 +15,11 @@ import (
 
 func TestGenerateReturnsStructuredContentAndLogsTheCall(t *testing.T) {
 	provider := newStubProvider(Response{Content: `{"name":"Chicken bowl"}`, TokensIn: 120, TokensOut: 45})
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+	var body map[string]any
+	var authorization string
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_ = json.NewDecoder(r.Body).Decode(&body)
+		authorization = r.Header.Get("Authorization")
 		writeStubPayload(w)
 	}))
 	defer server.Close()
@@ -28,6 +32,19 @@ func TestGenerateReturnsStructuredContentAndLogsTheCall(t *testing.T) {
 		t.Fatalf("Generate() error = %v", err)
 	}
 
+	// Proves Client.complete hands its own Config to the provider, not a zero
+	// value and not the request: the stub echoes config.Model into the wire
+	// body, so a client that passed Config{} (or the wrong config) here would
+	// fail this check even though every other assertion in this test stays
+	// green.
+	if body["model"] != testModel {
+		t.Fatalf("model = %v, want the client's configured model %q", body["model"], testModel)
+	}
+	// Same proof for Authorize: the stub echoes config.APIKey into the header,
+	// so a client that passed the wrong Config there would fail this check too.
+	if authorization != "Bearer test-key" {
+		t.Fatalf("Authorization = %q, want the client's configured API key", authorization)
+	}
 	if response.Content != `{"name":"Chicken bowl"}` {
 		t.Fatalf("content = %q, want what the provider decoded", response.Content)
 	}

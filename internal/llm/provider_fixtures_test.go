@@ -67,12 +67,15 @@ func (s *stubProvider) Name() string { return s.name }
 
 func (s *stubProvider) DefaultEndpoint() string { return s.endpoint }
 
-func (s *stubProvider) EncodeRequest(_ Config, request Request) ([]byte, error) {
-	// max_tokens is echoed because Client.complete is what fills that field in:
-	// TestGenerateDefaultsMaxTokensWhenUnset asserts the value the client handed
-	// over, and the stub is the only wire format the core still has.
+func (s *stubProvider) EncodeRequest(config Config, request Request) ([]byte, error) {
+	// model and max_tokens are echoed because Client.complete is what fills
+	// them in: TestGenerateReturnsStructuredContentAndLogsTheCall asserts that
+	// the client hands its own Config to the provider (not a zero value, not
+	// the request), and TestGenerateDefaultsMaxTokensWhenUnset asserts the
+	// max_tokens value the client handed over. The stub is the only wire
+	// format the core still has, so it is the only place left to prove either.
 	return json.Marshal(map[string]any{
-		"model":      "stub",
+		"model":      config.Model,
 		"prompt":     request.Prompt,
 		"max_tokens": request.MaxTokens,
 	})
