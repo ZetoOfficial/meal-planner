@@ -16,6 +16,7 @@ import (
 	"github.com/ZetoOfficial/meal-planner/internal/clock"
 	"github.com/ZetoOfficial/meal-planner/internal/llm"
 	"github.com/ZetoOfficial/meal-planner/internal/llm/anthropic"
+	"github.com/ZetoOfficial/meal-planner/internal/llm/openai"
 	"github.com/ZetoOfficial/meal-planner/internal/postgres"
 	analyticsrepo "github.com/ZetoOfficial/meal-planner/internal/postgres/analytics"
 	catalogrepo "github.com/ZetoOfficial/meal-planner/internal/postgres/catalog"
@@ -43,11 +44,11 @@ func llmProvider(name string) (llm.Provider, error) {
 	switch name {
 	case anthropic.Name:
 		return anthropic.New(), nil
-	case llm.OpenAIName:
-		return llm.NewOpenAIProvider(), nil
+	case openai.Name:
+		return openai.New(), nil
 	default:
 		return nil, fmt.Errorf("unknown llm provider %q, want %q or %q",
-			name, anthropic.Name, llm.OpenAIName)
+			name, anthropic.Name, openai.Name)
 	}
 }
 
