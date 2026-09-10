@@ -102,6 +102,10 @@ func testRequest() Request {
 		ToolName:    "emit_recipe",
 		Schema:      json.RawMessage(`{"type":"object","properties":{"name":{"type":"string"}}}`),
 		Temperature: 0.2,
+		// EncodeRequest now trusts the field as-is: Client.complete is the only
+		// place that fills in the default, so a request built for a direct
+		// EncodeRequest call must already carry one.
+		MaxTokens: defaultMaxTokens,
 	}
 }
 

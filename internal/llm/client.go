@@ -7,126 +7,13 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
-	"encoding/json"
 	"errors"
-	"fmt"
 	"net/http"
 	"strconv"
 	"time"
 
 	"github.com/ZetoOfficial/meal-planner/internal/apperr"
 )
-
-const (
-	defaultTimeout     = 30 * time.Second
-	defaultMaxAttempts = 3
-	defaultBaseBackoff = 500 * time.Millisecond
-	maxBackoff         = 8 * time.Second
-)
-
-// CallStatus mirrors the stored llm_call status so a plan can be explained
-// later: a live answer, a cache hit, or a failure.
-type CallStatus string
-
-const (
-	StatusOK     CallStatus = "ok"
-	StatusError  CallStatus = "error"
-	StatusCached CallStatus = "cached"
-)
-
-type Config struct {
-	Provider    string
-	Model       string
-	Endpoint    string
-	APIKey      string
-	Timeout     time.Duration
-	MaxAttempts int
-	BaseBackoff time.Duration
-}
-
-// Validate leaves the endpoint out: an empty one falls back to the provider's
-// own url, so only the model and the key have to be supplied.
-func (c Config) Validate() error {
-	if c.Model == "" || c.APIKey == "" {
-		return errors.New("llm config requires a model and an api key")
-	}
-	return nil
-}
-
-func (c Config) withDefaults() Config {
-	if c.Provider == "" {
-		c.Provider = ProviderAnthropic
-	}
-	if c.Timeout <= 0 {
-		c.Timeout = defaultTimeout
-	}
-	if c.MaxAttempts <= 0 {
-		c.MaxAttempts = defaultMaxAttempts
-	}
-	if c.BaseBackoff <= 0 {
-		c.BaseBackoff = defaultBaseBackoff
-	}
-	return c
-}
-
-// Request asks for one structured answer. Schema describes the only shape the
-// provider may return, so Go can unmarshal it without parsing prose.
-type Request struct {
-	System      string
-	Prompt      string
-	ToolName    string
-	Schema      json.RawMessage
-	Temperature float64
-	MaxTokens   int
-	PlanID      *int64
-}
-
-type Response struct {
-	Content   string
-	Cached    bool
-	TokensIn  int
-	TokensOut int
-	Latency   time.Duration
-}
-
-type CacheKey struct {
-	PromptHash  string
-	Model       string
-	Temperature float64
-}
-
-type CacheEntry struct {
-	PromptHash  string
-	Model       string
-	Temperature float64
-	Response    string
-}
-
-// CallRecord is the audit row for one attempt at generating candidates.
-type CallRecord struct {
-	PlanID      *int64
-	Provider    string
-	Model       string
-	Temperature float64
-	PromptHash  string
-	Prompt      string
-	Response    string
-	TokensIn    int
-	TokensOut   int
-	Latency     time.Duration
-	Status      CallStatus
-	Error       string
-}
-
-type CallStore interface {
-	Lookup(ctx context.Context, key CacheKey) (response string, found bool, err error)
-	SaveCache(ctx context.Context, entry CacheEntry) error
-	LogCall(ctx context.Context, record CallRecord) error
-}
-
-type Clock interface {
-	Now() time.Time
-}
 
 type Client struct {
 	config   Config
@@ -284,12 +171,4 @@ func (c *Client) promptHash(request Request) string {
 		digest.Write([]byte{0})
 	}
 	return hex.EncodeToString(digest.Sum(nil))
-}
-
-type transientError struct {
-	status int
-}
-
-func (e *transientError) Error() string {
-	return fmt.Sprintf("provider returned transient status %d", e.status)
 }

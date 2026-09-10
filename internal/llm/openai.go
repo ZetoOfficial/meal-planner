@@ -37,7 +37,7 @@ func (openAIProvider) EncodeRequest(config Config, request Request) ([]byte, err
 
 	body := openAIRequestBody{
 		Model:       config.Model,
-		MaxTokens:   requestMaxTokens(request),
+		MaxTokens:   request.MaxTokens,
 		Temperature: request.Temperature,
 		Messages:    messages,
 	}
@@ -144,5 +144,5 @@ func (r openAIResponse) toolArguments(toolName string) (string, error) {
 			}
 		}
 	}
-	return "", errNoStructuredOutput
+	return "", ErrNoStructuredOutput
 }

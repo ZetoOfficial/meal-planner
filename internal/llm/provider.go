@@ -41,10 +41,10 @@ const (
 	statusOverloadedCode = 529
 )
 
-// errNoStructuredOutput is what both providers report when the model answered
+// ErrNoStructuredOutput is what a provider reports when the model answered
 // with prose instead of the schema: the candidate is unusable, so the call is
 // logged as an error rather than parsed.
-var errNoStructuredOutput = errors.New("provider answered without the requested structured output")
+var ErrNoStructuredOutput = errors.New("provider answered without the requested structured output")
 
 // providerFor resolves a provider name. A switch keeps the supported set
 // visible in one place: no registry to consult and no init order to reason
@@ -63,6 +63,12 @@ func providerFor(name string) (Provider, error) {
 // complete performs one provider call: the client times it and classifies the
 // status, the provider decodes the payload.
 func (c *Client) complete(ctx context.Context, request Request) (Response, error) {
+	// The output bound is the client's business, so every provider can trust
+	// the field instead of re-deriving the default.
+	if request.MaxTokens <= 0 {
+		request.MaxTokens = defaultMaxTokens
+	}
+
 	payload, err := c.provider.EncodeRequest(c.config, request)
 	if err != nil {
 		return Response{}, fmt.Errorf("encode provider request: %w", err)
@@ -124,10 +130,10 @@ func providerStatusError(response *http.Response) error {
 	return fmt.Errorf("provider returned status %d: %s", response.StatusCode, bytes.TrimSpace(body))
 }
 
-// requestMaxTokens keeps the output bound explicit for every provider.
-func requestMaxTokens(request Request) int {
-	if request.MaxTokens > 0 {
-		return request.MaxTokens
-	}
-	return defaultMaxTokens
+type transientError struct {
+	status int
+}
+
+func (e *transientError) Error() string {
+	return fmt.Sprintf("provider returned transient status %d", e.status)
 }

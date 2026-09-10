@@ -28,7 +28,7 @@ func (anthropicProvider) Authorize(httpRequest *http.Request, config Config) {
 func (anthropicProvider) EncodeRequest(config Config, request Request) ([]byte, error) {
 	body := anthropicRequestBody{
 		Model:       config.Model,
-		MaxTokens:   requestMaxTokens(request),
+		MaxTokens:   request.MaxTokens,
 		Temperature: request.Temperature,
 		System:      request.System,
 		Messages:    []anthropicMessage{{Role: "user", Content: request.Prompt}},
@@ -105,5 +105,5 @@ func (r anthropicResponse) toolArguments(toolName string) (string, error) {
 			return string(block.Input), nil
 		}
 	}
-	return "", errNoStructuredOutput
+	return "", ErrNoStructuredOutput
 }
