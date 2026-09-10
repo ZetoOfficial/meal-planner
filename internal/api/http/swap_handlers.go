@@ -6,9 +6,9 @@ import (
 
 	"github.com/ZetoOfficial/meal-planner/api/sdk/go/api"
 	"github.com/ZetoOfficial/meal-planner/api/sdk/go/model"
+	"github.com/ZetoOfficial/meal-planner/internal/apperr"
 	catalogdom "github.com/ZetoOfficial/meal-planner/internal/domain/catalog"
 	planningdom "github.com/ZetoOfficial/meal-planner/internal/domain/planning"
-	apperr "github.com/ZetoOfficial/meal-planner/internal/errors"
 	usecaseplanning "github.com/ZetoOfficial/meal-planner/internal/usecase/planning"
 )
 
@@ -53,7 +53,7 @@ func swapCommand(
 	level model.SwapInputLevel,
 	slotFillID, newProductID *int64,
 ) (usecaseplanning.SwapCommand, error) {
-	if level != model.Fill {
+	if level != model.SwapInputLevelFill {
 		return usecaseplanning.SwapCommand{}, apperr.Validation(
 			"only fill-level swaps are supported", string(level),
 		)

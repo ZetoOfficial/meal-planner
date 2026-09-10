@@ -2,7 +2,6 @@ package eater
 
 import (
 	"context"
-	"time"
 
 	eaterdom "github.com/ZetoOfficial/meal-planner/internal/domain/eater"
 	"github.com/ZetoOfficial/meal-planner/internal/postgres"
@@ -162,7 +161,7 @@ func (r *Repository) CreateExclusion(ctx context.Context, exclusion eaterdom.Exc
 
 func (r *Repository) DeleteExclusion(ctx context.Context, id eaterdom.ExclusionID) error {
 	if _, err := r.store.Queries(ctx).DeleteEaterExclusion(ctx, int64(id)); err != nil {
-		return dberror.Map(err, "exclusion")
+		return dberror.MapDelete(err, "exclusion")
 	}
 	return nil
 }
@@ -211,7 +210,7 @@ func (r *Repository) load(ctx context.Context, query *sqlc.Queries, id eaterdom.
 		}
 		domainGoals = append(domainGoals, domainGoal)
 	}
-	profile.CurrentGoal = eaterdom.CurrentGoalAt(domainGoals, time.Now().UTC())
+	profile.Goals = domainGoals
 	return profile, nil
 }
 

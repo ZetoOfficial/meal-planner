@@ -94,6 +94,12 @@ INSERT INTO meal (
 )
 RETURNING *;
 
+-- name: DeleteMealComponentAllocations :exec
+-- A rebalance rewrites the whole allocation set of a meal, so the old rows go
+-- first: the portions and even the batches a meal draws from can change.
+DELETE FROM meal_component_allocation
+WHERE meal_id = sqlc.arg(meal_id);
+
 -- name: CreateMealComponentAllocation :one
 INSERT INTO meal_component_allocation (
     meal_id,

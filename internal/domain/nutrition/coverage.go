@@ -21,6 +21,21 @@ func CoverageForInput(known bool, weight float64) (Coverage, error) {
 	return coverage, nil
 }
 
+// CoverageFromScore rebuilds a coverage from the single stored score: the known
+// share carries that weight and the rest is explicitly unknown, so a reloaded
+// summary reports the same confidence it was saved with.
+func CoverageFromScore(score float64) (Coverage, error) {
+	known, err := CoverageForInput(true, score)
+	if err != nil {
+		return Coverage{}, err
+	}
+	unknown, err := CoverageForInput(false, 1-score)
+	if err != nil {
+		return Coverage{}, err
+	}
+	return known.Add(unknown), nil
+}
+
 func (c Coverage) Add(other Coverage) Coverage {
 	return Coverage{
 		knownWeight: c.knownWeight + other.knownWeight,

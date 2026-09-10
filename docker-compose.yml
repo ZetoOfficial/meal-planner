@@ -36,7 +36,7 @@ services:
       - .:/src
       - gocache:/go
     command: >
-      go run github.com/jackc/tern/v2@latest migrate
+      go tool tern migrate
       --migrations ./migrations --config ./migrations/tern.conf
 
   app:

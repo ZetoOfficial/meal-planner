@@ -7,7 +7,7 @@ import (
 	"net/http"
 
 	"github.com/ZetoOfficial/meal-planner/api/sdk/go/model"
-	apperr "github.com/ZetoOfficial/meal-planner/internal/errors"
+	"github.com/ZetoOfficial/meal-planner/internal/apperr"
 )
 
 func requestError(w http.ResponseWriter, r *http.Request, err error, status int) {
@@ -52,6 +52,8 @@ func applicationError(w http.ResponseWriter, r *http.Request, err error) {
 			status = http.StatusUnauthorized
 		case apperr.CodeUnavailable:
 			status = http.StatusServiceUnavailable
+		case apperr.CodeInternal:
+			// The 500 the response already carries is the right answer.
 		}
 		if status != http.StatusInternalServerError {
 			var details *[]string

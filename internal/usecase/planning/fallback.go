@@ -4,11 +4,11 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/ZetoOfficial/meal-planner/internal/apperr"
 	catalogdom "github.com/ZetoOfficial/meal-planner/internal/domain/catalog"
 	eaterdom "github.com/ZetoOfficial/meal-planner/internal/domain/eater"
 	mealdom "github.com/ZetoOfficial/meal-planner/internal/domain/meal"
 	recipedom "github.com/ZetoOfficial/meal-planner/internal/domain/recipe"
-	apperr "github.com/ZetoOfficial/meal-planner/internal/errors"
 	"github.com/ZetoOfficial/meal-planner/internal/solver"
 )
 
@@ -49,19 +49,34 @@ func (s *Service) generateCandidates(
 		return nil, err
 	}
 
-	accepted := make([]recipedom.Template, 0, len(candidates))
+	usable := make([]recipedom.Template, 0, len(candidates))
 	for i := range candidates {
 		if err := validateCandidate(candidates[i], input, s.options.AvailableEquipment); err != nil {
 			continue
 		}
-		stored, err := s.storeDraft(ctx, candidates[i])
-		if err != nil {
-			return nil, err
-		}
-		accepted = append(accepted, stored)
+		usable = append(usable, candidates[i])
 	}
-	if len(accepted) == 0 {
+	if len(usable) == 0 {
 		return nil, apperr.Validation("no generated recipe candidate survived validation")
+	}
+
+	// The drafts commit on their own, after the provider call has returned:
+	// they are a library addition in their own right and must not be rolled
+	// back with a plan that later turns out to be unstorable.
+	accepted := make([]recipedom.Template, 0, len(usable))
+	err = s.transactions.WithTx(ctx, func(ctx context.Context) error {
+		accepted = accepted[:0]
+		for i := range usable {
+			stored, err := s.storeDraft(ctx, usable[i])
+			if err != nil {
+				return err
+			}
+			accepted = append(accepted, stored)
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
 	}
 	return accepted, nil
 }

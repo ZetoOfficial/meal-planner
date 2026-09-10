@@ -150,8 +150,8 @@ func TestFailureNamesTheUnreachableMacro(t *testing.T) {
 		t.Fatalf("BuildPlan() = %#v, want an impossible plan", result.Plan)
 	}
 
-	constraint := macroConstraint(result.Failure.MacroConstraints, MacroProtein)
-	if constraint == nil {
+	constraint, found := macroConstraint(result.Failure.MacroConstraints, MacroProtein)
+	if !found {
 		t.Fatalf("macro constraints = %#v, want the unreachable protein bound", result.Failure.MacroConstraints)
 	}
 	if constraint.TargetMin != 500 || constraint.ReachableMax != 60 {
@@ -177,11 +177,11 @@ func TestFailureReportsNoMacroConstraintWhenTargetsAreReachable(t *testing.T) {
 	}
 }
 
-func macroConstraint(constraints []MacroConstraint, code MacroCode) *MacroConstraint {
+func macroConstraint(constraints []MacroConstraint, code MacroCode) (MacroConstraint, bool) {
 	for i := range constraints {
 		if constraints[i].Code == code {
-			return &constraints[i]
+			return constraints[i], true
 		}
 	}
-	return nil
+	return MacroConstraint{}, false
 }

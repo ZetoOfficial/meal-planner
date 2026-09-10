@@ -653,21 +653,42 @@ func (e StorageProfile) Valid() bool {
 	}
 }
 
+// Defines values for SwapApplyInputLevel.
+const (
+	SwapApplyInputLevelFill     SwapApplyInputLevel = "fill"
+	SwapApplyInputLevelRecipe   SwapApplyInputLevel = "recipe"
+	SwapApplyInputLevelRotation SwapApplyInputLevel = "rotation"
+)
+
+// Valid indicates whether the value is a known member of the SwapApplyInputLevel enum.
+func (e SwapApplyInputLevel) Valid() bool {
+	switch e {
+	case SwapApplyInputLevelFill:
+		return true
+	case SwapApplyInputLevelRecipe:
+		return true
+	case SwapApplyInputLevelRotation:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for SwapInputLevel.
 const (
-	Fill     SwapInputLevel = "fill"
-	Recipe   SwapInputLevel = "recipe"
-	Rotation SwapInputLevel = "rotation"
+	SwapInputLevelFill     SwapInputLevel = "fill"
+	SwapInputLevelRecipe   SwapInputLevel = "recipe"
+	SwapInputLevelRotation SwapInputLevel = "rotation"
 )
 
 // Valid indicates whether the value is a known member of the SwapInputLevel enum.
 func (e SwapInputLevel) Valid() bool {
 	switch e {
-	case Fill:
+	case SwapInputLevelFill:
 		return true
-	case Recipe:
+	case SwapInputLevelRecipe:
 		return true
-	case Rotation:
+	case SwapInputLevelRotation:
 		return true
 	default:
 		return false
@@ -778,7 +799,7 @@ type FeedbackEvent struct {
 	Rating      *int       `json:"rating,omitempty"`
 	TargetId    int64      `json:"target_id"`
 	TargetType  string     `json:"target_type"`
-	WeightDelta *float32   `json:"weight_delta,omitempty"`
+	WeightDelta *float64   `json:"weight_delta,omitempty"`
 }
 
 // FeedbackInput defines model for FeedbackInput.
@@ -818,21 +839,28 @@ type FixedMealInput struct {
 
 // FixedMealQuality Hot-path нутриенты + граммаж food-групп (нужен для rolling-7d правил) + флаги учёта фикс. приёма в quality-слое. NULL = неизвестно.
 type FixedMealQuality struct {
-	AddedSugarsG       *float32 `json:"added_sugars_g,omitempty"`
-	FiberG             *float32 `json:"fiber_g,omitempty"`
-	FreeSugarsG        *float32 `json:"free_sugars_g,omitempty"`
-	FruitVegG          *float32 `json:"fruit_veg_g,omitempty"`
-	GrainGEquiv        *float32 `json:"grain_g_equiv,omitempty"`
+	AddedSugarsG       *float64 `json:"added_sugars_g,omitempty"`
+	FiberG             *float64 `json:"fiber_g,omitempty"`
+	FreeSugarsG        *float64 `json:"free_sugars_g,omitempty"`
+	FruitVegG          *float64 `json:"fruit_veg_g,omitempty"`
+	GrainGEquiv        *float64 `json:"grain_g_equiv,omitempty"`
 	IncludeInAnalytics *bool    `json:"include_in_analytics,omitempty"`
 	IncludeInWarnings  *bool    `json:"include_in_warnings,omitempty"`
-	LegumeG            *float32 `json:"legume_g,omitempty"`
-	ProcessedMeatG     *float32 `json:"processed_meat_g,omitempty"`
-	RedMeatG           *float32 `json:"red_meat_g,omitempty"`
-	SaturatedFatG      *float32 `json:"saturated_fat_g,omitempty"`
-	SodiumMg           *float32 `json:"sodium_mg,omitempty"`
-	TransFatG          *float32 `json:"trans_fat_g,omitempty"`
-	UpfKcal            *float32 `json:"upf_kcal,omitempty"`
-	WholeGrainGEquiv   *float32 `json:"whole_grain_g_equiv,omitempty"`
+	LegumeG            *float64 `json:"legume_g,omitempty"`
+	ProcessedMeatG     *float64 `json:"processed_meat_g,omitempty"`
+	RedMeatG           *float64 `json:"red_meat_g,omitempty"`
+	SaturatedFatG      *float64 `json:"saturated_fat_g,omitempty"`
+	SodiumMg           *float64 `json:"sodium_mg,omitempty"`
+	TransFatG          *float64 `json:"trans_fat_g,omitempty"`
+	UpfKcal            *float64 `json:"upf_kcal,omitempty"`
+	WholeGrainGEquiv   *float64 `json:"whole_grain_g_equiv,omitempty"`
+}
+
+// FixedMealQualityBurden вклад фиксированных приёмов (напр. Сашин завтрак)
+type FixedMealQualityBurden struct {
+	ProcessedMeatG *float64 `json:"processed_meat_g,omitempty"`
+	SaturatedFatG  *float64 `json:"saturated_fat_g,omitempty"`
+	SodiumMg       *float64 `json:"sodium_mg,omitempty"`
 }
 
 // FoodClassification Пищевая классификация для food-based правил (отдельно от role_kind). Optional NULL означает unknown; explicit false/other означает известное значение.
@@ -845,9 +873,9 @@ type FoodClassification struct {
 	IsProcessedMeat      *bool                              `json:"is_processed_meat,omitempty"`
 	IsRedMeat            *bool                              `json:"is_red_meat,omitempty"`
 	IsWholeGrain         *bool                              `json:"is_whole_grain,omitempty"`
-	ProcessingConfidence *float32                           `json:"processing_confidence,omitempty"`
+	ProcessingConfidence *float64                           `json:"processing_confidence,omitempty"`
 	ProcessingLevel      *FoodClassificationProcessingLevel `json:"processing_level,omitempty"`
-	WholeGrainRatio      *float32                           `json:"whole_grain_ratio,omitempty"`
+	WholeGrainRatio      *float64                           `json:"whole_grain_ratio,omitempty"`
 }
 
 // FoodClassificationFoodGroup defines model for FoodClassification.FoodGroup.
@@ -858,43 +886,43 @@ type FoodClassificationProcessingLevel string
 
 // MacroGoal defines model for MacroGoal.
 type MacroGoal struct {
-	CarbMaxG      float32            `json:"carb_max_g"`
-	CarbMinG      float32            `json:"carb_min_g"`
+	CarbMaxG      float64            `json:"carb_max_g"`
+	CarbMinG      float64            `json:"carb_min_g"`
 	EffectiveFrom openapi_types.Date `json:"effective_from"`
-	FatMaxG       float32            `json:"fat_max_g"`
-	FatMinG       float32            `json:"fat_min_g"`
+	FatMaxG       float64            `json:"fat_max_g"`
+	FatMinG       float64            `json:"fat_min_g"`
 	Id            int64              `json:"id"`
 	KcalMax       int                `json:"kcal_max"`
 	KcalMin       int                `json:"kcal_min"`
 	Note          *string            `json:"note,omitempty"`
-	ProteinMaxG   float32            `json:"protein_max_g"`
-	ProteinMinG   float32            `json:"protein_min_g"`
+	ProteinMaxG   float64            `json:"protein_max_g"`
+	ProteinMinG   float64            `json:"protein_min_g"`
 }
 
 // MacroGoalInput defines model for MacroGoalInput.
 type MacroGoalInput struct {
-	CarbMaxG      float32             `json:"carb_max_g"`
-	CarbMinG      float32             `json:"carb_min_g"`
+	CarbMaxG      float64             `json:"carb_max_g"`
+	CarbMinG      float64             `json:"carb_min_g"`
 	EffectiveFrom *openapi_types.Date `json:"effective_from,omitempty"`
-	FatMaxG       float32             `json:"fat_max_g"`
-	FatMinG       float32             `json:"fat_min_g"`
+	FatMaxG       float64             `json:"fat_max_g"`
+	FatMinG       float64             `json:"fat_min_g"`
 	KcalMax       int                 `json:"kcal_max"`
 	KcalMin       int                 `json:"kcal_min"`
 	Note          *string             `json:"note,omitempty"`
-	ProteinMaxG   float32             `json:"protein_max_g"`
-	ProteinMinG   float32             `json:"protein_min_g"`
+	ProteinMaxG   float64             `json:"protein_max_g"`
+	ProteinMinG   float64             `json:"protein_min_g"`
 }
 
 // MacroRange Цель по БЖУ диапазонами (min–max) для Б, Ж, У и ккал
 type MacroRange struct {
-	CarbMaxG    float32 `json:"carb_max_g"`
-	CarbMinG    float32 `json:"carb_min_g"`
-	FatMaxG     float32 `json:"fat_max_g"`
-	FatMinG     float32 `json:"fat_min_g"`
+	CarbMaxG    float64 `json:"carb_max_g"`
+	CarbMinG    float64 `json:"carb_min_g"`
+	FatMaxG     float64 `json:"fat_max_g"`
+	FatMinG     float64 `json:"fat_min_g"`
 	KcalMax     int     `json:"kcal_max"`
 	KcalMin     int     `json:"kcal_min"`
-	ProteinMaxG float32 `json:"protein_max_g"`
-	ProteinMinG float32 `json:"protein_min_g"`
+	ProteinMaxG float64 `json:"protein_max_g"`
+	ProteinMinG float64 `json:"protein_min_g"`
 }
 
 // MacroSummary defines model for MacroSummary.
@@ -909,10 +937,10 @@ type MacroSummary struct {
 
 // Macros defines model for Macros.
 type Macros struct {
-	CarbG    float32 `json:"carb_g"`
-	FatG     float32 `json:"fat_g"`
+	CarbG    float64 `json:"carb_g"`
+	FatG     float64 `json:"fat_g"`
 	Kcal     int     `json:"kcal"`
-	ProteinG float32 `json:"protein_g"`
+	ProteinG float64 `json:"protein_g"`
 }
 
 // Meal Generated meal содержит одну или несколько component allocations и не имеет fixed_meal_id. Fixed meal содержит fixed_meal_id и пустой components.
@@ -939,8 +967,8 @@ type MealComponentAllocation struct {
 	PlanRecipeId int64 `json:"plan_recipe_id"`
 
 	// PlannedServingG Производная подсказка; доступна только при известном expected output
-	PlannedServingG *float32 `json:"planned_serving_g,omitempty"`
-	PortionFactor   float32  `json:"portion_factor"`
+	PlannedServingG *float64 `json:"planned_serving_g,omitempty"`
+	PortionFactor   float64  `json:"portion_factor"`
 }
 
 // MealLogInput В MVP вручную вводятся только actual-МАКРОСЫ. Actual quality-нутриенты вручную НЕ вводятся: при eaten_modified без structured replacement quality-метрики приёма становятся 'unknown' (FR-6), а не фикция.
@@ -961,7 +989,7 @@ type MealType string
 // NutritionDataQuality Происхождение и полнота нутриент-данных (unknown ≠ 0)
 type NutritionDataQuality struct {
 	LastVerifiedAt         *time.Time                                `json:"last_verified_at,omitempty"`
-	NutritionCoverageScore *float32                                  `json:"nutrition_coverage_score,omitempty"`
+	NutritionCoverageScore *float64                                  `json:"nutrition_coverage_score,omitempty"`
 	NutritionDataQuality   *NutritionDataQualityNutritionDataQuality `json:"nutrition_data_quality,omitempty"`
 	SourceKind             *NutritionDataQualitySourceKind           `json:"source_kind,omitempty"`
 	SourceNote             *string                                   `json:"source_note,omitempty"`
@@ -975,42 +1003,70 @@ type NutritionDataQualitySourceKind string
 
 // NutritionFacts Hot-path нутриенты на 100 г для quality-слоя. Все nullable: NULL = НЕИЗВЕСТНО (не 0). Натрий и соль взаимоконвертируются (натрий_мг = соль_г/2.54*1000).
 type NutritionFacts struct {
-	AddedSugarsPer100g                *float32 `json:"added_sugars_per_100g,omitempty"`
+	AddedSugarsPer100g                *float64 `json:"added_sugars_per_100g,omitempty"`
 	ContainsPartiallyHydrogenatedOils *bool    `json:"contains_partially_hydrogenated_oils,omitempty"`
-	FiberPer100g                      *float32 `json:"fiber_per_100g,omitempty"`
-	FreeSugarsPer100g                 *float32 `json:"free_sugars_per_100g,omitempty"`
+	FiberPer100g                      *float64 `json:"fiber_per_100g,omitempty"`
+	FreeSugarsPer100g                 *float64 `json:"free_sugars_per_100g,omitempty"`
 
 	// IndustrialTransFatPer100g именно промышленные → hard reject (HC-9)
-	IndustrialTransFatPer100g *float32 `json:"industrial_trans_fat_per_100g,omitempty"`
-	SaltGPer100g              *float32 `json:"salt_g_per_100g,omitempty"`
-	SaturatedFatPer100g       *float32 `json:"saturated_fat_per_100g,omitempty"`
-	SodiumMgPer100g           *float32 `json:"sodium_mg_per_100g,omitempty"`
-	TotalSugarsPer100g        *float32 `json:"total_sugars_per_100g,omitempty"`
+	IndustrialTransFatPer100g *float64 `json:"industrial_trans_fat_per_100g,omitempty"`
+	SaltGPer100g              *float64 `json:"salt_g_per_100g,omitempty"`
+	SaturatedFatPer100g       *float64 `json:"saturated_fat_per_100g,omitempty"`
+	SodiumMgPer100g           *float64 `json:"sodium_mg_per_100g,omitempty"`
+	TotalSugarsPer100g        *float64 `json:"total_sugars_per_100g,omitempty"`
 
 	// TransFatPer100g транс-жиры ВСЕГО (может включать природные) → только warn
-	TransFatPer100g *float32 `json:"trans_fat_per_100g,omitempty"`
+	TransFatPer100g *float64 `json:"trans_fat_per_100g,omitempty"`
+}
+
+// NutritionQualityAnalytics defines model for NutritionQualityAnalytics.
+type NutritionQualityAnalytics struct {
+	AddedSugarsG      *float64 `json:"added_sugars_g,omitempty"`
+	DataCoverageScore float64  `json:"data_coverage_score"`
+	EaterId           *int64   `json:"eater_id,omitempty"`
+	FiberG            *float64 `json:"fiber_g,omitempty"`
+
+	// FixedMealQualityBurden вклад фиксированных приёмов (напр. Сашин завтрак)
+	FixedMealQualityBurden  *FixedMealQualityBurden `json:"fixed_meal_quality_burden,omitempty"`
+	From                    *openapi_types.Date     `json:"from,omitempty"`
+	FruitVegG               *float64                `json:"fruit_veg_g,omitempty"`
+	GrainGEquiv             *float64                `json:"grain_g_equiv,omitempty"`
+	LegumeComponentsPlan    *int                    `json:"legume_components_plan,omitempty"`
+	LegumeG                 *float64                `json:"legume_g,omitempty"`
+	LegumeServingsRolling7d *float64                `json:"legume_servings_rolling_7d,omitempty"`
+	ProcessedMeatGRolling7d *float64                `json:"processed_meat_g_rolling_7d,omitempty"`
+	QualityScore            float64                 `json:"quality_score"`
+	RedMeatGRolling7d       *float64                `json:"red_meat_g_rolling_7d,omitempty"`
+	RuleEvaluations         []RuleEvaluation        `json:"rule_evaluations"`
+	SaturatedFatG           *float64                `json:"saturated_fat_g,omitempty"`
+	SodiumMg                *float64                `json:"sodium_mg,omitempty"`
+	To                      *openapi_types.Date     `json:"to,omitempty"`
+	UpfKcalShareEst         *float64                `json:"upf_kcal_share_est,omitempty"`
+	WarningsCount           int                     `json:"warnings_count"`
+	WholeGrainGEquiv        *float64                `json:"whole_grain_g_equiv,omitempty"`
+	WholeGrainRatio         *float64                `json:"whole_grain_ratio,omitempty"`
 }
 
 // NutritionQualitySummary Сводка качества для дня/плана + rolling-проекции недели
 type NutritionQualitySummary struct {
-	AddedSugarsG            *float32         `json:"added_sugars_g,omitempty"`
-	DataCoverageScore       float32          `json:"data_coverage_score"`
-	FiberG                  *float32         `json:"fiber_g,omitempty"`
-	FruitVegG               *float32         `json:"fruit_veg_g,omitempty"`
-	GrainGEquiv             *float32         `json:"grain_g_equiv,omitempty"`
+	AddedSugarsG            *float64         `json:"added_sugars_g,omitempty"`
+	DataCoverageScore       float64          `json:"data_coverage_score"`
+	FiberG                  *float64         `json:"fiber_g,omitempty"`
+	FruitVegG               *float64         `json:"fruit_veg_g,omitempty"`
+	GrainGEquiv             *float64         `json:"grain_g_equiv,omitempty"`
 	LegumeComponentsPlan    *int             `json:"legume_components_plan,omitempty"`
-	LegumeG                 *float32         `json:"legume_g,omitempty"`
-	LegumeServingsRolling7d *float32         `json:"legume_servings_rolling_7d,omitempty"`
-	ProcessedMeatGRolling7d *float32         `json:"processed_meat_g_rolling_7d,omitempty"`
-	QualityScore            float32          `json:"quality_score"`
-	RedMeatGRolling7d       *float32         `json:"red_meat_g_rolling_7d,omitempty"`
+	LegumeG                 *float64         `json:"legume_g,omitempty"`
+	LegumeServingsRolling7d *float64         `json:"legume_servings_rolling_7d,omitempty"`
+	ProcessedMeatGRolling7d *float64         `json:"processed_meat_g_rolling_7d,omitempty"`
+	QualityScore            float64          `json:"quality_score"`
+	RedMeatGRolling7d       *float64         `json:"red_meat_g_rolling_7d,omitempty"`
 	RuleEvaluations         []RuleEvaluation `json:"rule_evaluations"`
-	SaturatedFatG           *float32         `json:"saturated_fat_g,omitempty"`
-	SodiumMg                *float32         `json:"sodium_mg,omitempty"`
-	UpfKcalShareEst         *float32         `json:"upf_kcal_share_est,omitempty"`
+	SaturatedFatG           *float64         `json:"saturated_fat_g,omitempty"`
+	SodiumMg                *float64         `json:"sodium_mg,omitempty"`
+	UpfKcalShareEst         *float64         `json:"upf_kcal_share_est,omitempty"`
 	WarningsCount           int              `json:"warnings_count"`
-	WholeGrainGEquiv        *float32         `json:"whole_grain_g_equiv,omitempty"`
-	WholeGrainRatio         *float32         `json:"whole_grain_ratio,omitempty"`
+	WholeGrainGEquiv        *float64         `json:"whole_grain_g_equiv,omitempty"`
+	WholeGrainRatio         *float64         `json:"whole_grain_ratio,omitempty"`
 }
 
 // Plan defines model for Plan.
@@ -1066,14 +1122,14 @@ type PlanGenerateInput struct {
 
 // PlanRecipe defines model for PlanRecipe.
 type PlanRecipe struct {
-	ExpectedOutputG *float32   `json:"expected_output_g,omitempty"`
+	ExpectedOutputG *float64   `json:"expected_output_g,omitempty"`
 	Fills           []SlotFill `json:"fills"`
 	Id              int64      `json:"id"`
 	Label           *string    `json:"label,omitempty"`
 
 	// ReserveFactor Не распределённая по meals доля партии
-	ReserveFactor *float32 `json:"reserve_factor,omitempty"`
-	ScaleFactor   float32  `json:"scale_factor"`
+	ReserveFactor *float64 `json:"reserve_factor,omitempty"`
+	ScaleFactor   float64  `json:"scale_factor"`
 	TemplateId    int64    `json:"template_id"`
 }
 
@@ -1082,7 +1138,7 @@ type PlanSummary struct {
 	Days                 int                `json:"days"`
 	Id                   int64              `json:"id"`
 	Label                *string            `json:"label,omitempty"`
-	QualityScore         *float32           `json:"quality_score,omitempty"`
+	QualityScore         *float64           `json:"quality_score,omitempty"`
 	QualityWarningsCount int                `json:"quality_warnings_count"`
 	ShoppingListStale    bool               `json:"shopping_list_stale"`
 	StartDate            openapi_types.Date `json:"start_date"`
@@ -1103,7 +1159,7 @@ type PrepDependency struct {
 type Product struct {
 	Allergens   *[]string `json:"allergens,omitempty"`
 	Brand       string    `json:"brand"`
-	CarbPer100g float32   `json:"carb_per_100g"`
+	CarbPer100g float64   `json:"carb_per_100g"`
 
 	// Classification Пищевая классификация для food-based правил (отдельно от role_kind). Optional NULL означает unknown; explicit false/other означает известное значение.
 	Classification *FoodClassification `json:"classification,omitempty"`
@@ -1111,15 +1167,15 @@ type Product struct {
 	// DataQuality Происхождение и полнота нутриент-данных (unknown ≠ 0)
 	DataQuality *NutritionDataQuality `json:"data_quality,omitempty"`
 	DefaultUnit *string               `json:"default_unit,omitempty"`
-	FatPer100g  float32               `json:"fat_per_100g"`
+	FatPer100g  float64               `json:"fat_per_100g"`
 	Id          int64                 `json:"id"`
-	KcalPer100g float32               `json:"kcal_per_100g"`
+	KcalPer100g float64               `json:"kcal_per_100g"`
 	Name        string                `json:"name"`
 
 	// Nutrition Hot-path нутриенты на 100 г для quality-слоя. Все nullable: NULL = НЕИЗВЕСТНО (не 0). Натрий и соль взаимоконвертируются (натрий_мг = соль_г/2.54*1000).
 	Nutrition      *NutritionFacts `json:"nutrition,omitempty"`
-	PricePer100g   *float32        `json:"price_per_100g,omitempty"`
-	ProteinPer100g float32         `json:"protein_per_100g"`
+	PricePer100g   *float64        `json:"price_per_100g,omitempty"`
+	ProteinPer100g float64         `json:"protein_per_100g"`
 	Purchasable    *bool           `json:"purchasable,omitempty"`
 	Roles          *[]string       `json:"roles,omitempty"`
 }
@@ -1128,7 +1184,7 @@ type Product struct {
 type ProductInput struct {
 	Allergens   *[]string `json:"allergens,omitempty"`
 	Brand       string    `json:"brand"`
-	CarbPer100g float32   `json:"carb_per_100g"`
+	CarbPer100g float64   `json:"carb_per_100g"`
 
 	// Classification Пищевая классификация для food-based правил (отдельно от role_kind). Optional NULL означает unknown; explicit false/other означает известное значение.
 	Classification *FoodClassification `json:"classification,omitempty"`
@@ -1136,16 +1192,27 @@ type ProductInput struct {
 	// DataQuality Происхождение и полнота нутриент-данных (unknown ≠ 0)
 	DataQuality *NutritionDataQuality `json:"data_quality,omitempty"`
 	DefaultUnit *string               `json:"default_unit,omitempty"`
-	FatPer100g  float32               `json:"fat_per_100g"`
-	KcalPer100g float32               `json:"kcal_per_100g"`
+	FatPer100g  float64               `json:"fat_per_100g"`
+	KcalPer100g float64               `json:"kcal_per_100g"`
 	Name        string                `json:"name"`
 
 	// Nutrition Hot-path нутриенты на 100 г для quality-слоя. Все nullable: NULL = НЕИЗВЕСТНО (не 0). Натрий и соль взаимоконвертируются (натрий_мг = соль_г/2.54*1000).
 	Nutrition      *NutritionFacts `json:"nutrition,omitempty"`
-	PricePer100g   *float32        `json:"price_per_100g,omitempty"`
-	ProteinPer100g float32         `json:"protein_per_100g"`
+	PricePer100g   *float64        `json:"price_per_100g,omitempty"`
+	ProteinPer100g float64         `json:"protein_per_100g"`
 	Purchasable    *bool           `json:"purchasable,omitempty"`
 	Roles          []string        `json:"roles"`
+}
+
+// QualityDiff Изменение дневного качества после фиксации количества
+type QualityDiff struct {
+	AddedSugarsG  *float64          `json:"added_sugars_g,omitempty"`
+	ChangedRules  *[]RuleEvaluation `json:"changed_rules,omitempty"`
+	CoverageScore *float64          `json:"coverage_score,omitempty"`
+	FiberG        *float64          `json:"fiber_g,omitempty"`
+	FruitVegG     *float64          `json:"fruit_veg_g,omitempty"`
+	SaturatedFatG *float64          `json:"saturated_fat_g,omitempty"`
+	SodiumMg      *float64          `json:"sodium_mg,omitempty"`
 }
 
 // QualityProfile Набор quality-правил едока (read-only в MVP). Сами правила — в конфиге. Персональные per-eater override'ы (eater_rule_override) — v2/internal, в публичном API MVP не выставляются.
@@ -1158,41 +1225,54 @@ type QualityProfile struct {
 type QuantityAdjustmentInput struct {
 	// Confirm Только для apply: должно быть true
 	Confirm          *bool   `json:"confirm,omitempty"`
-	PlannedInputQtyG float32 `json:"planned_input_qty_g"`
+	PlannedInputQtyG float64 `json:"planned_input_qty_g"`
 	SlotFillId       int64   `json:"slot_fill_id"`
 }
 
 // QuantityAdjustmentPreview Что изменится, если зафиксировать введённое количество
 type QuantityAdjustmentPreview struct {
-	AffectedMeals []int64 `json:"affected_meals"`
-	MacroDiff     []struct {
-		Date    *openapi_types.Date `json:"date,omitempty"`
-		Delta   Macros              `json:"delta"`
-		EaterId int64               `json:"eater_id"`
-	} `json:"macro_diff"`
-	PortionChanges []struct {
-		After   float32             `json:"after"`
-		Before  float32             `json:"before"`
-		Date    *openapi_types.Date `json:"date,omitempty"`
-		EaterId int64               `json:"eater_id"`
-		MealId  int64               `json:"meal_id"`
-	} `json:"portion_changes"`
-	QualityDiff *struct {
-		AddedSugarsG  *float32          `json:"added_sugars_g,omitempty"`
-		ChangedRules  *[]RuleEvaluation `json:"changed_rules,omitempty"`
-		CoverageScore *float32          `json:"coverage_score,omitempty"`
-		FiberG        *float32          `json:"fiber_g,omitempty"`
-		FruitVegG     *float32          `json:"fruit_veg_g,omitempty"`
-		SaturatedFatG *float32          `json:"saturated_fat_g,omitempty"`
-		SodiumMg      *float32          `json:"sodium_mg,omitempty"`
-	} `json:"quality_diff,omitempty"`
-	ShoppingDiff []struct {
-		AfterG    float32 `json:"after_g"`
-		BeforeG   float32 `json:"before_g"`
-		ProductId int64   `json:"product_id"`
-	} `json:"shopping_diff"`
-	Summary  string   `json:"summary"`
-	Warnings []string `json:"warnings"`
+	AffectedMeals  []int64                 `json:"affected_meals"`
+	MacroDiff      []QuantityMacroDelta    `json:"macro_diff"`
+	PortionChanges []QuantityPortionChange `json:"portion_changes"`
+
+	// QualityDiff Изменение дневного качества после фиксации количества
+	QualityDiff  *QualityDiff             `json:"quality_diff,omitempty"`
+	ShoppingDiff []QuantityShoppingChange `json:"shopping_diff"`
+	Summary      string                   `json:"summary"`
+	Warnings     []string                 `json:"warnings"`
+}
+
+// QuantityMacroDelta Изменение БЖУ дня одного едока после фиксации количества
+type QuantityMacroDelta struct {
+	Date    *openapi_types.Date `json:"date,omitempty"`
+	Delta   Macros              `json:"delta"`
+	EaterId int64               `json:"eater_id"`
+}
+
+// QuantityPortionChange Как меняется доля партии в одном приёме пищи
+type QuantityPortionChange struct {
+	After   float64             `json:"after"`
+	Before  float64             `json:"before"`
+	Date    *openapi_types.Date `json:"date,omitempty"`
+	EaterId int64               `json:"eater_id"`
+	MealId  int64               `json:"meal_id"`
+}
+
+// QuantityShoppingChange Как меняется количество одного продукта в списке покупок
+type QuantityShoppingChange struct {
+	AfterG    float64 `json:"after_g"`
+	BeforeG   float64 `json:"before_g"`
+	ProductId int64   `json:"product_id"`
+}
+
+// RecipeSlotInput Слот шаблона в запросе на создание рецепта
+type RecipeSlotInput struct {
+	Label             string   `json:"label"`
+	Optional          *bool    `json:"optional,omitempty"`
+	Position          int      `json:"position"`
+	PreparedQtyFactor *float64 `json:"prepared_qty_factor,omitempty"`
+	QtyG              float64  `json:"qty_g"`
+	RoleTag           string   `json:"role_tag"`
 }
 
 // RecipeStatus defines model for RecipeStatus.
@@ -1211,7 +1291,7 @@ type RecipeTemplate struct {
 	Equipment     *[]string     `json:"equipment,omitempty"`
 
 	// ExpectedOutputG Ожидаемый выход базовой партии; NULL означает неизвестный yield
-	ExpectedOutputG *float32             `json:"expected_output_g,omitempty"`
+	ExpectedOutputG *float64             `json:"expected_output_g,omitempty"`
 	Id              int64                `json:"id"`
 	Instructions    *string              `json:"instructions,omitempty"`
 	Name            string               `json:"name"`
@@ -1220,7 +1300,7 @@ type RecipeTemplate struct {
 	Status          RecipeStatus         `json:"status"`
 	Storage         StorageProfile       `json:"storage"`
 	StorageNotes    *string              `json:"storage_notes,omitempty"`
-	Weight          *float32             `json:"weight,omitempty"`
+	Weight          *float64             `json:"weight,omitempty"`
 }
 
 // RecipeTemplateSource defines model for RecipeTemplate.Source.
@@ -1232,23 +1312,16 @@ type RecipeTemplateInput struct {
 	BaseServings     int        `json:"base_servings"`
 
 	// ComponentKind Роль независимо приготовленной партии при сборке приёма пищи
-	ComponentKind   ComponentKind `json:"component_kind"`
-	CookingMethod   *string       `json:"cooking_method,omitempty"`
-	Cuisine         *string       `json:"cuisine,omitempty"`
-	Equipment       *[]string     `json:"equipment,omitempty"`
-	ExpectedOutputG *float32      `json:"expected_output_g,omitempty"`
-	Instructions    *string       `json:"instructions,omitempty"`
-	Name            string        `json:"name"`
-	Slots           []struct {
-		Label             string   `json:"label"`
-		Optional          *bool    `json:"optional,omitempty"`
-		Position          int      `json:"position"`
-		PreparedQtyFactor *float32 `json:"prepared_qty_factor,omitempty"`
-		QtyG              float32  `json:"qty_g"`
-		RoleTag           string   `json:"role_tag"`
-	} `json:"slots"`
-	Storage      StorageProfile `json:"storage"`
-	StorageNotes *string        `json:"storage_notes,omitempty"`
+	ComponentKind   ComponentKind     `json:"component_kind"`
+	CookingMethod   *string           `json:"cooking_method,omitempty"`
+	Cuisine         *string           `json:"cuisine,omitempty"`
+	Equipment       *[]string         `json:"equipment,omitempty"`
+	ExpectedOutputG *float64          `json:"expected_output_g,omitempty"`
+	Instructions    *string           `json:"instructions,omitempty"`
+	Name            string            `json:"name"`
+	Slots           []RecipeSlotInput `json:"slots"`
+	Storage         StorageProfile    `json:"storage"`
+	StorageNotes    *string           `json:"storage_notes,omitempty"`
 }
 
 // RoleKind defines model for RoleKind.
@@ -1265,11 +1338,11 @@ type RoleTag struct {
 
 // RuleEvaluation Результат одного quality-правила (explainability, FR-3/FR-8), адресованный конкретному едоку и периоду оценки.
 type RuleEvaluation struct {
-	ActualValue *float32            `json:"actual_value,omitempty"`
+	ActualValue *float64            `json:"actual_value,omitempty"`
 	Basis       RuleEvaluationBasis `json:"basis"`
 
 	// CoverageScore доверие к оценке; низкий coverage → status=unknown (unknown ≠ pass)
-	CoverageScore float32 `json:"coverage_score"`
+	CoverageScore float64 `json:"coverage_score"`
 
 	// Date для entity_type=day/meal
 	Date        *openapi_types.Date      `json:"date,omitempty"`
@@ -1278,7 +1351,7 @@ type RuleEvaluation struct {
 	Message     *string                  `json:"message,omitempty"`
 	RuleCode    string                   `json:"rule_code"`
 	Status      RuleEvaluationStatus     `json:"status"`
-	TargetValue *float32                 `json:"target_value,omitempty"`
+	TargetValue *float64                 `json:"target_value,omitempty"`
 	Unit        *string                  `json:"unit,omitempty"`
 	WindowEnd   *openapi_types.Date      `json:"window_end,omitempty"`
 	WindowStart *openapi_types.Date      `json:"window_start,omitempty"`
@@ -1299,17 +1372,22 @@ type Sex string
 // ShoppingItem defines model for ShoppingItem.
 type ShoppingItem struct {
 	Checked     bool     `json:"checked"`
-	EstCost     *float32 `json:"est_cost,omitempty"`
+	EstCost     *float64 `json:"est_cost,omitempty"`
 	Id          int64    `json:"id"`
 	ProductId   int64    `json:"product_id"`
 	ProductName *string  `json:"product_name,omitempty"`
-	TotalQtyG   float32  `json:"total_qty_g"`
+	TotalQtyG   float64  `json:"total_qty_g"`
 	Unit        string   `json:"unit"`
+}
+
+// ShoppingItemCheck Отметка «куплено» для одной позиции списка
+type ShoppingItemCheck struct {
+	Checked bool `json:"checked"`
 }
 
 // ShoppingList defines model for ShoppingList.
 type ShoppingList struct {
-	EstTotal *float32       `json:"est_total,omitempty"`
+	EstTotal *float64       `json:"est_total,omitempty"`
 	Id       int64          `json:"id"`
 	Items    []ShoppingItem `json:"items"`
 	PlanId   int64          `json:"plan_id"`
@@ -1323,8 +1401,8 @@ type Slot struct {
 	Position int    `json:"position"`
 
 	// PreparedQtyFactor optional input→prepared factor для food-group правил; NULL снижает coverage
-	PreparedQtyFactor *float32 `json:"prepared_qty_factor,omitempty"`
-	QtyG              float32  `json:"qty_g"`
+	PreparedQtyFactor *float64 `json:"prepared_qty_factor,omitempty"`
+	QtyG              float64  `json:"qty_g"`
 
 	// RoleTag код роли, который ловит слот
 	RoleTag string `json:"role_tag"`
@@ -1334,7 +1412,7 @@ type Slot struct {
 type SlotFill struct {
 	Id               *int64  `json:"id,omitempty"`
 	Macros           *Macros `json:"macros,omitempty"`
-	PlannedInputQtyG float32 `json:"planned_input_qty_g"`
+	PlannedInputQtyG float64 `json:"planned_input_qty_g"`
 	ProductId        int64   `json:"product_id"`
 	SlotId           int64   `json:"slot_id"`
 }
@@ -1344,16 +1422,13 @@ type SolverDiagnostic struct {
 	Constraint         SolverDiagnosticConstraint `json:"constraint"`
 	Date               *openapi_types.Date        `json:"date,omitempty"`
 	EaterId            *int64                     `json:"eater_id,omitempty"`
-	ExcludedCandidates *[]struct {
-		Reason           string `json:"reason"`
-		RecipeTemplateId int64  `json:"recipe_template_id"`
-	} `json:"excluded_candidates,omitempty"`
-	MealType     *MealType `json:"meal_type,omitempty"`
-	ReachableMax *float32  `json:"reachable_max,omitempty"`
-	ReachableMin *float32  `json:"reachable_min,omitempty"`
-	Reason       string    `json:"reason"`
-	TargetMax    *float32  `json:"target_max,omitempty"`
-	TargetMin    *float32  `json:"target_min,omitempty"`
+	ExcludedCandidates *[]SolverExcludedCandidate `json:"excluded_candidates,omitempty"`
+	MealType           *MealType                  `json:"meal_type,omitempty"`
+	ReachableMax       *float64                   `json:"reachable_max,omitempty"`
+	ReachableMin       *float64                   `json:"reachable_min,omitempty"`
+	Reason             string                     `json:"reason"`
+	TargetMax          *float64                   `json:"target_max,omitempty"`
+	TargetMin          *float64                   `json:"target_min,omitempty"`
 }
 
 // SolverDiagnosticConstraint defines model for SolverDiagnostic.Constraint.
@@ -1376,8 +1451,37 @@ type SolverErrorCode string
 // SolverErrorError defines model for SolverError.Error.
 type SolverErrorError string
 
+// SolverExcludedCandidate Шаблон, отсеянный до поиска, и причина отсева
+type SolverExcludedCandidate struct {
+	Reason           string `json:"reason"`
+	RecipeTemplateId int64  `json:"recipe_template_id"`
+}
+
 // StorageProfile defines model for StorageProfile.
 type StorageProfile string
+
+// SwapApplyInput Своп с явным подтверждением владельца.
+type SwapApplyInput struct {
+	// Confirm Должно быть true; иначе 409
+	Confirm bool `json:"confirm"`
+
+	// Level fill = смена продукта в слоте; recipe = смена шаблона; rotation = весь план
+	Level         SwapApplyInputLevel `json:"level"`
+	NewProductId  *int64              `json:"new_product_id,omitempty"`
+	NewTemplateId *int64              `json:"new_template_id,omitempty"`
+	PlanRecipeId  *int64              `json:"plan_recipe_id,omitempty"`
+	SlotFillId    *int64              `json:"slot_fill_id,omitempty"`
+}
+
+// SwapApplyInputLevel fill = смена продукта в слоте; recipe = смена шаблона; rotation = весь план
+type SwapApplyInputLevel string
+
+// SwapEaterMacroDelta Изменение БЖУ одного дня одного едока (новое минус старое)
+type SwapEaterMacroDelta struct {
+	Date    *openapi_types.Date `json:"date,omitempty"`
+	Delta   *Macros             `json:"delta,omitempty"`
+	EaterId *int64              `json:"eater_id,omitempty"`
+}
 
 // SwapInput Своп одного из четырёх уровней. Для fill-уровня указывается slot_fill_id + новый product_id; для уровня блюда — plan_recipe_id + новый template_id.
 type SwapInput struct {
@@ -1392,53 +1496,66 @@ type SwapInput struct {
 // SwapInputLevel fill = смена продукта в слоте; recipe = смена шаблона; rotation = весь план
 type SwapInputLevel string
 
+// SwapInvalidatedRecipe Блюдо, которое станет невалидным по prep-графу
+type SwapInvalidatedRecipe struct {
+	PlanRecipeId *int64  `json:"plan_recipe_id,omitempty"`
+	Reason       *string `json:"reason,omitempty"`
+}
+
+// SwapMacroDiff изменение БЖУ дня (новое минус старое)
+type SwapMacroDiff struct {
+	ByEater *[]SwapEaterMacroDelta `json:"by_eater,omitempty"`
+}
+
 // SwapPreview Blast radius до подтверждения (FR-4)
 type SwapPreview struct {
 	AffectedMeals *[]int64 `json:"affected_meals,omitempty"`
 
 	// InvalidatedRecipes блюда, которые станут невалидны по prep-графу
-	InvalidatedRecipes *[]struct {
-		PlanRecipeId *int64  `json:"plan_recipe_id,omitempty"`
-		Reason       *string `json:"reason,omitempty"`
-	} `json:"invalidated_recipes,omitempty"`
-	Level SwapPreviewLevel `json:"level"`
+	InvalidatedRecipes *[]SwapInvalidatedRecipe `json:"invalidated_recipes,omitempty"`
+	Level              SwapPreviewLevel         `json:"level"`
 
 	// MacroDiff изменение БЖУ дня (новое минус старое)
-	MacroDiff *struct {
-		ByEater *[]struct {
-			Date    *openapi_types.Date `json:"date,omitempty"`
-			Delta   *Macros             `json:"delta,omitempty"`
-			EaterId *int64              `json:"eater_id,omitempty"`
-		} `json:"by_eater,omitempty"`
-	} `json:"macro_diff,omitempty"`
+	MacroDiff *SwapMacroDiff `json:"macro_diff,omitempty"`
 
 	// QualityDiff Изменение качества (FR-4): нутриенты, food-group объёмы, coverage
-	QualityDiff *struct {
-		AddedSugarsG            *float32          `json:"added_sugars_g,omitempty"`
-		ChangedRules            *[]RuleEvaluation `json:"changed_rules,omitempty"`
-		CoverageScore           *float32          `json:"coverage_score,omitempty"`
-		FiberG                  *float32          `json:"fiber_g,omitempty"`
-		FruitVegG               *float32          `json:"fruit_veg_g,omitempty"`
-		ProcessedMeatGRolling7d *float32          `json:"processed_meat_g_rolling_7d,omitempty"`
-		RedMeatGRolling7d       *float32          `json:"red_meat_g_rolling_7d,omitempty"`
-		SaturatedFatG           *float32          `json:"saturated_fat_g,omitempty"`
-		SodiumMg                *float32          `json:"sodium_mg,omitempty"`
-	} `json:"quality_diff,omitempty"`
-	ShoppingDelta *struct {
-		Added   *[]int64 `json:"added,omitempty"`
-		Removed *[]int64 `json:"removed,omitempty"`
-	} `json:"shopping_delta,omitempty"`
-	Summary string `json:"summary"`
+	QualityDiff *SwapQualityDiff `json:"quality_diff,omitempty"`
+
+	// ShoppingDelta Продукты, появившиеся и исчезнувшие из списка покупок
+	ShoppingDelta *SwapShoppingDelta `json:"shopping_delta,omitempty"`
+	Summary       string             `json:"summary"`
 }
 
 // SwapPreviewLevel defines model for SwapPreview.Level.
 type SwapPreviewLevel string
 
+// SwapQualityDiff Изменение качества (FR-4): нутриенты, food-group объёмы, coverage
+type SwapQualityDiff struct {
+	AddedSugarsG            *float64          `json:"added_sugars_g,omitempty"`
+	ChangedRules            *[]RuleEvaluation `json:"changed_rules,omitempty"`
+	CoverageScore           *float64          `json:"coverage_score,omitempty"`
+	FiberG                  *float64          `json:"fiber_g,omitempty"`
+	FruitVegG               *float64          `json:"fruit_veg_g,omitempty"`
+	ProcessedMeatGRolling7d *float64          `json:"processed_meat_g_rolling_7d,omitempty"`
+	RedMeatGRolling7d       *float64          `json:"red_meat_g_rolling_7d,omitempty"`
+	SaturatedFatG           *float64          `json:"saturated_fat_g,omitempty"`
+	SodiumMg                *float64          `json:"sodium_mg,omitempty"`
+}
+
+// SwapShoppingDelta Продукты, появившиеся и исчезнувшие из списка покупок
+type SwapShoppingDelta struct {
+	Added   *[]int64 `json:"added,omitempty"`
+	Removed *[]int64 `json:"removed,omitempty"`
+}
+
 // TopRecipe defines model for TopRecipe.
 type TopRecipe struct {
 	CookedCount int    `json:"cooked_count"`
 	Name        string `json:"name"`
-	RecipeId    int64  `json:"recipe_id"`
+
+	// PlanUsage сколько раз планы обращались к шаблону, даже если он не был приготовлен
+	PlanUsage int   `json:"plan_usage"`
+	RecipeId  int64 `json:"recipe_id"`
 }
 
 // EaterId defines model for EaterId.
@@ -1458,122 +1575,133 @@ type RecipeId = int64
 // const string: with thousands of chunks the chained `+` fold is several
 // times slower for the Go compiler than parsing a slice literal.
 var swaggerSpec = []string{
-	"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",
+	"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",
+	"AgAA//8=",
 }
 
 // decodeSpec returns the embedded OpenAPI spec as raw JSON bytes,

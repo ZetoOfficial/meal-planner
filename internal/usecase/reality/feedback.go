@@ -3,9 +3,9 @@ package reality
 import (
 	"context"
 
+	"github.com/ZetoOfficial/meal-planner/internal/apperr"
 	feedbackdom "github.com/ZetoOfficial/meal-planner/internal/domain/feedback"
 	recipedom "github.com/ZetoOfficial/meal-planner/internal/domain/recipe"
-	apperr "github.com/ZetoOfficial/meal-planner/internal/errors"
 )
 
 // CreateFeedback stores the owner's verdict and nudges the rotation weight of a

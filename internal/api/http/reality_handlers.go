@@ -20,7 +20,7 @@ func (s *server) ListPlanMeals(ctx context.Context, request api.ListPlanMealsReq
 	if err != nil {
 		return nil, err
 	}
-	return api.ListPlanMeals200JSONResponse(mealsResponse(planningdom.PlanID(request.PlanId), meals)), nil
+	return api.ListPlanMeals200JSONResponse(mealsResponse(meals)), nil
 }
 
 func (s *server) LogMeal(ctx context.Context, request api.LogMealRequestObject) (api.LogMealResponseObject, error) {
@@ -28,7 +28,7 @@ func (s *server) LogMeal(ctx context.Context, request api.LogMealRequestObject) 
 	if err != nil {
 		return nil, err
 	}
-	return api.LogMeal200JSONResponse(mealResponseWithPlan(0, meal)), nil
+	return api.LogMeal200JSONResponse(mealResponse(meal)), nil
 }
 
 func (s *server) CreateFeedback(ctx context.Context, request api.CreateFeedbackRequestObject) (api.CreateFeedbackResponseObject, error) {

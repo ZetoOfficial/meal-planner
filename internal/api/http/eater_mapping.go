@@ -55,11 +55,11 @@ func fixedMealCommand(input model.FixedMealInput) usecaseeater.CreateFixedMealCo
 
 func fixedMealQualityCommand(input model.FixedMealQuality) eaterdom.FixedMealQuality {
 	return eaterdom.FixedMealQuality{
-		SaturatedFatG: float64Pointer(input.SaturatedFatG), TransFatG: float64Pointer(input.TransFatG), FiberG: float64Pointer(input.FiberG),
-		SodiumMg: float64Pointer(input.SodiumMg), AddedSugarsG: float64Pointer(input.AddedSugarsG), FreeSugarsG: float64Pointer(input.FreeSugarsG),
-		ProcessedMeatG: float64Pointer(input.ProcessedMeatG), RedMeatG: float64Pointer(input.RedMeatG),
-		GrainGEquiv: float64Pointer(input.GrainGEquiv), WholeGrainGEquiv: float64Pointer(input.WholeGrainGEquiv),
-		LegumeG: float64Pointer(input.LegumeG), FruitVegG: float64Pointer(input.FruitVegG), UPFKcal: float64Pointer(input.UpfKcal),
+		SaturatedFatG: input.SaturatedFatG, TransFatG: input.TransFatG, FiberG: input.FiberG,
+		SodiumMg: input.SodiumMg, AddedSugarsG: input.AddedSugarsG, FreeSugarsG: input.FreeSugarsG,
+		ProcessedMeatG: input.ProcessedMeatG, RedMeatG: input.RedMeatG,
+		GrainGEquiv: input.GrainGEquiv, WholeGrainGEquiv: input.WholeGrainGEquiv,
+		LegumeG: input.LegumeG, FruitVegG: input.FruitVegG, UPFKcal: input.UpfKcal,
 	}
 }
 
@@ -101,8 +101,8 @@ func eatersResponse(eaters []eaterdom.Eater) []model.Eater {
 func macroGoalResponse(value eaterdom.MacroGoal) model.MacroGoal {
 	return model.MacroGoal{
 		Id: int64(value.ID), EffectiveFrom: openapitypes.Date{Time: value.EffectiveFrom}, Note: value.Note,
-		ProteinMinG: float32(value.Range.ProteinMinG), ProteinMaxG: float32(value.Range.ProteinMaxG), FatMinG: float32(value.Range.FatMinG), FatMaxG: float32(value.Range.FatMaxG),
-		CarbMinG: float32(value.Range.CarbMinG), CarbMaxG: float32(value.Range.CarbMaxG), KcalMin: value.Range.KcalMin, KcalMax: value.Range.KcalMax,
+		ProteinMinG: value.Range.ProteinMinG, ProteinMaxG: value.Range.ProteinMaxG, FatMinG: value.Range.FatMinG, FatMaxG: value.Range.FatMaxG,
+		CarbMinG: value.Range.CarbMinG, CarbMaxG: value.Range.CarbMaxG, KcalMin: value.Range.KcalMin, KcalMax: value.Range.KcalMax,
 	}
 }
 
@@ -118,7 +118,7 @@ func fixedMealResponse(value eaterdom.FixedMeal) model.FixedMeal {
 	active := value.Active
 	return model.FixedMeal{
 		Id: int64(value.ID), EaterId: int64(value.EaterID), MealType: model.MealType(value.MealType), Label: value.Label,
-		Macros:  model.Macros{ProteinG: float32(value.Macros.ProteinG), FatG: float32(value.Macros.FatG), CarbG: float32(value.Macros.CarbG), Kcal: value.Macros.Kcal},
+		Macros:  model.Macros{ProteinG: value.Macros.ProteinG, FatG: value.Macros.FatG, CarbG: value.Macros.CarbG, Kcal: value.Macros.Kcal},
 		Quality: fixedMealQualityResponse(value.Quality), Active: &active,
 	}
 }
@@ -133,10 +133,10 @@ func fixedMealsResponse(meals []eaterdom.FixedMeal) []model.FixedMeal {
 
 func fixedMealQualityResponse(value eaterdom.FixedMealQuality) *model.FixedMealQuality {
 	return &model.FixedMealQuality{
-		SaturatedFatG: float32Pointer(value.SaturatedFatG), TransFatG: float32Pointer(value.TransFatG), FiberG: float32Pointer(value.FiberG), SodiumMg: float32Pointer(value.SodiumMg),
-		AddedSugarsG: float32Pointer(value.AddedSugarsG), FreeSugarsG: float32Pointer(value.FreeSugarsG), ProcessedMeatG: float32Pointer(value.ProcessedMeatG), RedMeatG: float32Pointer(value.RedMeatG),
-		GrainGEquiv: float32Pointer(value.GrainGEquiv), WholeGrainGEquiv: float32Pointer(value.WholeGrainGEquiv),
-		LegumeG: float32Pointer(value.LegumeG), FruitVegG: float32Pointer(value.FruitVegG), UpfKcal: float32Pointer(value.UPFKcal),
+		SaturatedFatG: value.SaturatedFatG, TransFatG: value.TransFatG, FiberG: value.FiberG, SodiumMg: value.SodiumMg,
+		AddedSugarsG: value.AddedSugarsG, FreeSugarsG: value.FreeSugarsG, ProcessedMeatG: value.ProcessedMeatG, RedMeatG: value.RedMeatG,
+		GrainGEquiv: value.GrainGEquiv, WholeGrainGEquiv: value.WholeGrainGEquiv,
+		LegumeG: value.LegumeG, FruitVegG: value.FruitVegG, UpfKcal: value.UPFKcal,
 		IncludeInAnalytics: boolPointer(value.IncludeInAnalytics), IncludeInWarnings: boolPointer(value.IncludeInWarnings),
 	}
 }

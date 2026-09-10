@@ -95,3 +95,15 @@ func DefaultRuleset() Ruleset {
 		CoverageThreshold: defaultCoverageThreshold,
 	}
 }
+
+// IsRollingRule reports whether a verdict belongs to the rolling window rather
+// than to a single day. Rolling and daily verdicts are stored, ranked and
+// rendered separately, so the split has to mean the same thing everywhere.
+func IsRollingRule(code string) bool {
+	switch code {
+	case RuleRedMeat, RuleProcessedMeat, RuleLegumes:
+		return true
+	default:
+		return false
+	}
+}

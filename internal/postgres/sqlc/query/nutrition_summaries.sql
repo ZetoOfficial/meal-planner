@@ -176,3 +176,16 @@ FROM rule_evaluation_result
 WHERE entity_type = sqlc.arg(entity_type)
   AND entity_id = ANY(sqlc.arg(entity_ids)::bigint[])
 ORDER BY entity_id, rule_code;
+
+-- name: ListEaterRuleEvaluationsForPeriod :many
+-- Day verdicts are dated, rolling-window verdicts are keyed by the window they
+-- close, so both kinds are selected by the date the owner asked about.
+SELECT *
+FROM rule_evaluation_result
+WHERE eater_id = sqlc.arg(eater_id)
+  AND basis = sqlc.arg(basis)
+  AND (
+        (entity_type = 'day' AND eval_date BETWEEN sqlc.arg(from_date) AND sqlc.arg(to_date))
+     OR (entity_type = 'rolling_window' AND window_end BETWEEN sqlc.arg(from_date) AND sqlc.arg(to_date))
+  )
+ORDER BY entity_type, COALESCE(eval_date, window_end), rule_code;

@@ -5,16 +5,17 @@ package reality
 import (
 	"context"
 
+	"github.com/ZetoOfficial/meal-planner/internal/apperr"
 	eaterdom "github.com/ZetoOfficial/meal-planner/internal/domain/eater"
 	planningdom "github.com/ZetoOfficial/meal-planner/internal/domain/planning"
-	apperr "github.com/ZetoOfficial/meal-planner/internal/errors"
+	"github.com/ZetoOfficial/meal-planner/internal/usecase/reference"
 )
 
 type Service struct {
 	meals        MealRepository
 	feedback     FeedbackRepository
 	analytics    AnalyticsRepository
-	reference    CatalogueRepository
+	reference    reference.Readers
 	transactions TxRunner
 	clock        Clock
 }
@@ -23,15 +24,21 @@ func NewService(
 	meals MealRepository,
 	feedback FeedbackRepository,
 	analytics AnalyticsRepository,
-	reference CatalogueRepository,
+	products ProductRepository,
+	recipes RecipeRepository,
+	eaters EaterRepository,
 	transactions TxRunner,
 	clock Clock,
 ) *Service {
 	return &Service{
-		meals:        meals,
-		feedback:     feedback,
-		analytics:    analytics,
-		reference:    reference,
+		meals:     meals,
+		feedback:  feedback,
+		analytics: analytics,
+		reference: reference.Readers{
+			Products: products,
+			Recipes:  recipes,
+			Eaters:   eaters,
+		},
 		transactions: transactions,
 		clock:        clock,
 	}
@@ -56,5 +63,20 @@ func (s *Service) LogMeal(
 	if err := log.Validate(); err != nil {
 		return planningdom.Meal{}, apperr.Validation("meal log is not valid", err.Error())
 	}
-	return s.meals.LogMeal(ctx, mealID, log)
+
+	var logged planningdom.Meal
+	err := s.transactions.WithTx(ctx, func(ctx context.Context) error {
+		var err error
+		logged, err = s.meals.LogMeal(ctx, mealID, log)
+		if err != nil {
+			return err
+		}
+		// The log is what changes the actual-basis picture, so the snapshot is
+		// recomputed here and not when analytics are read.
+		return s.refreshActualSummaries(ctx, logged.PlanID)
+	})
+	if err != nil {
+		return planningdom.Meal{}, err
+	}
+	return logged, nil
 }

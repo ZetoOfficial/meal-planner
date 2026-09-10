@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	apperr "github.com/ZetoOfficial/meal-planner/internal/errors"
+	"github.com/ZetoOfficial/meal-planner/internal/apperr"
 )
 
 func TestGenerateReturnsStructuredContentAndLogsTheCall(t *testing.T) {

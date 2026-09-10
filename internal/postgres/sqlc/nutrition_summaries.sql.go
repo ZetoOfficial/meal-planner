@@ -11,6 +11,69 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const listEaterRuleEvaluationsForPeriod = `-- name: ListEaterRuleEvaluationsForPeriod :many
+SELECT id, entity_type, entity_id, eater_id, rule_code, basis, status, actual_value, target_value, unit, eval_date, window_start, window_end, coverage_score, message, evaluated_at
+FROM rule_evaluation_result
+WHERE eater_id = $1
+  AND basis = $2
+  AND (
+        (entity_type = 'day' AND eval_date BETWEEN $3 AND $4)
+     OR (entity_type = 'rolling_window' AND window_end BETWEEN $3 AND $4)
+  )
+ORDER BY entity_type, COALESCE(eval_date, window_end), rule_code
+`
+
+type ListEaterRuleEvaluationsForPeriodParams struct {
+	EaterID  *int64       `json:"eater_id"`
+	Basis    SummaryBasis `json:"basis"`
+	FromDate pgtype.Date  `json:"from_date"`
+	ToDate   pgtype.Date  `json:"to_date"`
+}
+
+// Day verdicts are dated, rolling-window verdicts are keyed by the window they
+// close, so both kinds are selected by the date the owner asked about.
+func (q *Queries) ListEaterRuleEvaluationsForPeriod(ctx context.Context, arg ListEaterRuleEvaluationsForPeriodParams) ([]RuleEvaluationResult, error) {
+	rows, err := q.db.Query(ctx, listEaterRuleEvaluationsForPeriod,
+		arg.EaterID,
+		arg.Basis,
+		arg.FromDate,
+		arg.ToDate,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []RuleEvaluationResult{}
+	for rows.Next() {
+		var i RuleEvaluationResult
+		if err := rows.Scan(
+			&i.ID,
+			&i.EntityType,
+			&i.EntityID,
+			&i.EaterID,
+			&i.RuleCode,
+			&i.Basis,
+			&i.Status,
+			&i.ActualValue,
+			&i.TargetValue,
+			&i.Unit,
+			&i.EvalDate,
+			&i.WindowStart,
+			&i.WindowEnd,
+			&i.CoverageScore,
+			&i.Message,
+			&i.EvaluatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listPlanDaySummaries = `-- name: ListPlanDaySummaries :many
 SELECT id, eater_id, plan_id, summary_date, basis, protein_g, fat_g, carb_g, kcal, saturated_fat_g, trans_fat_g, fiber_g, sodium_mg, added_sugars_g, free_sugars_g, fruit_veg_g, grain_g_equiv, whole_grain_g_equiv, legume_g, red_meat_g, processed_meat_g, upf_kcal_share_est, data_coverage_score, created_at
 FROM day_nutrition_summary

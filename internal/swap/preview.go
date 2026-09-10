@@ -113,7 +113,14 @@ type Input struct {
 	History           map[eaterdom.ID][]nutrition.DaySummary
 }
 
-var errUnknownFill = errors.New("swap targets a slot fill outside the plan")
+// ErrUnknownFill and ErrUnknownProduct are the request-level rejections: the
+// caller named something the plan or the catalogue does not hold. Every other
+// error means the stored plan or the arithmetic is broken, and must not be
+// reported back as the owner's mistake.
+var (
+	ErrUnknownFill    = errors.New("swap targets a slot fill outside the plan")
+	ErrUnknownProduct = errors.New("swap targets a product outside the catalogue")
+)
 
 // Compute produces the blast radius without touching the supplied plan: the
 // swapped plan is a copy, so the caller decides whether to persist it.
@@ -124,7 +131,7 @@ func Compute(input Input, request Request) (Preview, error) {
 	}
 	oldProductID := input.Plan.Recipes[recipeIndex].Fills[fillIndex].ProductID
 	if _, ok := input.Catalogue.Products[request.NewProductID]; !ok {
-		return Preview{}, fmt.Errorf("swap targets unknown product %d", request.NewProductID)
+		return Preview{}, fmt.Errorf("%w: %d", ErrUnknownProduct, request.NewProductID)
 	}
 
 	before, err := evaluatePlan(input, input.Plan)
@@ -159,7 +166,7 @@ func locateFill(plan planningdom.Plan, id planningdom.SlotFillID) (recipeIndex, 
 			}
 		}
 	}
-	return 0, 0, errUnknownFill
+	return 0, 0, ErrUnknownFill
 }
 
 // withSwappedFill deep copies the parts a swap touches so the caller's plan is
@@ -264,21 +271,12 @@ func snapshots(days []dayEvaluation) []DaySnapshot {
 func partitionRules(rules []nutrition.RuleEvaluationResult, rolling bool) []nutrition.RuleEvaluationResult {
 	result := make([]nutrition.RuleEvaluationResult, 0, len(rules))
 	for _, rule := range rules {
-		if isRollingRule(rule.RuleCode) != rolling {
+		if quality.IsRollingRule(rule.RuleCode) != rolling {
 			continue
 		}
 		result = append(result, rule)
 	}
 	return result
-}
-
-func isRollingRule(code string) bool {
-	switch code {
-	case quality.RuleRedMeat, quality.RuleProcessedMeat, quality.RuleLegumes:
-		return true
-	default:
-		return false
-	}
 }
 
 func ruleResults(evaluation quality.Evaluation) []nutrition.RuleEvaluationResult {

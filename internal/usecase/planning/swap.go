@@ -2,14 +2,16 @@ package planning
 
 import (
 	"context"
+	"errors"
 
+	"github.com/ZetoOfficial/meal-planner/internal/apperr"
 	catalogdom "github.com/ZetoOfficial/meal-planner/internal/domain/catalog"
 	eaterdom "github.com/ZetoOfficial/meal-planner/internal/domain/eater"
+	"github.com/ZetoOfficial/meal-planner/internal/domain/nutrition"
 	planningdom "github.com/ZetoOfficial/meal-planner/internal/domain/planning"
-	recipedom "github.com/ZetoOfficial/meal-planner/internal/domain/recipe"
-	apperr "github.com/ZetoOfficial/meal-planner/internal/errors"
 	"github.com/ZetoOfficial/meal-planner/internal/quality"
 	"github.com/ZetoOfficial/meal-planner/internal/swap"
+	"github.com/ZetoOfficial/meal-planner/internal/usecase/reference"
 )
 
 // SwapCommand asks to replace the product of one stored slot fill. Recipe and
@@ -39,7 +41,7 @@ func (s *Service) PreviewSwap(
 		NewProductID: command.NewProductID,
 	})
 	if err != nil {
-		return swap.Preview{}, apperr.Validation("swap cannot be previewed", err.Error())
+		return swap.Preview{}, swapRequestError("swap cannot be previewed", err)
 	}
 	return preview, nil
 }
@@ -68,7 +70,7 @@ func (s *Service) ApplySwap(
 			NewProductID: command.NewProductID,
 		})
 		if err != nil {
-			return apperr.Validation("swap cannot be applied", err.Error())
+			return swapRequestError("swap cannot be applied", err)
 		}
 		if !confirmed {
 			return &UnconfirmedSwapError{Preview: preview}
@@ -92,6 +94,20 @@ func (s *Service) ApplySwap(
 		return PlanResult{}, err
 	}
 	return result, nil
+}
+
+// swapRequestError reports only the rejections that describe a bad request as
+// validation failures. A plan that no longer matches the catalogue is corrupt
+// data: turning it into 422 would blame the owner for a storage problem.
+func swapRequestError(message string, err error) error {
+	switch {
+	case errors.Is(err, swap.ErrUnknownFill),
+		errors.Is(err, swap.ErrUnknownProduct),
+		errors.Is(err, swap.ErrNonPositiveQuantity):
+		return apperr.Validation(message, err.Error())
+	default:
+		return err
+	}
 }
 
 // UnconfirmedSwapError carries the preview the owner still has to accept.
@@ -120,61 +136,34 @@ func swapSnapshots(preview swap.Preview) []planningdom.QualitySnapshot {
 	return snapshots
 }
 
-// swapInput assembles the catalogue a stored plan needs to be re-evaluated.
+// swapInput assembles the catalogue and the rolling-window history a stored
+// plan needs to be re-evaluated the same way it was built.
 func (s *Service) swapInput(ctx context.Context, plan planningdom.Plan) (swap.Input, error) {
-	catalogue, err := s.catalogue(ctx, plan)
+	catalogue, err := reference.LoadCatalogue(ctx, reference.Readers{
+		Products: s.products,
+		Recipes:  s.recipes,
+		Eaters:   s.eaters,
+	}, []planningdom.Plan{plan})
 	if err != nil {
 		return swap.Input{}, err
+	}
+	history := make(map[eaterdom.ID][]nutrition.DaySummary, len(plan.EaterDays))
+	for i := range plan.EaterDays {
+		eaterID := plan.EaterDays[i].EaterID
+		if _, loaded := history[eaterID]; loaded {
+			continue
+		}
+		days, err := s.eaterHistory(ctx, eaterID, plan.StartDate)
+		if err != nil {
+			return swap.Input{}, err
+		}
+		history[eaterID] = days
 	}
 	return swap.Input{
 		Plan:              plan,
 		Catalogue:         catalogue,
 		Ruleset:           quality.DefaultRuleset(),
 		RollingWindowDays: s.options.RollingWindowDays,
+		History:           history,
 	}, nil
-}
-
-func (s *Service) catalogue(ctx context.Context, plan planningdom.Plan) (quality.Catalogue, error) {
-	products, err := s.products.List(ctx, "")
-	if err != nil {
-		return quality.Catalogue{}, err
-	}
-	templates, err := s.recipes.List(ctx, nil)
-	if err != nil {
-		return quality.Catalogue{}, err
-	}
-
-	catalogue := quality.Catalogue{
-		Products:   make(map[catalogdom.ProductID]catalogdom.Product, len(products)),
-		Templates:  make(map[recipedom.ID]recipedom.Template, len(templates)),
-		Eaters:     make(map[eaterdom.ID]eaterdom.Eater),
-		FixedMeals: make(map[eaterdom.FixedMealID]eaterdom.FixedMeal),
-	}
-	for i := range products {
-		catalogue.Products[products[i].ID] = products[i]
-	}
-	for i := range templates {
-		catalogue.Templates[templates[i].ID] = templates[i]
-	}
-
-	for i := range plan.EaterDays {
-		eaterID := plan.EaterDays[i].EaterID
-		if _, loaded := catalogue.Eaters[eaterID]; loaded {
-			continue
-		}
-		eater, err := s.eaters.Get(ctx, eaterID)
-		if err != nil {
-			return quality.Catalogue{}, err
-		}
-		catalogue.Eaters[eaterID] = eater
-
-		fixedMeals, err := s.eaters.ListFixedMeals(ctx, eaterID)
-		if err != nil {
-			return quality.Catalogue{}, err
-		}
-		for j := range fixedMeals {
-			catalogue.FixedMeals[fixedMeals[j].ID] = fixedMeals[j]
-		}
-	}
-	return catalogue, nil
 }

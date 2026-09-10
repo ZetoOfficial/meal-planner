@@ -9,10 +9,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ZetoOfficial/meal-planner/internal/apperr"
 	"github.com/ZetoOfficial/meal-planner/internal/clock"
 	catalogdom "github.com/ZetoOfficial/meal-planner/internal/domain/catalog"
 	eaterdom "github.com/ZetoOfficial/meal-planner/internal/domain/eater"
-	apperr "github.com/ZetoOfficial/meal-planner/internal/errors"
 	postgresdb "github.com/ZetoOfficial/meal-planner/internal/postgres"
 	catalogrepo "github.com/ZetoOfficial/meal-planner/internal/postgres/catalog"
 	eaterrepo "github.com/ZetoOfficial/meal-planner/internal/postgres/eater"

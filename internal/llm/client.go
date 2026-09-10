@@ -14,7 +14,7 @@ import (
 	"strconv"
 	"time"
 
-	apperr "github.com/ZetoOfficial/meal-planner/internal/errors"
+	"github.com/ZetoOfficial/meal-planner/internal/apperr"
 )
 
 const (

@@ -4,6 +4,7 @@ package planning
 
 import (
 	"context"
+	"time"
 
 	catalogdom "github.com/ZetoOfficial/meal-planner/internal/domain/catalog"
 	eaterdom "github.com/ZetoOfficial/meal-planner/internal/domain/eater"
@@ -32,6 +33,12 @@ type PlanRepository interface {
 
 	SaveQualitySnapshots(ctx context.Context, planID planningdom.PlanID, snapshots []planningdom.QualitySnapshot) error
 	ListQualitySnapshots(ctx context.Context, planID planningdom.PlanID, basis nutrition.SummaryBasis) ([]planningdom.QualitySnapshot, error)
+
+	// ListEaterDaySummaries reads the stored days a rolling window still covers
+	// before a plan starts. Weekly rules are projected over that window, so
+	// without these days red meat, processed meat and legumes would be judged
+	// on the plan's own days alone (SPEC §3.2).
+	ListEaterDaySummaries(ctx context.Context, eaterID eaterdom.ID, basis nutrition.SummaryBasis, from, to time.Time) ([]planningdom.QualitySnapshot, error)
 }
 
 // EaterRepository supplies the planning inputs of one eater: profile with

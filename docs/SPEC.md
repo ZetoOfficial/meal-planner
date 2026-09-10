@@ -342,7 +342,7 @@ solver только следующим fairness tie-break. Aggregate coverage п
 - **sqlc** — type-safe queries из SQL (`docs/schema.sql`).
 - **OpenAPI-first** (oapi-codegen) — спека `api/openapi/api/api.yaml` → хендлеры/DTO.
 - **Docker** — контейнеризация: `Dockerfile` для приложения (multi-stage Go build) + `docker-compose.yml` с Postgres для локальной разработки и запуска. Миграции прогоняются в составе compose. Owner-only деплой — один compose-стек.
-- **LLM:** Claude Sonnet для MVP (строгий JSON, длинные системные промпты). Доступ через `internal/llm/client.go` с интерфейсом `LLMClient.Generate(ctx, prompt, schema)` + кэш/retry/timeout 30s (DESIGN §11).
+- **LLM:** Claude Sonnet для MVP (строгий JSON, длинные системные промпты). Доступ через `internal/llm/client.go`: `llm.Client.Generate(ctx, llm.Request) (llm.Response, error)`, где `Request` несёт system, prompt, tool name и JSON-схему, + кэш/retry/timeout 30s (DESIGN §11).
 
 Schema-first + sqlc + OpenAPI задают жёсткие границы для LLM-вайбкодинга: минимум места галлюцинировать сигнатуры.
 

@@ -9,11 +9,11 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/ZetoOfficial/meal-planner/internal/apperr"
 	catalogdom "github.com/ZetoOfficial/meal-planner/internal/domain/catalog"
 	eaterdom "github.com/ZetoOfficial/meal-planner/internal/domain/eater"
 	"github.com/ZetoOfficial/meal-planner/internal/domain/nutrition"
 	planningdom "github.com/ZetoOfficial/meal-planner/internal/domain/planning"
-	apperr "github.com/ZetoOfficial/meal-planner/internal/errors"
 	"github.com/ZetoOfficial/meal-planner/internal/postgres"
 	"github.com/ZetoOfficial/meal-planner/internal/postgres/dberror"
 	"github.com/ZetoOfficial/meal-planner/internal/postgres/pgvalue"
@@ -530,6 +530,11 @@ func (r *Repository) ReplacePlanAllocations(
 		if _, err := query.UpdateMealPlannedMacros(ctx, mealMacroParams(*meal)); err != nil {
 			return planningdom.Plan{}, dberror.Map(err, "meal")
 		}
+		// (meal_id, plan_recipe_id) is the allocation primary key, so the old
+		// rows have to go before the rebalanced ones are written.
+		if err := query.DeleteMealComponentAllocations(ctx, int64(meal.ID)); err != nil {
+			return planningdom.Plan{}, dberror.Map(err, "meal component allocation")
+		}
 		for _, component := range meal.Components {
 			if component.PlanRecipeIndex >= len(plan.Recipes) {
 				return planningdom.Plan{}, apperr.Conflict("allocation points to a plan recipe outside the plan")
@@ -541,6 +546,34 @@ func (r *Repository) ReplacePlanAllocations(
 		}
 	}
 	return r.Get(ctx, planID)
+}
+
+// ListEaterDaySummaries reads the stored day summaries of one eater in a date
+// range, across plans: a rolling window reaches back past the plan being built.
+func (r *Repository) ListEaterDaySummaries(
+	ctx context.Context,
+	eaterID eaterdom.ID,
+	basis nutrition.SummaryBasis,
+	from, to time.Time,
+) ([]planningdom.QualitySnapshot, error) {
+	rows, err := r.store.Queries(ctx).ListEaterDaySummariesForPeriod(ctx, sqlc.ListEaterDaySummariesForPeriodParams{
+		EaterID:  int64(eaterID),
+		Basis:    sqlc.SummaryBasis(basis),
+		FromDate: pgvalue.Date(from),
+		ToDate:   pgvalue.Date(to),
+	})
+	if err != nil {
+		return nil, dberror.Map(err, "day nutrition summary")
+	}
+	summaries := make([]planningdom.QualitySnapshot, 0, len(rows))
+	for i := range rows {
+		summary, err := daySummaryFromRow(rows[i])
+		if err != nil {
+			return nil, err
+		}
+		summaries = append(summaries, summary)
+	}
+	return summaries, nil
 }
 
 // ListPlanMeals returns the meals of a plan, optionally for one eater.
@@ -573,8 +606,8 @@ func (r *Repository) ListEaterMeals(
 ) ([]planningdom.Meal, error) {
 	rows, err := r.store.Queries(ctx).ListMealsForEaterPeriod(ctx, sqlc.ListMealsForEaterPeriodParams{
 		EaterID:  int64(eaterID),
-		FromDate: dateValue(from),
-		ToDate:   dateValue(to),
+		FromDate: pgvalue.Date(from),
+		ToDate:   pgvalue.Date(to),
 	})
 	if err != nil {
 		return nil, dberror.Map(err, "meal")
@@ -618,8 +651,8 @@ func (r *Repository) ListPlansForEaterPeriod(
 ) ([]planningdom.Plan, error) {
 	rows, err := r.store.Queries(ctx).ListPlansForEaterPeriod(ctx, sqlc.ListPlansForEaterPeriodParams{
 		EaterID:  int64(eaterID),
-		FromDate: dateValue(from),
-		ToDate:   dateValue(to),
+		FromDate: pgvalue.Date(from),
+		ToDate:   pgvalue.Date(to),
 	})
 	if err != nil {
 		return nil, dberror.Map(err, "plan")

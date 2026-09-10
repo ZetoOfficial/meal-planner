@@ -3,17 +3,18 @@ package reality
 import (
 	"context"
 	"errors"
+	"math"
 	"testing"
 	"time"
 
 	"go.uber.org/mock/gomock"
 
+	"github.com/ZetoOfficial/meal-planner/internal/apperr"
 	eaterdom "github.com/ZetoOfficial/meal-planner/internal/domain/eater"
 	feedbackdom "github.com/ZetoOfficial/meal-planner/internal/domain/feedback"
 	"github.com/ZetoOfficial/meal-planner/internal/domain/nutrition"
 	planningdom "github.com/ZetoOfficial/meal-planner/internal/domain/planning"
 	recipedom "github.com/ZetoOfficial/meal-planner/internal/domain/recipe"
-	apperr "github.com/ZetoOfficial/meal-planner/internal/errors"
 	"github.com/ZetoOfficial/meal-planner/internal/usecase/reality/mocks"
 )
 
@@ -33,8 +34,16 @@ func TestLogMealStoresEachStatus(t *testing.T) {
 				LogMeal(gomock.Any(), planningdom.MealID(21), gomock.Any()).
 				DoAndReturn(func(_ context.Context, _ planningdom.MealID, l planningdom.MealLog) (planningdom.Meal, error) {
 					stored = l
-					return planningdom.Meal{ID: 21, LogStatus: l.Status, Actual: l.Actual}, nil
+					return planningdom.Meal{ID: 21, PlanID: 7, LogStatus: l.Status, Actual: l.Actual}, nil
 				})
+			deps.meals.EXPECT().
+				Get(gomock.Any(), planningdom.PlanID(7)).
+				Return(planningdom.Plan{ID: 7, StartDate: analyticsDay(0), Days: 1, CookDate: analyticsDay(0)}, nil)
+			deps.products.EXPECT().List(gomock.Any(), "").Return(nil, nil)
+			deps.recipes.EXPECT().List(gomock.Any(), nil).Return(nil, nil)
+			deps.meals.EXPECT().
+				SaveQualitySnapshots(gomock.Any(), planningdom.PlanID(7), gomock.Any()).
+				Return(nil)
 
 			meal, err := deps.service.LogMeal(t.Context(), 21, log)
 			if err != nil {
@@ -47,6 +56,36 @@ func TestLogMealStoresEachStatus(t *testing.T) {
 				t.Fatal("log timestamp is zero, want the service to stamp it")
 			}
 		})
+	}
+}
+
+// Recomputing the actual-basis snapshot belongs to the event that changes the
+// data, not to the read that reports it: a GET must not write.
+func TestLogMealRefreshesTheActualSnapshotAndAnalyticsDoesNot(t *testing.T) {
+	deps := newRealityDeps(t)
+	plan := planningdom.Plan{
+		ID: 7, StartDate: analyticsDay(0), Days: 1, CookDate: analyticsDay(0),
+		EaterDays: []planningdom.EaterDay{{EaterID: 1, Date: analyticsDay(0), MacroGoalID: 1}},
+	}
+	deps.meals.EXPECT().
+		LogMeal(gomock.Any(), planningdom.MealID(21), gomock.Any()).
+		Return(planningdom.Meal{ID: 21, PlanID: 7, EaterID: 1, Date: analyticsDay(0)}, nil)
+	deps.meals.EXPECT().Get(gomock.Any(), planningdom.PlanID(7)).Return(plan, nil)
+	deps.products.EXPECT().List(gomock.Any(), "").Return(nil, nil)
+	deps.recipes.EXPECT().List(gomock.Any(), nil).Return(nil, nil)
+	deps.eaters.EXPECT().Get(gomock.Any(), eaterdom.ID(1)).Return(eaterdom.Eater{ID: 1}, nil)
+	deps.eaters.EXPECT().ListFixedMeals(gomock.Any(), eaterdom.ID(1)).Return(nil, nil)
+	deps.meals.EXPECT().SaveQualitySnapshots(gomock.Any(), planningdom.PlanID(7), gomock.Any()).Return(nil)
+
+	if _, err := deps.service.LogMeal(t.Context(), 21, planningdom.MealLog{
+		Status: planningdom.MealLogStatusEatenAsPlanned, LoggedBy: 1,
+	}); err != nil {
+		t.Fatalf("LogMeal() error = %v", err)
+	}
+
+	// No repository write is expected here: gomock fails the test if one happens.
+	if _, err := deps.service.QualityAnalytics(t.Context(), analyticsPeriod(), nutrition.SummaryBasisActual); err != nil {
+		t.Fatalf("QualityAnalytics() error = %v", err)
 	}
 }
 
@@ -183,6 +222,22 @@ func TestMacroAnalyticsSkipsSkippedMeals(t *testing.T) {
 	}
 }
 
+// Silently dropping a day that does not fit the accumulator would report an
+// average over fewer days than it claims.
+func TestMacroAnalyticsReportsAnArithmeticOverflowInsteadOfSkippingADay(t *testing.T) {
+	deps := newRealityDeps(t)
+	deps.meals.EXPECT().
+		ListEaterMeals(gomock.Any(), eaterdom.ID(1), gomock.Any(), gomock.Any()).
+		Return([]planningdom.Meal{
+			{ID: 1, EaterID: 1, Date: analyticsDay(0), Planned: nutrition.Macros{Kcal: math.MaxInt}},
+			{ID: 2, EaterID: 1, Date: analyticsDay(1), Planned: nutrition.Macros{Kcal: math.MaxInt}},
+		}, nil)
+
+	if _, err := deps.service.MacroAnalytics(t.Context(), analyticsPeriod()); err == nil {
+		t.Fatal("MacroAnalytics() = nil, want the overflow reported")
+	}
+}
+
 func TestMacroAnalyticsHandlesAnEmptyPeriod(t *testing.T) {
 	deps := newRealityDeps(t)
 	deps.meals.EXPECT().
@@ -246,6 +301,39 @@ func TestQualityAnalyticsReportsAveragesAndCoverage(t *testing.T) {
 	}
 }
 
+func TestQualityAnalyticsReportsStoredRuleVerdicts(t *testing.T) {
+	deps := newRealityDeps(t)
+	fullCoverage, err := nutrition.CoverageForInput(true, 1)
+	if err != nil {
+		t.Fatalf("CoverageForInput() error = %v", err)
+	}
+	deps.analytics.days = []nutrition.DaySummary{{Totals: nutrition.DailyTotals{FiberG: 30}, Coverage: fullCoverage}}
+	deps.analytics.evaluations = []RuleEvaluation{
+		{
+			Scope:  RuleScopeDay,
+			Date:   analyticsDay(0),
+			Result: nutrition.RuleEvaluationResult{RuleCode: "fiber", Status: nutrition.StatusPass},
+		},
+		{
+			Scope:       RuleScopeRollingWindow,
+			WindowStart: analyticsDay(0),
+			WindowEnd:   analyticsDay(6),
+			Result:      nutrition.RuleEvaluationResult{RuleCode: "red_meat", Status: nutrition.StatusWarn},
+		},
+	}
+
+	result, err := deps.service.QualityAnalytics(t.Context(), analyticsPeriod(), nutrition.SummaryBasisPlanned)
+	if err != nil {
+		t.Fatalf("QualityAnalytics() error = %v", err)
+	}
+	if len(result.Evaluations) != 2 {
+		t.Fatalf("evaluations = %#v, want the stored day and rolling verdicts", result.Evaluations)
+	}
+	if result.Evaluations[1].Scope != RuleScopeRollingWindow {
+		t.Fatalf("second verdict = %#v, want the rolling window scope preserved", result.Evaluations[1])
+	}
+}
+
 func TestQualityAnalyticsRejectsAnUnknownBasis(t *testing.T) {
 	deps := newRealityDeps(t)
 
@@ -275,7 +363,9 @@ type realityDeps struct {
 	meals     *mocks.MockMealRepository
 	feedback  *mocks.MockFeedbackRepository
 	analytics *fakeAnalytics
-	reference *mocks.MockCatalogueRepository
+	products  *mocks.MockProductRepository
+	recipes   *mocks.MockRecipeRepository
+	eaters    *mocks.MockEaterRepository
 }
 
 func newRealityDeps(t *testing.T) *realityDeps {
@@ -285,7 +375,9 @@ func newRealityDeps(t *testing.T) *realityDeps {
 		meals:     mocks.NewMockMealRepository(controller),
 		feedback:  mocks.NewMockFeedbackRepository(controller),
 		analytics: &fakeAnalytics{},
-		reference: mocks.NewMockCatalogueRepository(controller),
+		products:  mocks.NewMockProductRepository(controller),
+		recipes:   mocks.NewMockRecipeRepository(controller),
+		eaters:    mocks.NewMockEaterRepository(controller),
 	}
 	transactions := mocks.NewMockTxRunner(controller)
 	transactions.EXPECT().
@@ -295,7 +387,10 @@ func newRealityDeps(t *testing.T) *realityDeps {
 	clock := mocks.NewMockClock(controller)
 	clock.EXPECT().Now().Return(analyticsDay(0)).AnyTimes()
 
-	deps.service = NewService(deps.meals, deps.feedback, deps.analytics, deps.reference, transactions, clock)
+	deps.service = NewService(
+		deps.meals, deps.feedback, deps.analytics,
+		deps.products, deps.recipes, deps.eaters, transactions, clock,
+	)
 	return deps
 }
 
@@ -316,11 +411,12 @@ func isValidation(err error) bool {
 // a package-local type, which a generated mock cannot express without importing
 // the package under test.
 type fakeAnalytics struct {
-	days      []nutrition.DaySummary
-	rolling   []nutrition.RollingSummary
-	top       []TopRecipe
-	lastLimit int
-	basis     nutrition.SummaryBasis
+	days        []nutrition.DaySummary
+	rolling     []nutrition.RollingSummary
+	evaluations []RuleEvaluation
+	top         []TopRecipe
+	lastLimit   int
+	basis       nutrition.SummaryBasis
 }
 
 func (a *fakeAnalytics) ListDaySummaries(
@@ -334,6 +430,12 @@ func (a *fakeAnalytics) ListRollingSummaries(
 	_ context.Context, _ eaterdom.ID, _ nutrition.SummaryBasis, _, _ time.Time,
 ) ([]nutrition.RollingSummary, error) {
 	return a.rolling, nil
+}
+
+func (a *fakeAnalytics) ListRuleEvaluations(
+	_ context.Context, _ eaterdom.ID, _ nutrition.SummaryBasis, _, _ time.Time,
+) ([]RuleEvaluation, error) {
+	return a.evaluations, nil
 }
 
 func (a *fakeAnalytics) ListTopRecipes(_ context.Context, limit int) ([]TopRecipe, error) {

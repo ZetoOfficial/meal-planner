@@ -4,13 +4,12 @@ import (
 	"context"
 	"time"
 
-	catalogdom "github.com/ZetoOfficial/meal-planner/internal/domain/catalog"
+	"github.com/ZetoOfficial/meal-planner/internal/apperr"
 	eaterdom "github.com/ZetoOfficial/meal-planner/internal/domain/eater"
 	"github.com/ZetoOfficial/meal-planner/internal/domain/nutrition"
 	planningdom "github.com/ZetoOfficial/meal-planner/internal/domain/planning"
-	recipedom "github.com/ZetoOfficial/meal-planner/internal/domain/recipe"
-	apperr "github.com/ZetoOfficial/meal-planner/internal/errors"
 	"github.com/ZetoOfficial/meal-planner/internal/quality"
+	"github.com/ZetoOfficial/meal-planner/internal/usecase/reference"
 )
 
 const dayDuration = 24 * time.Hour
@@ -83,26 +82,26 @@ func (s *Service) MacroAnalytics(ctx context.Context, period Period) (MacroAnaly
 	if result.Days == 0 {
 		return result, nil
 	}
-	result.AvgPlanned = averageMacros(planned, result.Days)
-	result.AvgActual = averageMacros(actual, result.Days)
+	if result.AvgPlanned, err = averageMacros(planned, result.Days); err != nil {
+		return MacroAnalytics{}, err
+	}
+	if result.AvgActual, err = averageMacros(actual, result.Days); err != nil {
+		return MacroAnalytics{}, err
+	}
 	result.HasActual = len(actual) > 0
 	return result, nil
 }
 
-func averageMacros(byDay map[string]nutrition.Macros, days int) nutrition.Macros {
+func averageMacros(byDay map[string]nutrition.Macros, days int) (nutrition.Macros, error) {
 	total := nutrition.Macros{}
 	for _, macros := range byDay {
 		sum, err := total.Add(macros)
 		if err != nil {
-			continue
+			return nutrition.Macros{}, err
 		}
 		total = sum
 	}
-	average, err := total.Scale(1 / float64(days))
-	if err != nil {
-		return nutrition.Macros{}
-	}
-	return average
+	return total.Scale(1 / float64(days))
 }
 
 // QualityAnalytics reports the stored hot-path averages, rule verdicts and
@@ -114,7 +113,25 @@ type QualityAnalytics struct {
 	Averages    nutrition.DailyTotals
 	Coverage    float64
 	Rolling     nutrition.RollingSummary
-	Evaluations []nutrition.RuleEvaluationResult
+	Evaluations []RuleEvaluation
+}
+
+// RuleScope says whether a stored verdict covers one day or a rolling window.
+// The two are read back together but describe different periods.
+type RuleScope string
+
+const (
+	RuleScopeDay           RuleScope = "day"
+	RuleScopeRollingWindow RuleScope = "rolling_window"
+)
+
+// RuleEvaluation is one persisted verdict together with the period it covers.
+type RuleEvaluation struct {
+	Scope       RuleScope
+	Date        time.Time
+	WindowStart time.Time
+	WindowEnd   time.Time
+	Result      nutrition.RuleEvaluationResult
 }
 
 func (s *Service) QualityAnalytics(
@@ -130,12 +147,6 @@ func (s *Service) QualityAnalytics(
 		return QualityAnalytics{}, apperr.Validation("basis must be planned or actual", "basis")
 	}
 
-	if basis == nutrition.SummaryBasisActual {
-		if err := s.refreshActualSummaries(ctx, period); err != nil {
-			return QualityAnalytics{}, err
-		}
-	}
-
 	days, err := s.analytics.ListDaySummaries(ctx, period.EaterID, basis, period.From, period.To)
 	if err != nil {
 		return QualityAnalytics{}, err
@@ -149,7 +160,13 @@ func (s *Service) QualityAnalytics(
 	if len(days) == 0 {
 		return result, nil
 	}
+	evaluations, err := s.analytics.ListRuleEvaluations(ctx, period.EaterID, basis, period.From, period.To)
+	if err != nil {
+		return QualityAnalytics{}, err
+	}
+
 	result.Averages, result.Coverage = averageTotals(days)
+	result.Evaluations = evaluations
 	if len(rolling) > 0 {
 		result.Rolling = rolling[len(rolling)-1]
 	}
@@ -183,32 +200,23 @@ func averageTotals(days []nutrition.DaySummary) (totals nutrition.DailyTotals, c
 	return totals, coverage / count
 }
 
-// refreshActualSummaries recomputes the actual-basis snapshot from the meal log
-// before reading it, so analytics never serve a stale picture. Snapshots are
-// keyed by plan, eater, date and basis, so recomputing replaces rather than
-// duplicates.
-func (s *Service) refreshActualSummaries(ctx context.Context, period Period) error {
-	plans, err := s.meals.ListPlansForEaterPeriod(ctx, period.EaterID, period.From, period.To)
+// refreshActualSummaries recomputes the actual-basis snapshot of one plan from
+// the meal log. Snapshots are keyed by plan, eater, date and basis, so
+// recomputing replaces rather than duplicates.
+func (s *Service) refreshActualSummaries(ctx context.Context, planID planningdom.PlanID) error {
+	plan, err := s.meals.Get(ctx, planID)
 	if err != nil {
 		return err
 	}
-	catalogue, err := s.catalogue(ctx, plans)
+	catalogue, err := reference.LoadCatalogue(ctx, s.reference, []planningdom.Plan{plan})
 	if err != nil {
 		return err
 	}
-
-	return s.transactions.WithTx(ctx, func(ctx context.Context) error {
-		for i := range plans {
-			snapshots, err := actualSnapshots(plans[i], catalogue, s.ruleset(), s.windowDays())
-			if err != nil {
-				return err
-			}
-			if err := s.meals.SaveQualitySnapshots(ctx, plans[i].ID, snapshots); err != nil {
-				return err
-			}
-		}
-		return nil
-	})
+	snapshots, err := actualSnapshots(plan, catalogue, s.ruleset(), s.windowDays())
+	if err != nil {
+		return err
+	}
+	return s.meals.SaveQualitySnapshots(ctx, planID, snapshots)
 }
 
 func actualSnapshots(
@@ -266,21 +274,12 @@ func actualSnapshots(
 func splitRules(evaluation quality.Evaluation, rolling bool) []nutrition.RuleEvaluationResult {
 	results := make([]nutrition.RuleEvaluationResult, 0, len(evaluation.Outcomes))
 	for _, outcome := range evaluation.Outcomes {
-		if isRollingRule(outcome.Code) != rolling {
+		if quality.IsRollingRule(outcome.Code) != rolling {
 			continue
 		}
 		results = append(results, outcome.Result())
 	}
 	return results
-}
-
-func isRollingRule(code string) bool {
-	switch code {
-	case quality.RuleRedMeat, quality.RuleProcessedMeat, quality.RuleLegumes:
-		return true
-	default:
-		return false
-	}
 }
 
 func (s *Service) TopRecipes(ctx context.Context, limit int) ([]TopRecipe, error) {
@@ -294,54 +293,6 @@ const (
 	defaultTopRecipes = 10
 	defaultWindowDays = 7
 )
-
-// catalogue loads the reference data every plan in the period points at.
-func (s *Service) catalogue(ctx context.Context, plans []planningdom.Plan) (quality.Catalogue, error) {
-	products, err := s.reference.ListProducts(ctx)
-	if err != nil {
-		return quality.Catalogue{}, err
-	}
-	templates, err := s.reference.ListRecipeTemplates(ctx)
-	if err != nil {
-		return quality.Catalogue{}, err
-	}
-
-	catalogue := quality.Catalogue{
-		Products:   make(map[catalogdom.ProductID]catalogdom.Product, len(products)),
-		Templates:  make(map[recipedom.ID]recipedom.Template, len(templates)),
-		Eaters:     make(map[eaterdom.ID]eaterdom.Eater),
-		FixedMeals: make(map[eaterdom.FixedMealID]eaterdom.FixedMeal),
-	}
-	for i := range products {
-		catalogue.Products[products[i].ID] = products[i]
-	}
-	for i := range templates {
-		catalogue.Templates[templates[i].ID] = templates[i]
-	}
-
-	for i := range plans {
-		for j := range plans[i].EaterDays {
-			eaterID := plans[i].EaterDays[j].EaterID
-			if _, loaded := catalogue.Eaters[eaterID]; loaded {
-				continue
-			}
-			eater, err := s.reference.GetEater(ctx, eaterID)
-			if err != nil {
-				return quality.Catalogue{}, err
-			}
-			catalogue.Eaters[eaterID] = eater
-
-			fixedMeals, err := s.reference.ListFixedMeals(ctx, eaterID)
-			if err != nil {
-				return quality.Catalogue{}, err
-			}
-			for k := range fixedMeals {
-				catalogue.FixedMeals[fixedMeals[k].ID] = fixedMeals[k]
-			}
-		}
-	}
-	return catalogue, nil
-}
 
 func (s *Service) ruleset() quality.Ruleset { return quality.DefaultRuleset() }
 

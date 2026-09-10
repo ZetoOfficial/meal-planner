@@ -3,8 +3,8 @@ package catalog
 import (
 	"context"
 
+	"github.com/ZetoOfficial/meal-planner/internal/apperr"
 	catalogdom "github.com/ZetoOfficial/meal-planner/internal/domain/catalog"
-	apperr "github.com/ZetoOfficial/meal-planner/internal/errors"
 	"github.com/ZetoOfficial/meal-planner/internal/postgres"
 	"github.com/ZetoOfficial/meal-planner/internal/postgres/dberror"
 	"github.com/ZetoOfficial/meal-planner/internal/postgres/sqlc"
@@ -74,7 +74,7 @@ func (r *Repository) Update(ctx context.Context, product catalogdom.Product) (ca
 func (r *Repository) Delete(ctx context.Context, id catalogdom.ProductID) error {
 	deleted, err := r.store.Queries(ctx).DeleteProduct(ctx, int64(id))
 	if err != nil {
-		return dberror.Map(err, "product")
+		return dberror.MapDelete(err, "product")
 	}
 	if deleted == 0 {
 		return apperr.NotFound("product")

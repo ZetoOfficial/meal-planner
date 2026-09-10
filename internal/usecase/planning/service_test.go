@@ -8,13 +8,13 @@ import (
 
 	"go.uber.org/mock/gomock"
 
+	"github.com/ZetoOfficial/meal-planner/internal/apperr"
 	catalogdom "github.com/ZetoOfficial/meal-planner/internal/domain/catalog"
 	eaterdom "github.com/ZetoOfficial/meal-planner/internal/domain/eater"
 	mealdom "github.com/ZetoOfficial/meal-planner/internal/domain/meal"
 	"github.com/ZetoOfficial/meal-planner/internal/domain/nutrition"
 	planningdom "github.com/ZetoOfficial/meal-planner/internal/domain/planning"
 	recipedom "github.com/ZetoOfficial/meal-planner/internal/domain/recipe"
-	apperr "github.com/ZetoOfficial/meal-planner/internal/errors"
 	"github.com/ZetoOfficial/meal-planner/internal/quality"
 	"github.com/ZetoOfficial/meal-planner/internal/solver"
 	"github.com/ZetoOfficial/meal-planner/internal/usecase/planning/mocks"
@@ -206,6 +206,10 @@ func TestGeneratePlanPassesOnlyActiveFixedMealsToTheSolver(t *testing.T) {
 		{ID: 1, EaterID: 1, MealType: mealdom.TypeBreakfast, Active: true},
 		{ID: 2, EaterID: 1, MealType: mealdom.TypeSnack, Active: false},
 	}, nil)
+	deps.plans.EXPECT().
+		ListEaterDaySummaries(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+		Return(nil, nil).
+		AnyTimes()
 
 	var input solver.Input
 	deps.planner.EXPECT().
@@ -233,6 +237,7 @@ type deps struct {
 	generator    *fakeGenerator
 	storedDraft  recipedom.Template
 	committed    bool
+	txDepth      int
 }
 
 func newDeps(t *testing.T) *deps {
@@ -250,7 +255,9 @@ func newDeps(t *testing.T) *deps {
 	transactions.EXPECT().
 		WithTx(gomock.Any(), gomock.Any()).
 		DoAndReturn(func(ctx context.Context, fn func(context.Context) error) error {
+			result.txDepth++
 			err := fn(ctx)
+			result.txDepth--
 			result.committed = err == nil
 			return err
 		}).
@@ -264,6 +271,14 @@ func newDeps(t *testing.T) *deps {
 }
 
 func (d *deps) expectInputs() {
+	d.expectInputsWithoutHistory()
+	d.plans.EXPECT().
+		ListEaterDaySummaries(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+		Return(nil, nil).
+		AnyTimes()
+}
+
+func (d *deps) expectInputsWithoutHistory() {
 	d.products.EXPECT().List(gomock.Any(), "").Return([]catalogdom.Product{{
 		ID: 1, Roles: []catalogdom.RoleTag{{Code: "protein:lean"}},
 	}}, nil)
@@ -492,10 +507,12 @@ func validCandidate() recipedom.Template {
 }
 
 type fakeGenerator struct {
-	calls      int
-	candidates []recipedom.Template
-	err        error
-	request    RecipeCandidateRequest
+	calls       int
+	candidates  []recipedom.Template
+	err         error
+	request     RecipeCandidateRequest
+	depth       *int
+	depthAtCall int
 }
 
 func (g *fakeGenerator) GenerateCandidates(
@@ -504,8 +521,198 @@ func (g *fakeGenerator) GenerateCandidates(
 ) ([]recipedom.Template, error) {
 	g.calls++
 	g.request = request
+	if g.depth != nil {
+		g.depthAtCall = *g.depth
+	}
 	if g.err != nil {
 		return nil, g.err
 	}
 	return g.candidates, nil
+}
+
+func TestPreviewSwapReportsAnUnknownFillAsAValidationError(t *testing.T) {
+	deps := newDeps(t)
+	deps.plans.EXPECT().Get(gomock.Any(), planningdom.PlanID(7)).Return(swappablePlan(), nil)
+	deps.expectSwapCatalogue()
+
+	_, err := deps.service.PreviewSwap(t.Context(), 7, SwapCommand{SlotFillID: 404, NewProductID: 1})
+	if err == nil {
+		t.Fatal("PreviewSwap() = nil, want a rejection for a fill outside the plan")
+	}
+	if !isValidation(err) {
+		t.Fatalf("PreviewSwap() error = %v, want a validation error", err)
+	}
+}
+
+// A plan that points at a product the catalogue no longer holds is corrupted
+// data, not a bad request: reporting it as 422 would blame the owner.
+func TestPreviewSwapDoesNotBlameTheOwnerForACorruptPlan(t *testing.T) {
+	deps := newDeps(t)
+	plan := swappablePlan()
+	plan.Recipes[0].Fills[0].ProductID = 99
+	deps.plans.EXPECT().Get(gomock.Any(), planningdom.PlanID(7)).Return(plan, nil)
+	deps.expectSwapCatalogue()
+
+	_, err := deps.service.PreviewSwap(t.Context(), 7, SwapCommand{SlotFillID: 11, NewProductID: 1})
+	if err == nil {
+		t.Fatal("PreviewSwap() = nil, want the missing product reported")
+	}
+	if isValidation(err) {
+		t.Fatalf("PreviewSwap() error = %v, want a server-side failure, not a validation error", err)
+	}
+}
+
+func swappablePlan() planningdom.Plan {
+	serving := 100.0
+	return planningdom.Plan{
+		ID: 7, StartDate: planStartDate(), Days: 1, CookDate: planStartDate(),
+		Status: planningdom.PlanStatusDraft,
+		EaterDays: []planningdom.EaterDay{{
+			EaterID: 1, Date: planStartDate(), MacroGoalID: 1,
+			GeneratedMealTypes: []mealdom.Type{mealdom.TypeLunch},
+		}},
+		Recipes: []planningdom.PlanRecipe{{
+			ID: 3, TemplateID: 1, ScaleFactor: 1,
+			Fills: []planningdom.SlotFill{{ID: 11, SlotID: 1, ProductID: 1, PlannedInputQtyG: 100}},
+		}},
+		Meals: []planningdom.Meal{{
+			ID: 21, EaterID: 1, Date: planStartDate(), Type: mealdom.TypeLunch,
+			Components: []planningdom.ComponentAllocation{
+				{PlanRecipeIndex: 0, PortionFactor: 1, PlannedServingG: &serving},
+			},
+		}},
+	}
+}
+
+func (d *deps) expectSwapCatalogue() {
+	d.products.EXPECT().List(gomock.Any(), "").Return([]catalogdom.Product{{ID: 1}}, nil)
+	d.recipes.EXPECT().List(gomock.Any(), nil).Return([]recipedom.Template{{ID: 1}}, nil)
+	d.eaters.EXPECT().Get(gomock.Any(), eaterdom.ID(1)).Return(eaterdom.Eater{ID: 1}, nil)
+	d.eaters.EXPECT().ListFixedMeals(gomock.Any(), eaterdom.ID(1)).Return(nil, nil)
+	d.plans.EXPECT().
+		ListEaterDaySummaries(gomock.Any(), eaterdom.ID(1), gomock.Any(), gomock.Any(), gomock.Any()).
+		Return(nil, nil).
+		AnyTimes()
+}
+
+// A swap re-evaluates the same weekly rules the plan was built against, so it
+// needs the same window of stored days.
+func TestPreviewSwapReadsTheRollingWindowHistory(t *testing.T) {
+	deps := newDeps(t)
+	deps.plans.EXPECT().Get(gomock.Any(), planningdom.PlanID(7)).Return(swappablePlan(), nil)
+	deps.products.EXPECT().List(gomock.Any(), "").Return([]catalogdom.Product{{ID: 1}}, nil)
+	deps.recipes.EXPECT().List(gomock.Any(), nil).Return([]recipedom.Template{{ID: 1}}, nil)
+	deps.eaters.EXPECT().Get(gomock.Any(), eaterdom.ID(1)).Return(eaterdom.Eater{ID: 1}, nil)
+	deps.eaters.EXPECT().ListFixedMeals(gomock.Any(), eaterdom.ID(1)).Return(nil, nil)
+
+	from := planStartDate().AddDate(0, 0, -6)
+	to := planStartDate().AddDate(0, 0, -1)
+	deps.plans.EXPECT().
+		ListEaterDaySummaries(gomock.Any(), eaterdom.ID(1), nutrition.SummaryBasisPlanned, from, to).
+		Return(nil, nil)
+	deps.plans.EXPECT().
+		ListEaterDaySummaries(gomock.Any(), eaterdom.ID(1), nutrition.SummaryBasisActual, from, to).
+		Return(nil, nil)
+
+	if _, err := deps.service.PreviewSwap(t.Context(), 7, SwapCommand{SlotFillID: 11, NewProductID: 1}); err != nil {
+		t.Fatalf("PreviewSwap() error = %v", err)
+	}
+}
+
+// A pooled connection must not be held for the search budget plus the provider
+// attempts, and the LLM audit rows must outlive an infeasible outcome, so
+// neither the solver nor the generator may run inside a transaction.
+func TestGeneratePlanRunsTheSearchAndTheLLMOutsideAnyTransaction(t *testing.T) {
+	deps := newDepsWithGenerator(t)
+	deps.expectInputs()
+	deps.generator.candidates = []recipedom.Template{validCandidate()}
+	deps.generator.depth = &deps.txDepth
+	deps.expectRoleTagsAndDraftStorage()
+
+	searchDepths := make([]int, 0, 2)
+	deps.planner.EXPECT().
+		BuildPlan(gomock.Any(), gomock.Any()).
+		DoAndReturn(func(_ context.Context, _ solver.Input) (solver.Result, error) {
+			searchDepths = append(searchDepths, deps.txDepth)
+			if len(searchDepths) == 1 {
+				return solver.Result{Failure: &solver.Failure{
+					Code: solver.FailureMacroInfeasible, EaterID: 1, Date: planStartDate(),
+				}}, nil
+			}
+			return solvedResult(), nil
+		}).
+		Times(2)
+	deps.expectPersistence()
+
+	if _, err := deps.service.GeneratePlan(t.Context(), validCommand()); err != nil {
+		t.Fatalf("GeneratePlan() error = %v", err)
+	}
+
+	for i, depth := range searchDepths {
+		if depth != 0 {
+			t.Fatalf("solver call %d ran at transaction depth %d, want no open transaction", i+1, depth)
+		}
+	}
+	if deps.generator.depthAtCall != 0 {
+		t.Fatalf("generator ran at transaction depth %d, want its audit rows outside the plan transaction",
+			deps.generator.depthAtCall)
+	}
+}
+
+// Weekly rules are projected over a rolling window that starts before the plan
+// does. Without the stored days the solver judges red meat on the plan alone.
+func TestGeneratePlanFeedsTheStoredHistoryToTheSolver(t *testing.T) {
+	deps := newDeps(t)
+	deps.expectInputsWithoutHistory()
+	deps.expectHistory()
+
+	var solverInput solver.Input
+	deps.planner.EXPECT().
+		BuildPlan(gomock.Any(), gomock.Any()).
+		DoAndReturn(func(_ context.Context, input solver.Input) (solver.Result, error) {
+			solverInput = input
+			return solvedResult(), nil
+		})
+	deps.expectPersistence()
+
+	if _, err := deps.service.GeneratePlan(t.Context(), validCommand()); err != nil {
+		t.Fatalf("GeneratePlan() error = %v", err)
+	}
+
+	history := solverInput.Eaters[0].History
+	if len(history) != 2 {
+		t.Fatalf("history = %#v, want the two stored days before the plan", history)
+	}
+	if history[0].Totals.RedMeatG != 100 || history[1].Totals.RedMeatG != 250 {
+		t.Fatalf("history = %#v, want the stored days oldest first", history)
+	}
+	if history[1].Basis != nutrition.SummaryBasisActual {
+		t.Fatalf("history[1] basis = %q, want the logged day to win over the planned one", history[1].Basis)
+	}
+}
+
+// expectHistory serves two stored days before the plan starts: one that was
+// only planned, and one that was logged differently than planned.
+func (d *deps) expectHistory() {
+	plannedOnly := planStartDate().AddDate(0, 0, -3)
+	logged := planStartDate().AddDate(0, 0, -1)
+	d.plans.EXPECT().
+		ListEaterDaySummaries(gomock.Any(), eaterdom.ID(1), nutrition.SummaryBasisPlanned, gomock.Any(), gomock.Any()).
+		Return([]planningdom.QualitySnapshot{
+			{EaterID: 1, Date: plannedOnly, Basis: nutrition.SummaryBasisPlanned, Day: nutrition.DaySummary{
+				Basis: nutrition.SummaryBasisPlanned, Totals: nutrition.DailyTotals{RedMeatG: 100},
+			}},
+			{EaterID: 1, Date: logged, Basis: nutrition.SummaryBasisPlanned, Day: nutrition.DaySummary{
+				Basis: nutrition.SummaryBasisPlanned, Totals: nutrition.DailyTotals{RedMeatG: 40},
+			}},
+		}, nil).
+		AnyTimes()
+	d.plans.EXPECT().
+		ListEaterDaySummaries(gomock.Any(), eaterdom.ID(1), nutrition.SummaryBasisActual, gomock.Any(), gomock.Any()).
+		Return([]planningdom.QualitySnapshot{
+			{EaterID: 1, Date: logged, Basis: nutrition.SummaryBasisActual, Day: nutrition.DaySummary{
+				Basis: nutrition.SummaryBasisActual, Totals: nutrition.DailyTotals{RedMeatG: 250},
+			}},
+		}, nil).
+		AnyTimes()
 }

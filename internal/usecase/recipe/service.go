@@ -4,9 +4,9 @@ import (
 	"context"
 	"strings"
 
+	"github.com/ZetoOfficial/meal-planner/internal/apperr"
 	"github.com/ZetoOfficial/meal-planner/internal/domain/meal"
 	recipedom "github.com/ZetoOfficial/meal-planner/internal/domain/recipe"
-	apperr "github.com/ZetoOfficial/meal-planner/internal/errors"
 )
 
 type Service struct {

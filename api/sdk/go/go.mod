@@ -1,6 +1,8 @@
 module github.com/ZetoOfficial/meal-planner/api/sdk/go
 
-go 1.25
+go 1.26.0
+
+toolchain go1.26.8
 
 require (
 	github.com/getkin/kin-openapi v0.149.0

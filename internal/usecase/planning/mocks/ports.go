@@ -12,6 +12,7 @@ package mocks
 import (
 	context "context"
 	reflect "reflect"
+	time "time"
 
 	catalog "github.com/ZetoOfficial/meal-planner/internal/domain/catalog"
 	eater "github.com/ZetoOfficial/meal-planner/internal/domain/eater"
@@ -126,6 +127,21 @@ func (m *MockPlanRepository) List(ctx context.Context) ([]planning.Plan, error) 
 func (mr *MockPlanRepositoryMockRecorder) List(ctx any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockPlanRepository)(nil).List), ctx)
+}
+
+// ListEaterDaySummaries mocks base method.
+func (m *MockPlanRepository) ListEaterDaySummaries(ctx context.Context, eaterID eater.ID, basis nutrition.SummaryBasis, from, to time.Time) ([]planning.QualitySnapshot, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListEaterDaySummaries", ctx, eaterID, basis, from, to)
+	ret0, _ := ret[0].([]planning.QualitySnapshot)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListEaterDaySummaries indicates an expected call of ListEaterDaySummaries.
+func (mr *MockPlanRepositoryMockRecorder) ListEaterDaySummaries(ctx, eaterID, basis, from, to any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListEaterDaySummaries", reflect.TypeOf((*MockPlanRepository)(nil).ListEaterDaySummaries), ctx, eaterID, basis, from, to)
 }
 
 // ListQualitySnapshots mocks base method.

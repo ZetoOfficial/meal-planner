@@ -30,7 +30,9 @@ func (s MealLogStatus) Valid() bool {
 }
 
 type Meal struct {
-	ID          MealID
+	ID MealID
+	// PlanID is the plan the meal belongs to; a meal never exists outside one.
+	PlanID      PlanID
 	LogStatus   MealLogStatus
 	EaterID     eaterdom.ID
 	Date        time.Time

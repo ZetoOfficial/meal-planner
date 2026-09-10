@@ -6,10 +6,10 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/ZetoOfficial/meal-planner/internal/apperr"
 	catalogdom "github.com/ZetoOfficial/meal-planner/internal/domain/catalog"
 	mealdom "github.com/ZetoOfficial/meal-planner/internal/domain/meal"
 	recipedom "github.com/ZetoOfficial/meal-planner/internal/domain/recipe"
-	apperr "github.com/ZetoOfficial/meal-planner/internal/errors"
 )
 
 func TestPromptCarriesOnlyTheSuppliedConstraints(t *testing.T) {

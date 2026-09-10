@@ -82,7 +82,7 @@ make down
 
 ## Локальная разработка
 
-Для запуска Go-приложения вне контейнера нужны Go 1.25, Make и доступный PostgreSQL.
+Для запуска Go-приложения вне контейнера нужны Go 1.26, Make и доступный PostgreSQL.
 
 ```bash
 cp .env.example .env
@@ -126,7 +126,12 @@ make migrate
 make seed
 ```
 
-`make test-integration` требует `TEST_DATABASE_URL` с отдельной тестовой базой. Настройки и примеры значений находятся в `.env.example`.
+`make test-integration` требует `TEST_DATABASE_URL` с отдельной тестовой базой. Настройки и примеры значений находятся в `.env.example`. Эта же цель запускается в CI против сервиса `postgres:18`, поэтому адаптерные и сквозные проверки больше не пропускаются молча.
+
+Тесты с тегом `integration` лежат рядом с кодом, который проверяют: адаптерные — в
+`internal/postgres/<capability>/integration_test.go`, сквозной smoke-тест владельческого
+сценария — в `internal/api/http/e2e_integration_test.go`. Он собирается против
+сгенерированного SDK, поэтому расхождение с контрактом ловится ещё на компиляции.
 
 ## Архитектура в двух словах
 
@@ -147,7 +152,7 @@ make seed
 - [docs/schema.sql](docs/schema.sql) — контракт схемы PostgreSQL.
 - [api/openapi/api/api.yaml](api/openapi/api/api.yaml) — контракт HTTP API (схемы — в [api/openapi/model/api.yaml](api/openapi/model/api.yaml)).
 - [docs/deep-research-report.md](docs/deep-research-report.md) — обоснование правил качества рациона.
-- [docs/github-roadmap.md](docs/github-roadmap.md) — этапы и задачи реализации.
+- [AGENTS.md](AGENTS.md) — правила для агентов, работающих с этим репозиторием.
 
 ## Границы проекта
 

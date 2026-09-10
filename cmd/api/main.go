@@ -14,9 +14,6 @@ import (
 	httpapi "github.com/ZetoOfficial/meal-planner/internal/api/http"
 	"github.com/ZetoOfficial/meal-planner/internal/app"
 	"github.com/ZetoOfficial/meal-planner/internal/clock"
-	catalogdom "github.com/ZetoOfficial/meal-planner/internal/domain/catalog"
-	eaterdom "github.com/ZetoOfficial/meal-planner/internal/domain/eater"
-	recipedom "github.com/ZetoOfficial/meal-planner/internal/domain/recipe"
 	"github.com/ZetoOfficial/meal-planner/internal/llm"
 	"github.com/ZetoOfficial/meal-planner/internal/postgres"
 	analyticsrepo "github.com/ZetoOfficial/meal-planner/internal/postgres/analytics"
@@ -37,30 +34,6 @@ import (
 )
 
 const readHeaderTimeout = 10 * time.Second
-
-// referenceRepository adapts the existing catalogue, recipe and eater
-// repositories to the single reference port the reality use case needs.
-type referenceRepository struct {
-	products *catalogrepo.Repository
-	recipes  *reciperepo.Repository
-	eaters   *eaterrepo.Repository
-}
-
-func (r referenceRepository) ListProducts(ctx context.Context) ([]catalogdom.Product, error) {
-	return r.products.List(ctx, "")
-}
-
-func (r referenceRepository) ListRecipeTemplates(ctx context.Context) ([]recipedom.Template, error) {
-	return r.recipes.List(ctx, nil)
-}
-
-func (r referenceRepository) GetEater(ctx context.Context, id eaterdom.ID) (eaterdom.Eater, error) {
-	return r.eaters.Get(ctx, id)
-}
-
-func (r referenceRepository) ListFixedMeals(ctx context.Context, eaterID eaterdom.ID) ([]eaterdom.FixedMeal, error) {
-	return r.eaters.ListFixedMeals(ctx, eaterID)
-}
 
 // recipeGenerator stays nil without an API key: the planner then works
 // reuse-only instead of failing at start-up.
@@ -129,7 +102,7 @@ func run() error {
 		Shopping: usecaseshopping.NewService(shoppingrepo.New(store), plans, products, tx),
 		Reality: usecasereality.NewService(
 			plans, feedbackrepo.New(store), analyticsrepo.New(store),
-			referenceRepository{products: products, recipes: recipes, eaters: eaters}, tx, clock.System{},
+			products, recipes, eaters, tx, clock.System{},
 		),
 		Planning: usecaseplanning.NewService(
 			plans, eaters, products, recipes, solver.New(), generator, tx,
