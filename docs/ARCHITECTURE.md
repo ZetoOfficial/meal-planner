@@ -93,7 +93,10 @@ internal/
   postgres/                 store, tx, sqlc, pgvalue, dberror и
                             capability-пакеты: analytics, catalog, eater,
                             feedback, llm, planning, recipe, shopping
-  llm/                      клиент, провайдер-адаптеры и генератор рецептов
+  llm/                      транспорт: HTTP-вызов, кэш промптов, retry, audit
+    anthropic/              формат провода Messages API
+    openai/                 формат провода Chat Completions
+    recipe/                 кандидаты рецептов: промпт, схема, валидация
 
   testkit/postgres/         изолированная схема для integration-тестов
 
@@ -382,7 +385,7 @@ type RecipeGenerator interface {
 
 Postgres/sqlc реализует repository ports.
 
-LLM adapter реализует `RecipeGenerator`.
+`llm/recipe` реализует `RecipeGenerator`.
 
 ---
 
@@ -419,6 +422,9 @@ Messages, OpenAI Chat Completions) кодирует запрос и достаё
 везде идёт через tool / function calling на одной и той же JSON-схеме, поэтому
 генератор рецептов провайдера не видит. Хеш промпта солится именем провайдера:
 переключение не отдаёт чужой закэшированный ответ.
+
+Резолв имени провайдера живёт в composition root (`cmd/api`): интерфейс
+объявлен в ядре, поэтому ядро не может импортировать реализации без цикла.
 
 ---
 
