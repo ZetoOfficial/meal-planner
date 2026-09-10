@@ -63,6 +63,47 @@ func TestGenerateReturnsStructuredContentAndLogsTheCall(t *testing.T) {
 	}
 }
 
+// The default max-tokens budget used to be applied inside each provider's
+// EncodeRequest, via a now-removed requestMaxTokens helper; the split moved
+// that normalization into Client.complete instead (provider.go). This test
+// drives an unset MaxTokens end to end through Client.Generate and checks the
+// wire body, so a regression in that normalization (e.g. an accidental
+// deletion, or an off-by-one on the <= 0 check) fails a test instead of
+// silently shipping.
+func TestGenerateDefaultsMaxTokensWhenUnset(t *testing.T) {
+	maxTokensField := map[string]string{
+		ProviderAnthropic: "max_tokens",
+		ProviderOpenAI:    "max_completion_tokens",
+	}
+
+	for _, fixture := range providerFixtures() {
+		t.Run(fixture.name, func(t *testing.T) {
+			var body map[string]any
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				_ = json.NewDecoder(r.Body).Decode(&body)
+				writePayload(w, fixture.toolUsePayload(t, `{"name":"Chicken bowl"}`, 1, 1))
+			}))
+			defer server.Close()
+
+			client := newTestClient(t, fixture.name, server.URL, &fakeStore{})
+
+			request := testRequest()
+			request.MaxTokens = 0
+
+			if _, err := client.Generate(t.Context(), request); err != nil {
+				t.Fatalf("Generate() error = %v", err)
+			}
+
+			field := maxTokensField[fixture.name]
+			got, _ := body[field].(float64)
+			if int(got) != defaultMaxTokens {
+				t.Fatalf("%s = %v, want the default max tokens %d applied for an unset request",
+					field, body[field], defaultMaxTokens)
+			}
+		})
+	}
+}
+
 func TestGenerateServesCachedResponsesWithoutCallingTheProvider(t *testing.T) {
 	for _, fixture := range providerFixtures() {
 		t.Run(fixture.name, func(t *testing.T) {

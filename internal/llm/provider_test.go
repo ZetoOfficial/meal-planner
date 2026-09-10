@@ -57,7 +57,7 @@ func TestAnthropicEncodesToolUse(t *testing.T) {
 	decode(t, payload, &body)
 
 	if body.Model != testModel || body.Temperature != 0.2 || body.MaxTokens != defaultMaxTokens {
-		t.Fatalf("body = %#v, want the configured model, temperature and default max tokens", body)
+		t.Fatalf("body = %#v, want the configured model, temperature and max tokens carried through", body)
 	}
 	if body.System != "You generate recipes." || len(body.Messages) != 1 || body.Messages[0].Role != "user" {
 		t.Fatalf("body = %#v, want the system prompt and one user message", body)
@@ -101,7 +101,7 @@ func TestOpenAIEncodesFunctionCalling(t *testing.T) {
 	decode(t, payload, &body)
 
 	if body.Model != testModel || body.Temperature != 0.2 || body.MaxTokens != defaultMaxTokens {
-		t.Fatalf("body = %#v, want the configured model, temperature and default max tokens", body)
+		t.Fatalf("body = %#v, want the configured model, temperature and max tokens carried through", body)
 	}
 	if len(body.Messages) != 2 || body.Messages[0].Role != "system" || body.Messages[1].Role != "user" {
 		t.Fatalf("messages = %#v, want the system prompt as its own message before the user turn", body.Messages)
