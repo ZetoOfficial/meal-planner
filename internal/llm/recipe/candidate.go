@@ -28,11 +28,11 @@ func parseCandidates(content string, input Input) ([]recipedom.Template, error) 
 
 	templates := make([]recipedom.Template, 0, len(payload.Recipes))
 	for i := range payload.Recipes {
-		candidate, err := payload.Recipes[i].toTemplate(roles, equipment, mealTypes)
+		template, err := payload.Recipes[i].toTemplate(roles, equipment, mealTypes)
 		if err != nil {
 			return nil, err
 		}
-		templates = append(templates, candidate)
+		templates = append(templates, template)
 	}
 	return templates, nil
 }

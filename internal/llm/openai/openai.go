@@ -146,8 +146,8 @@ type response struct {
 }
 
 func (r response) toolArguments(toolName string) (string, error) {
-	for _, choice := range r.Choices {
-		for _, call := range choice.Message.ToolCalls {
+	for _, entry := range r.Choices {
+		for _, call := range entry.Message.ToolCalls {
 			if toolName == "" || call.Function.Name == toolName {
 				return call.Function.Arguments, nil
 			}

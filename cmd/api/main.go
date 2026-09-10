@@ -65,7 +65,6 @@ func recipeGenerator(cfg app.Config, store *postgres.Store) (usecaseplanning.Rec
 		return nil, err
 	}
 	client, err := llm.New(llm.Config{
-		Provider: cfg.LLMProvider,
 		Model:    cfg.LLMModel,
 		Endpoint: cfg.LLMEndpoint,
 		APIKey:   cfg.LLMAPIKey,
