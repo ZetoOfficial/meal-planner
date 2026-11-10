@@ -19,11 +19,13 @@ const (
 var defaultEquipment = []string{"stove", "oven"}
 
 type Config struct {
-	HTTPAddr     string
-	DatabaseURL  string
-	APIToken     string
-	LLMProvider  string
-	LLMModel     string
+	HTTPAddr    string
+	DatabaseURL string
+	APIToken    string
+	LLMProvider string
+	LLMModel    string
+	// LLMEndpoint overrides the provider's own url. Empty is the normal case;
+	// set it for a proxy or an OpenAI-compatible gateway.
 	LLMEndpoint  string
 	LLMAPIKey    string
 	LLMTimeout   time.Duration
@@ -41,7 +43,7 @@ func Load() (Config, error) {
 		APIToken:     os.Getenv("API_TOKEN"),
 		LLMProvider:  env("LLM_PROVIDER", "anthropic"),
 		LLMModel:     env("LLM_MODEL", "claude-sonnet-5"),
-		LLMEndpoint:  env("LLM_ENDPOINT", "https://api.anthropic.com/v1/messages"),
+		LLMEndpoint:  os.Getenv("LLM_ENDPOINT"),
 		LLMAPIKey:    os.Getenv("LLM_API_KEY"),
 		LLMTimeout:   defaultLLMTimeout,
 		ShutdownWait: defaultShutdownWait,

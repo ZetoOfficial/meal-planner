@@ -1,4 +1,4 @@
-package llm
+package recipe
 
 import (
 	"context"
@@ -10,10 +10,10 @@ import (
 // PlanningGenerator adapts the recipe generator to the planning use case port,
 // keeping provider types out of the core.
 type PlanningGenerator struct {
-	generator *RecipeGenerator
+	generator *Generator
 }
 
-func NewPlanningGenerator(generator *RecipeGenerator) *PlanningGenerator {
+func NewPlanningGenerator(generator *Generator) *PlanningGenerator {
 	return &PlanningGenerator{generator: generator}
 }
 
@@ -21,7 +21,7 @@ func (a *PlanningGenerator) GenerateCandidates(
 	ctx context.Context,
 	request usecaseplanning.RecipeCandidateRequest,
 ) ([]recipedom.Template, error) {
-	return a.generator.Generate(ctx, RecipeGeneratorInput{
+	return a.generator.Generate(ctx, Input{
 		Days:       request.Days,
 		Count:      request.Count,
 		Novelty:    request.Novelty,

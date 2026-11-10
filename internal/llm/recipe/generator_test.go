@@ -1,4 +1,4 @@
-package llm
+package recipe
 
 import (
 	"context"
@@ -10,6 +10,7 @@ import (
 	catalogdom "github.com/ZetoOfficial/meal-planner/internal/domain/catalog"
 	mealdom "github.com/ZetoOfficial/meal-planner/internal/domain/meal"
 	recipedom "github.com/ZetoOfficial/meal-planner/internal/domain/recipe"
+	"github.com/ZetoOfficial/meal-planner/internal/llm"
 )
 
 func TestPromptCarriesOnlyTheSuppliedConstraints(t *testing.T) {
@@ -43,8 +44,8 @@ func TestPromptCarriesOnlyTheSuppliedConstraints(t *testing.T) {
 func TestNoveltyMapsToProviderTemperature(t *testing.T) {
 	cases := map[int]float64{0: 0, 1: 0.27, 2: 0.53, 3: 0.8, 9: 0.8}
 	for novelty, want := range cases {
-		if got := NoveltyTemperature(novelty); got != want {
-			t.Fatalf("NoveltyTemperature(%d) = %v, want %v", novelty, got, want)
+		if got := noveltyTemperature(novelty); got != want {
+			t.Fatalf("noveltyTemperature(%d) = %v, want %v", novelty, got, want)
 		}
 	}
 }
@@ -80,7 +81,7 @@ func TestGenerateParsesCandidatesAsDrafts(t *testing.T) {
 	if len(candidate.Slots) != 1 || candidate.Slots[0].QtyG != 960 || candidate.Slots[0].Position != 0 {
 		t.Fatalf("candidate slots = %#v, want the parsed slot", candidate.Slots)
 	}
-	if completer.request.Temperature != 0.53 || completer.request.ToolName != recipeToolName {
+	if completer.request.Temperature != 0.53 || completer.request.ToolName != toolName {
 		t.Fatalf("provider request = %#v, want the novelty temperature and the recipe tool", completer.request)
 	}
 }
@@ -136,7 +137,7 @@ func TestGeneratePropagatesProviderFailure(t *testing.T) {
 	}
 }
 
-func assertValidationFailure(t *testing.T, generator *RecipeGenerator) {
+func assertValidationFailure(t *testing.T, generator *Generator) {
 	t.Helper()
 	_, err := generator.Generate(t.Context(), generatorInput())
 
@@ -152,17 +153,17 @@ func candidateWith(extra string) string {
 		"base_servings":2,"storage":"keeps_3d",` + extra + `}]}`
 }
 
-func newGenerator(t *testing.T, completer Completer) *RecipeGenerator {
+func newGenerator(t *testing.T, completer Completer) *Generator {
 	t.Helper()
-	generator, err := NewRecipeGenerator(completer)
+	generator, err := New(completer)
 	if err != nil {
-		t.Fatalf("NewRecipeGenerator() error = %v", err)
+		t.Fatalf("New() error = %v", err)
 	}
 	return generator
 }
 
-func generatorInput() RecipeGeneratorInput {
-	return RecipeGeneratorInput{
+func generatorInput() Input {
+	return Input{
 		Days:       3,
 		Count:      2,
 		Novelty:    2,
@@ -185,13 +186,13 @@ func generatorInput() RecipeGeneratorInput {
 type fakeCompleter struct {
 	content string
 	err     error
-	request Request
+	request llm.Request
 }
 
-func (c *fakeCompleter) Generate(_ context.Context, request Request) (Response, error) {
+func (c *fakeCompleter) Generate(_ context.Context, request llm.Request) (llm.Response, error) {
 	c.request = request
 	if c.err != nil {
-		return Response{}, c.err
+		return llm.Response{}, c.err
 	}
-	return Response{Content: c.content}, nil
+	return llm.Response{Content: c.content}, nil
 }

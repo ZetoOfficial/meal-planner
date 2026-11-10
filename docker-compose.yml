@@ -57,6 +57,7 @@ services:
       API_TOKEN: ${API_TOKEN}
       LLM_PROVIDER: ${LLM_PROVIDER}
       LLM_MODEL: ${LLM_MODEL}
+      LLM_ENDPOINT: ${LLM_ENDPOINT}
       LLM_API_KEY: ${LLM_API_KEY}
     ports:
       - "8080:8080"
