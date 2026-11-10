@@ -29,3 +29,14 @@ updates:
       github-actions:
         patterns:
           - "*"
+
+  # Базовые образы закреплены на патч-версии Go, чтобы сборка была
+  # воспроизводимой; Dependabot двигает эти пины.
+  - package-ecosystem: docker
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      docker-images:
+        patterns:
+          - "*"
