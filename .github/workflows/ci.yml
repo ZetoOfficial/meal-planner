@@ -25,6 +25,31 @@ jobs:
       - name: Run golangci-lint
         run: make lint
 
+  vulncheck:
+    name: govulncheck
+    runs-on: ubuntu-latest
+
+    # Scans with the toolchain pinned in go.mod, so a stale Go patch release
+    # fails CI instead of shipping known stdlib CVEs.
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Set up Go
+        uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Scan application module
+        run: go run golang.org/x/vuln/cmd/govulncheck@v1.9.0 ./...
+
+      - name: Scan SDK module
+        working-directory: api/sdk/go
+        run: go run golang.org/x/vuln/cmd/govulncheck@v1.9.0 ./...
+
   test:
     name: Build and test
     runs-on: ubuntu-latest
