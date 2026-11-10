@@ -14,10 +14,10 @@ tool (
 
 require (
 	github.com/ZetoOfficial/meal-planner/api/sdk/go v0.0.0-00010101000000-000000000000
-	github.com/getkin/kin-openapi v0.149.0
-	github.com/jackc/pgx/v5 v5.10.0
-	github.com/oapi-codegen/nethttp-middleware v1.1.2
-	github.com/oapi-codegen/runtime v1.7.0
+	github.com/getkin/kin-openapi v0.152.0
+	github.com/jackc/pgx/v5 v5.11.0
+	github.com/oapi-codegen/nethttp-middleware v1.3.1
+	github.com/oapi-codegen/runtime v1.8.0
 	go.uber.org/mock v0.6.0
 )
 
@@ -98,8 +98,7 @@ require (
 	github.com/fzipp/gocyclo v0.6.0 // indirect
 	github.com/ghostiam/protogetter v0.3.20 // indirect
 	github.com/go-critic/go-critic v0.14.3 // indirect
-	github.com/go-openapi/jsonpointer v0.22.5 // indirect
-	github.com/go-openapi/swag/jsonname v0.25.5 // indirect
+	github.com/go-openapi/jsonpointer v1.0.0 // indirect
 	github.com/go-sql-driver/mysql v1.9.3 // indirect
 	github.com/go-toolsmith/astcast v1.1.0 // indirect
 	github.com/go-toolsmith/astcopy v1.1.0 // indirect
