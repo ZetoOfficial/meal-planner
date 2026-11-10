@@ -2,7 +2,7 @@ module github.com/ZetoOfficial/meal-planner/api/sdk/go
 
 go 1.26.0
 
-toolchain go1.26.8
+toolchain go1.26.10
 
 require (
 	github.com/getkin/kin-openapi v0.149.0
@@ -18,5 +18,5 @@ require (
 	github.com/oasdiff/yaml v0.1.1 // indirect
 	github.com/oasdiff/yaml3 v0.0.14 // indirect
 	github.com/santhosh-tekuri/jsonschema/v6 v6.0.3 // indirect
-	golang.org/x/text v0.32.0 // indirect
+	golang.org/x/text v0.41.0 // indirect
 )

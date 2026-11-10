@@ -36,7 +36,15 @@ import (
 	usecaseshopping "github.com/ZetoOfficial/meal-planner/internal/usecase/shopping"
 )
 
-const readHeaderTimeout = 10 * time.Second
+const (
+	readHeaderTimeout = 10 * time.Second
+	// readTimeout bounds a slow upload; bodies are capped at 1 MiB anyway.
+	readTimeout = 30 * time.Second
+	// writeTimeout has to outlive plan generation: one LLM call may take
+	// 3 attempts of 30s plus backoff before the planner falls back.
+	writeTimeout = 3 * time.Minute
+	idleTimeout  = 2 * time.Minute
+)
 
 // llmProvider resolves the configured provider name. The composition root owns
 // this switch: the core declares the Provider interface, so it cannot import
@@ -94,6 +102,9 @@ func run() error {
 	if err != nil {
 		return err
 	}
+	if cfg.AuthDisabled {
+		slog.Warn("API_AUTH_DISABLED=true: the API accepts requests without X-API-Token")
+	}
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
@@ -141,6 +152,9 @@ func run() error {
 		Addr:              cfg.HTTPAddr,
 		Handler:           handler,
 		ReadHeaderTimeout: readHeaderTimeout,
+		ReadTimeout:       readTimeout,
+		WriteTimeout:      writeTimeout,
+		IdleTimeout:       idleTimeout,
 	}
 
 	go func() {

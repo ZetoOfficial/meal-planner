@@ -3,6 +3,7 @@ package httpapi
 import (
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 )
 
@@ -100,5 +101,21 @@ func TestRequestIDOfTheCallerIsKept(t *testing.T) {
 
 	if got := rec.Header().Get(requestIDHeader); got != "abc-123" {
 		t.Fatalf("%s = %q, want the caller's id echoed", requestIDHeader, got)
+	}
+}
+
+func TestOversizedRequestBodyIsRejected(t *testing.T) {
+	handler := New(Deps{APIToken: "secret"})
+
+	body := `{"name":"` + strings.Repeat("a", maxRequestBodyBytes) + `"}`
+	req := httptest.NewRequest(http.MethodPost, "/products", strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-API-Token", "secret")
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusRequestEntityTooLarge {
+		t.Fatalf("POST /products with %d-byte body status = %d, want %d, body %s",
+			len(body), rec.Code, http.StatusRequestEntityTooLarge, rec.Body.String())
 	}
 }

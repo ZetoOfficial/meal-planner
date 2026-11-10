@@ -2,8 +2,10 @@ package app
 
 import (
 	"errors"
-	"fmt"
+	"net"
+	"net/url"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -22,8 +24,11 @@ type Config struct {
 	HTTPAddr    string
 	DatabaseURL string
 	APIToken    string
-	LLMProvider string
-	LLMModel    string
+	// AuthDisabled is the only way to run without API_TOKEN. An empty token
+	// alone is a misconfiguration, not a request for an open API.
+	AuthDisabled bool
+	LLMProvider  string
+	LLMModel     string
 	// LLMEndpoint overrides the provider's own url. Empty is the normal case;
 	// set it for a proxy or an OpenAI-compatible gateway.
 	LLMEndpoint  string
@@ -41,6 +46,7 @@ func Load() (Config, error) {
 		HTTPAddr:     env("HTTP_ADDR", ":8080"),
 		DatabaseURL:  databaseURL(),
 		APIToken:     os.Getenv("API_TOKEN"),
+		AuthDisabled: envBool("API_AUTH_DISABLED"),
 		LLMProvider:  env("LLM_PROVIDER", "anthropic"),
 		LLMModel:     env("LLM_MODEL", "claude-sonnet-5"),
 		LLMEndpoint:  os.Getenv("LLM_ENDPOINT"),
@@ -54,6 +60,9 @@ func Load() (Config, error) {
 	if cfg.DatabaseURL == "" {
 		return Config{}, errors.New("config: DATABASE_URL (или DB_* переменные) обязателен")
 	}
+	if cfg.APIToken == "" && !cfg.AuthDisabled {
+		return Config{}, errors.New("config: API_TOKEN обязателен (для локальной работы без авторизации задайте API_AUTH_DISABLED=true)")
+	}
 	return cfg, nil
 }
 
@@ -65,12 +74,16 @@ func databaseURL() string {
 	if host == "" {
 		return ""
 	}
-	return fmt.Sprintf(
-		"postgres://%s:%s@%s:%s/%s?sslmode=%s",
-		os.Getenv("DB_USER"), os.Getenv("DB_PASSWORD"),
-		host, env("DB_PORT", "5432"), os.Getenv("DB_NAME"),
-		env("DB_SSLMODE", "disable"),
-	)
+	// url.URL escapes the credentials, so a password with @, / or ? cannot
+	// break the DSN or smuggle in connection parameters.
+	dsn := url.URL{
+		Scheme:   "postgres",
+		User:     url.UserPassword(os.Getenv("DB_USER"), os.Getenv("DB_PASSWORD")),
+		Host:     net.JoinHostPort(host, env("DB_PORT", "5432")),
+		Path:     "/" + os.Getenv("DB_NAME"),
+		RawQuery: url.Values{"sslmode": {env("DB_SSLMODE", "disable")}}.Encode(),
+	}
+	return dsn.String()
 }
 
 func equipment() []string {
@@ -86,6 +99,13 @@ func equipment() []string {
 		}
 	}
 	return result
+}
+
+// envBool treats anything strconv cannot parse as false: a typo must not
+// switch a safety check off.
+func envBool(key string) bool {
+	value, err := strconv.ParseBool(os.Getenv(key))
+	return err == nil && value
 }
 
 func env(key, def string) string {
