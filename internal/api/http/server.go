@@ -14,6 +14,11 @@ import (
 	"github.com/ZetoOfficial/meal-planner/internal/apperr"
 )
 
+// maxRequestBodyBytes caps every API request body. The largest legitimate
+// payload is a recipe with its slots, a few kilobytes; without a cap the
+// validator would buffer whatever a client sends.
+const maxRequestBodyBytes = 1 << 20
+
 type Deps struct {
 	APIToken string
 	Catalog  CatalogUseCases
@@ -69,6 +74,7 @@ func New(d Deps) http.Handler {
 			applicationError(w, r, apperr.Unauthorized("missing or invalid X-API-Token"))
 			return
 		}
+		r.Body = http.MaxBytesReader(w, r.Body, maxRequestBodyBytes)
 		validated.ServeHTTP(w, r)
 	}))
 

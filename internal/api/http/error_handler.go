@@ -16,6 +16,11 @@ func requestError(w http.ResponseWriter, r *http.Request, err error, status int)
 		Message: "invalid request",
 		Details: &[]string{err.Error()},
 	}
+	var tooLarge *http.MaxBytesError
+	if errors.As(err, &tooLarge) {
+		status = http.StatusRequestEntityTooLarge
+		response.Message = "request body too large"
+	}
 	if status >= http.StatusInternalServerError {
 		slog.ErrorContext(r.Context(), "request validation failed", slog.Any("error", err))
 		status = http.StatusInternalServerError
