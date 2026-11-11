@@ -297,7 +297,6 @@ CREATE TABLE fixed_meal (
     include_in_analytics BOOLEAN NOT NULL DEFAULT TRUE,
     include_in_warnings  BOOLEAN NOT NULL DEFAULT TRUE,
     active      BOOLEAN     NOT NULL DEFAULT TRUE,
-    UNIQUE (eater_id, meal_type, label),
     CONSTRAINT fixed_meal_nonneg CHECK (
         protein_g >= 0 AND fat_g >= 0 AND carb_g >= 0 AND kcal >= 0
         AND (saturated_fat_g IS NULL OR saturated_fat_g >= 0)
@@ -315,6 +314,12 @@ CREATE TABLE fixed_meal (
         AND (upf_kcal IS NULL OR upf_kcal >= 0)
     )
 );
+
+-- Метка уникальна только среди активных приёмов: выключенная строка остаётся
+-- для планов, которые на неё ссылаются, и не мешает завести приём заново.
+CREATE UNIQUE INDEX fixed_meal_active_label_key
+    ON fixed_meal (eater_id, meal_type, label)
+    WHERE active;
 
 -- =====================================================================
 -- БИБЛИОТЕКА ПРОДУКТОВ  (личная БД брендов, §4)

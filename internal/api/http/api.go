@@ -38,6 +38,9 @@ type EaterUseCases interface {
 	CreateGoal(context.Context, eaterdom.ID, usecaseeater.MacroGoalCommand) (eaterdom.MacroGoal, error)
 	ListFixedMeals(context.Context, eaterdom.ID) ([]eaterdom.FixedMeal, error)
 	CreateFixedMeal(context.Context, eaterdom.ID, usecaseeater.CreateFixedMealCommand) (eaterdom.FixedMeal, error)
+	UpdateFixedMeal(context.Context, eaterdom.FixedMealID, usecaseeater.CreateFixedMealCommand) (eaterdom.FixedMeal, error)
+	DeleteFixedMeal(context.Context, eaterdom.FixedMealID) error
+	DeleteEater(context.Context, eaterdom.ID) error
 	ListExclusions(context.Context, eaterdom.ID) ([]eaterdom.Exclusion, error)
 	CreateExclusion(context.Context, eaterdom.ID, usecaseeater.CreateExclusionCommand) (eaterdom.Exclusion, error)
 	DeleteExclusion(context.Context, eaterdom.ExclusionID) error
@@ -68,6 +71,7 @@ type RealityUseCases interface {
 	MacroAnalytics(context.Context, usecasereality.Period) (usecasereality.MacroAnalytics, error)
 	QualityAnalytics(context.Context, usecasereality.Period, nutrition.SummaryBasis) (usecasereality.QualityAnalytics, error)
 	TopRecipes(context.Context, int) ([]usecasereality.TopRecipe, error)
+	ProductFrequency(context.Context, usecasereality.Period, int) ([]usecasereality.ProductFrequency, error)
 }
 
 type ShoppingUseCases interface {

@@ -83,6 +83,22 @@ paths:
           content:
             application/json:
               schema: { $ref: '../model/api.yaml#/components/schemas/Error' }
+    delete:
+      operationId: deleteEater
+      tags: [eaters]
+      summary: Удалить профиль едока без истории
+      description: >
+        Удаляет профиль вместе с целями, аллергенами, исключениями и фиксированными
+        приёмами. Едок, на которого ссылаются планы, приёмы или feedback, не
+        удаляется: история планов не переписывается задним числом.
+      responses:
+        '204': { description: No Content }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: На едока ссылаются планы, приёмы пищи или feedback
+          content:
+            application/json:
+              schema: { $ref: '../model/api.yaml#/components/schemas/Error' }
 
   /eaters/{eaterId}/goals:
     parameters:
@@ -200,6 +216,45 @@ paths:
             application/json:
               schema: { $ref: '../model/api.yaml#/components/schemas/Error' }
         '422': { $ref: '#/components/responses/ValidationError' }
+
+  /fixed-meals/{fixedMealId}:
+    parameters:
+      - name: fixedMealId
+        in: path
+        required: true
+        schema: { type: integer, format: int64 }
+    put:
+      operationId: updateFixedMeal
+      tags: [eaters]
+      summary: Обновить фиксированный приём (влияет на следующую генерацию)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '../model/api.yaml#/components/schemas/FixedMealInput' }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '../model/api.yaml#/components/schemas/FixedMeal' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: Такой фиксированный приём уже существует
+          content:
+            application/json:
+              schema: { $ref: '../model/api.yaml#/components/schemas/Error' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+    delete:
+      operationId: deleteFixedMeal
+      tags: [eaters]
+      summary: Отключить фиксированный приём
+      description: >
+        Приём деактивируется, а не стирается: уже сохранённые планы продолжают
+        ссылаться на него и объясняют свои БЖУ. В новые планы он не попадает.
+      responses:
+        '204': { description: No Content }
+        '404': { $ref: '#/components/responses/NotFound' }
 
   /exclusions/{exclusionId}:
     parameters:
@@ -463,6 +518,10 @@ paths:
       operationId: applySwap
       tags: [swaps]
       summary: Применить своп (после подтверждения)
+      description: >
+        fill и recipe меняют план на месте. rotation сохраняет новый план и
+        архивирует прежний, поэтому в ответе план с новым id. План, в котором уже
+        залогированы приёмы, не ротируется (409).
       requestBody:
         required: true
         content:
@@ -488,6 +547,7 @@ paths:
             application/json:
               schema: { $ref: '../model/api.yaml#/components/schemas/SwapPreview' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
         '501': { $ref: '#/components/responses/NotImplemented' }
 
   /plans/{planId}/quantity/preview:
@@ -721,6 +781,42 @@ paths:
             application/json:
               schema: { $ref: '../model/api.yaml#/components/schemas/NutritionQualityAnalytics' }
         '501': { $ref: '#/components/responses/NotImplemented' }
+
+  /analytics/product-frequency:
+    get:
+      operationId: getProductFrequency
+      tags: [analytics]
+      summary: Частота продуктов в приёмах едока за период (FR-8)
+      description: >
+        Сколько приёмов пищи использовали продукт и сколько граммов входа на него
+        пришлось — по запланированным и съеденным приёмам. Пропущенные приёмы не
+        считаются; на каждый день берётся один план (тот, где день залогирован,
+        иначе последний неархивный).
+      parameters:
+        - name: eaterId
+          in: query
+          required: true
+          schema: { type: integer, format: int64 }
+        - name: from
+          in: query
+          required: true
+          schema: { type: string, format: date }
+        - name: to
+          in: query
+          required: true
+          schema: { type: string, format: date }
+        - name: limit
+          in: query
+          schema: { type: integer, default: 20 }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '../model/api.yaml#/components/schemas/ProductFrequency' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /analytics/top-recipes:
     get:

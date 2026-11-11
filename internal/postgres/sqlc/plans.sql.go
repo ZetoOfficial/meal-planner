@@ -399,6 +399,26 @@ func (q *Queries) DeleteMealComponentAllocations(ctx context.Context, mealID int
 	return err
 }
 
+const deletePlanPrepDependencies = `-- name: DeletePlanPrepDependencies :exec
+DELETE FROM prep_dependency
+WHERE plan_id = $1
+`
+
+func (q *Queries) DeletePlanPrepDependencies(ctx context.Context, planID int64) error {
+	_, err := q.db.Exec(ctx, deletePlanPrepDependencies, planID)
+	return err
+}
+
+const deletePlanRecipeSlotFills = `-- name: DeletePlanRecipeSlotFills :exec
+DELETE FROM slot_fill
+WHERE plan_recipe_id = $1
+`
+
+func (q *Queries) DeletePlanRecipeSlotFills(ctx context.Context, planRecipeID int64) error {
+	_, err := q.db.Exec(ctx, deletePlanRecipeSlotFills, planRecipeID)
+	return err
+}
+
 const getPlan = `-- name: GetPlan :one
 SELECT id, label, start_date, days, cook_date, novelty_level, status, quality_score, quality_warnings_count, shopping_list_stale, created_at
 FROM plan
@@ -677,6 +697,40 @@ func (q *Queries) ListPrepDependencies(ctx context.Context, planID int64) ([]Pre
 	return items, nil
 }
 
+const listTemplateLastPlanned = `-- name: ListTemplateLastPlanned :many
+SELECT pr.template_id, max(p.start_date)::date AS last_planned
+FROM plan_recipe pr
+JOIN plan p ON p.id = pr.plan_id
+WHERE p.start_date < $1
+GROUP BY pr.template_id
+`
+
+type ListTemplateLastPlannedRow struct {
+	TemplateID  int64       `json:"template_id"`
+	LastPlanned pgtype.Date `json:"last_planned"`
+}
+
+// Последняя дата, на которую шаблон попадал в план, начавшийся раньше before.
+func (q *Queries) ListTemplateLastPlanned(ctx context.Context, before pgtype.Date) ([]ListTemplateLastPlannedRow, error) {
+	rows, err := q.db.Query(ctx, listTemplateLastPlanned, before)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListTemplateLastPlannedRow{}
+	for rows.Next() {
+		var i ListTemplateLastPlannedRow
+		if err := rows.Scan(&i.TemplateID, &i.LastPlanned); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const markShoppingListStale = `-- name: MarkShoppingListStale :one
 UPDATE plan
 SET shopping_list_stale = $1
@@ -756,6 +810,75 @@ func (q *Queries) UpdateMealPlannedMacros(ctx context.Context, arg UpdateMealPla
 		&i.LoggedBy,
 		&i.LoggedAt,
 		&i.LogStatus,
+	)
+	return i, err
+}
+
+const updatePlanQuality = `-- name: UpdatePlanQuality :one
+UPDATE plan
+SET quality_score = $1,
+    quality_warnings_count = $2
+WHERE id = $3
+RETURNING id, label, start_date, days, cook_date, novelty_level, status, quality_score, quality_warnings_count, shopping_list_stale, created_at
+`
+
+type UpdatePlanQualityParams struct {
+	QualityScore         pgtype.Numeric `json:"quality_score"`
+	QualityWarningsCount int32          `json:"quality_warnings_count"`
+	ID                   int64          `json:"id"`
+}
+
+func (q *Queries) UpdatePlanQuality(ctx context.Context, arg UpdatePlanQualityParams) (Plan, error) {
+	row := q.db.QueryRow(ctx, updatePlanQuality, arg.QualityScore, arg.QualityWarningsCount, arg.ID)
+	var i Plan
+	err := row.Scan(
+		&i.ID,
+		&i.Label,
+		&i.StartDate,
+		&i.Days,
+		&i.CookDate,
+		&i.NoveltyLevel,
+		&i.Status,
+		&i.QualityScore,
+		&i.QualityWarningsCount,
+		&i.ShoppingListStale,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const updatePlanRecipeTemplate = `-- name: UpdatePlanRecipeTemplate :one
+UPDATE plan_recipe
+SET template_id = $1,
+    scale_factor = $2,
+    expected_output_g = $3
+WHERE id = $4
+RETURNING id, plan_id, template_id, label, scale_factor, expected_output_g, created_at
+`
+
+type UpdatePlanRecipeTemplateParams struct {
+	TemplateID      int64          `json:"template_id"`
+	ScaleFactor     pgtype.Numeric `json:"scale_factor"`
+	ExpectedOutputG pgtype.Numeric `json:"expected_output_g"`
+	ID              int64          `json:"id"`
+}
+
+func (q *Queries) UpdatePlanRecipeTemplate(ctx context.Context, arg UpdatePlanRecipeTemplateParams) (PlanRecipe, error) {
+	row := q.db.QueryRow(ctx, updatePlanRecipeTemplate,
+		arg.TemplateID,
+		arg.ScaleFactor,
+		arg.ExpectedOutputG,
+		arg.ID,
+	)
+	var i PlanRecipe
+	err := row.Scan(
+		&i.ID,
+		&i.PlanID,
+		&i.TemplateID,
+		&i.Label,
+		&i.ScaleFactor,
+		&i.ExpectedOutputG,
+		&i.CreatedAt,
 	)
 	return i, err
 }

@@ -226,6 +226,20 @@ func (mr *MockEaterUseCasesMockRecorder) CreateGoal(arg0, arg1, arg2 any) *gomoc
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateGoal", reflect.TypeOf((*MockEaterUseCases)(nil).CreateGoal), arg0, arg1, arg2)
 }
 
+// DeleteEater mocks base method.
+func (m *MockEaterUseCases) DeleteEater(arg0 context.Context, arg1 eater.ID) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteEater", arg0, arg1)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteEater indicates an expected call of DeleteEater.
+func (mr *MockEaterUseCasesMockRecorder) DeleteEater(arg0, arg1 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteEater", reflect.TypeOf((*MockEaterUseCases)(nil).DeleteEater), arg0, arg1)
+}
+
 // DeleteExclusion mocks base method.
 func (m *MockEaterUseCases) DeleteExclusion(arg0 context.Context, arg1 eater.ExclusionID) error {
 	m.ctrl.T.Helper()
@@ -238,6 +252,20 @@ func (m *MockEaterUseCases) DeleteExclusion(arg0 context.Context, arg1 eater.Exc
 func (mr *MockEaterUseCasesMockRecorder) DeleteExclusion(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteExclusion", reflect.TypeOf((*MockEaterUseCases)(nil).DeleteExclusion), arg0, arg1)
+}
+
+// DeleteFixedMeal mocks base method.
+func (m *MockEaterUseCases) DeleteFixedMeal(arg0 context.Context, arg1 eater.FixedMealID) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteFixedMeal", arg0, arg1)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteFixedMeal indicates an expected call of DeleteFixedMeal.
+func (mr *MockEaterUseCasesMockRecorder) DeleteFixedMeal(arg0, arg1 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteFixedMeal", reflect.TypeOf((*MockEaterUseCases)(nil).DeleteFixedMeal), arg0, arg1)
 }
 
 // GetEater mocks base method.
@@ -328,6 +356,21 @@ func (m *MockEaterUseCases) UpdateEater(arg0 context.Context, arg1 eater.ID, arg
 func (mr *MockEaterUseCasesMockRecorder) UpdateEater(arg0, arg1, arg2 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateEater", reflect.TypeOf((*MockEaterUseCases)(nil).UpdateEater), arg0, arg1, arg2)
+}
+
+// UpdateFixedMeal mocks base method.
+func (m *MockEaterUseCases) UpdateFixedMeal(arg0 context.Context, arg1 eater.FixedMealID, arg2 eater0.CreateFixedMealCommand) (eater.FixedMeal, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateFixedMeal", arg0, arg1, arg2)
+	ret0, _ := ret[0].(eater.FixedMeal)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// UpdateFixedMeal indicates an expected call of UpdateFixedMeal.
+func (mr *MockEaterUseCasesMockRecorder) UpdateFixedMeal(arg0, arg1, arg2 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateFixedMeal", reflect.TypeOf((*MockEaterUseCases)(nil).UpdateFixedMeal), arg0, arg1, arg2)
 }
 
 // MockRecipeUseCases is a mock of RecipeUseCases interface.
@@ -639,6 +682,21 @@ func (m *MockRealityUseCases) MacroAnalytics(arg0 context.Context, arg1 reality.
 func (mr *MockRealityUseCasesMockRecorder) MacroAnalytics(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MacroAnalytics", reflect.TypeOf((*MockRealityUseCases)(nil).MacroAnalytics), arg0, arg1)
+}
+
+// ProductFrequency mocks base method.
+func (m *MockRealityUseCases) ProductFrequency(arg0 context.Context, arg1 reality.Period, arg2 int) ([]reality.ProductFrequency, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ProductFrequency", arg0, arg1, arg2)
+	ret0, _ := ret[0].([]reality.ProductFrequency)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ProductFrequency indicates an expected call of ProductFrequency.
+func (mr *MockRealityUseCasesMockRecorder) ProductFrequency(arg0, arg1, arg2 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ProductFrequency", reflect.TypeOf((*MockRealityUseCases)(nil).ProductFrequency), arg0, arg1, arg2)
 }
 
 // QualityAnalytics mocks base method.
