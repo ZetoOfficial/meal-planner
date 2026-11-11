@@ -159,6 +159,21 @@ func (mr *MockPlanRepositoryMockRecorder) ListQualitySnapshots(ctx, planID, basi
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListQualitySnapshots", reflect.TypeOf((*MockPlanRepository)(nil).ListQualitySnapshots), ctx, planID, basis)
 }
 
+// ListTemplateLastPlanned mocks base method.
+func (m *MockPlanRepository) ListTemplateLastPlanned(ctx context.Context, before time.Time) (map[recipe.ID]time.Time, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListTemplateLastPlanned", ctx, before)
+	ret0, _ := ret[0].(map[recipe.ID]time.Time)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListTemplateLastPlanned indicates an expected call of ListTemplateLastPlanned.
+func (mr *MockPlanRepositoryMockRecorder) ListTemplateLastPlanned(ctx, before any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListTemplateLastPlanned", reflect.TypeOf((*MockPlanRepository)(nil).ListTemplateLastPlanned), ctx, before)
+}
+
 // MarkShoppingListStale mocks base method.
 func (m *MockPlanRepository) MarkShoppingListStale(ctx context.Context, planID planning.PlanID, stale bool) error {
 	m.ctrl.T.Helper()
@@ -186,6 +201,20 @@ func (m *MockPlanRepository) ReplacePlanAllocations(ctx context.Context, planID 
 func (mr *MockPlanRepositoryMockRecorder) ReplacePlanAllocations(ctx, planID, plan any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReplacePlanAllocations", reflect.TypeOf((*MockPlanRepository)(nil).ReplacePlanAllocations), ctx, planID, plan)
+}
+
+// ReplacePlanRecipe mocks base method.
+func (m *MockPlanRepository) ReplacePlanRecipe(ctx context.Context, planID planning.PlanID, plan planning.Plan, recipeIndex int) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ReplacePlanRecipe", ctx, planID, plan, recipeIndex)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// ReplacePlanRecipe indicates an expected call of ReplacePlanRecipe.
+func (mr *MockPlanRepositoryMockRecorder) ReplacePlanRecipe(ctx, planID, plan, recipeIndex any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReplacePlanRecipe", reflect.TypeOf((*MockPlanRepository)(nil).ReplacePlanRecipe), ctx, planID, plan, recipeIndex)
 }
 
 // Save mocks base method.
@@ -229,6 +258,34 @@ func (m *MockPlanRepository) SwapSlotFill(ctx context.Context, planID planning.P
 func (mr *MockPlanRepositoryMockRecorder) SwapSlotFill(ctx, planID, fillID, productID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SwapSlotFill", reflect.TypeOf((*MockPlanRepository)(nil).SwapSlotFill), ctx, planID, fillID, productID)
+}
+
+// UpdateMealMacros mocks base method.
+func (m *MockPlanRepository) UpdateMealMacros(ctx context.Context, plan planning.Plan) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateMealMacros", ctx, plan)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// UpdateMealMacros indicates an expected call of UpdateMealMacros.
+func (mr *MockPlanRepositoryMockRecorder) UpdateMealMacros(ctx, plan any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateMealMacros", reflect.TypeOf((*MockPlanRepository)(nil).UpdateMealMacros), ctx, plan)
+}
+
+// UpdatePlanQuality mocks base method.
+func (m *MockPlanRepository) UpdatePlanQuality(ctx context.Context, planID planning.PlanID, score *float64, warnings int) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdatePlanQuality", ctx, planID, score, warnings)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// UpdatePlanQuality indicates an expected call of UpdatePlanQuality.
+func (mr *MockPlanRepositoryMockRecorder) UpdatePlanQuality(ctx, planID, score, warnings any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdatePlanQuality", reflect.TypeOf((*MockPlanRepository)(nil).UpdatePlanQuality), ctx, planID, score, warnings)
 }
 
 // MockEaterRepository is a mock of EaterRepository interface.

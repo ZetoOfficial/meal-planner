@@ -9,11 +9,12 @@ import (
 	"github.com/ZetoOfficial/meal-planner/internal/apperr"
 	catalogdom "github.com/ZetoOfficial/meal-planner/internal/domain/catalog"
 	planningdom "github.com/ZetoOfficial/meal-planner/internal/domain/planning"
+	recipedom "github.com/ZetoOfficial/meal-planner/internal/domain/recipe"
 	usecaseplanning "github.com/ZetoOfficial/meal-planner/internal/usecase/planning"
 )
 
 func (s *server) PreviewSwap(ctx context.Context, request api.PreviewSwapRequestObject) (api.PreviewSwapResponseObject, error) {
-	command, err := swapCommand(request.Body.Level, request.Body.SlotFillId, request.Body.NewProductId)
+	command, err := swapCommand(*request.Body)
 	if err != nil {
 		return nil, err
 	}
@@ -27,11 +28,13 @@ func (s *server) PreviewSwap(ctx context.Context, request api.PreviewSwapRequest
 // ApplySwap answers 409 with the same preview when the owner has not confirmed,
 // so the client can show exactly what it is about to accept.
 func (s *server) ApplySwap(ctx context.Context, request api.ApplySwapRequestObject) (api.ApplySwapResponseObject, error) {
-	command, err := swapCommand(
-		model.SwapInputLevel(request.Body.Level),
-		request.Body.SlotFillId,
-		request.Body.NewProductId,
-	)
+	command, err := swapCommand(model.SwapInput{
+		Level:         model.SwapInputLevel(request.Body.Level),
+		SlotFillId:    request.Body.SlotFillId,
+		NewProductId:  request.Body.NewProductId,
+		PlanRecipeId:  request.Body.PlanRecipeId,
+		NewTemplateId: request.Body.NewTemplateId,
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -47,24 +50,34 @@ func (s *server) ApplySwap(ctx context.Context, request api.ApplySwapRequestObje
 	return api.ApplySwap200JSONResponse(planResponse(result)), nil
 }
 
-// swapCommand accepts only fill-level swaps: recipe and rotation swaps need a
-// full re-solve and are not part of v1.
-func swapCommand(
-	level model.SwapInputLevel,
-	slotFillID, newProductID *int64,
-) (usecaseplanning.SwapCommand, error) {
-	if level != model.SwapInputLevelFill {
-		return usecaseplanning.SwapCommand{}, apperr.Validation(
-			"only fill-level swaps are supported", string(level),
-		)
+// swapCommand checks that the request carries the ids its level needs.
+func swapCommand(body model.SwapInput) (usecaseplanning.SwapCommand, error) {
+	switch body.Level {
+	case model.SwapInputLevelFill:
+		if body.SlotFillId == nil || body.NewProductId == nil {
+			return usecaseplanning.SwapCommand{}, apperr.Validation(
+				"fill-level swaps need slot_fill_id and new_product_id", "level",
+			)
+		}
+		return usecaseplanning.SwapCommand{
+			Level:        planningdom.SwapFill,
+			SlotFillID:   planningdom.SlotFillID(*body.SlotFillId),
+			NewProductID: catalogdom.ProductID(*body.NewProductId),
+		}, nil
+	case model.SwapInputLevelRecipe:
+		if body.PlanRecipeId == nil || body.NewTemplateId == nil {
+			return usecaseplanning.SwapCommand{}, apperr.Validation(
+				"recipe-level swaps need plan_recipe_id and new_template_id", "level",
+			)
+		}
+		return usecaseplanning.SwapCommand{
+			Level:         planningdom.SwapRecipe,
+			PlanRecipeID:  planningdom.PlanRecipeID(*body.PlanRecipeId),
+			NewTemplateID: recipedom.ID(*body.NewTemplateId),
+		}, nil
+	case model.SwapInputLevelRotation:
+		return usecaseplanning.SwapCommand{Level: planningdom.SwapRotation}, nil
+	default:
+		return usecaseplanning.SwapCommand{}, apperr.Validation("level must be fill, recipe or rotation", string(body.Level))
 	}
-	if slotFillID == nil || newProductID == nil {
-		return usecaseplanning.SwapCommand{}, apperr.Validation(
-			"fill-level swaps need slot_fill_id and new_product_id", "level",
-		)
-	}
-	return usecaseplanning.SwapCommand{
-		SlotFillID:   planningdom.SlotFillID(*slotFillID),
-		NewProductID: catalogdom.ProductID(*newProductID),
-	}, nil
 }

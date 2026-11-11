@@ -6,6 +6,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgtype"
 
+	"github.com/ZetoOfficial/meal-planner/internal/apperr"
 	catalogdom "github.com/ZetoOfficial/meal-planner/internal/domain/catalog"
 	eaterdom "github.com/ZetoOfficial/meal-planner/internal/domain/eater"
 	mealdom "github.com/ZetoOfficial/meal-planner/internal/domain/meal"
@@ -316,22 +317,33 @@ func mealMacroParams(meal planningdom.Meal) sqlc.UpdateMealPlannedMacrosParams {
 	}
 }
 
-func prepDependencyParams(planID planningdom.PlanID, dependency planningdom.PrepDependency) sqlc.CreatePrepDependencyParams {
+func prepDependencyParams(
+	planID planningdom.PlanID,
+	dependentID, sourceID planningdom.PlanRecipeID,
+	note *string,
+) sqlc.CreatePrepDependencyParams {
 	return sqlc.CreatePrepDependencyParams{
 		PlanID:            int64(planID),
-		DependentRecipeID: int64(dependency.DependentRecipeID),
-		SourceRecipeID:    int64(dependency.SourceRecipeID),
-		Note:              dependency.Note,
+		DependentRecipeID: int64(dependentID),
+		SourceRecipeID:    int64(sourceID),
+		Note:              note,
 	}
 }
 
-func prepDependencyFromRow(row sqlc.PrepDependency) planningdom.PrepDependency {
-	return planningdom.PrepDependency{
-		ID:                row.ID,
-		DependentRecipeID: planningdom.PlanRecipeID(row.DependentRecipeID),
-		SourceRecipeID:    planningdom.PlanRecipeID(row.SourceRecipeID),
-		Note:              row.Note,
+// prepDependencyFromRow turns stored recipe ids back into the slice indexes
+// the aggregate uses.
+func prepDependencyFromRow(row sqlc.PrepDependency, recipeIndex map[int64]int) (planningdom.PrepDependency, error) {
+	dependent, dependentOK := recipeIndex[row.DependentRecipeID]
+	source, sourceOK := recipeIndex[row.SourceRecipeID]
+	if !dependentOK || !sourceOK {
+		return planningdom.PrepDependency{}, apperr.Conflict("prep dependency references a plan recipe outside the plan")
 	}
+	return planningdom.PrepDependency{
+		ID:                   row.ID,
+		DependentRecipeIndex: dependent,
+		SourceRecipeIndex:    source,
+		Note:                 row.Note,
+	}, nil
 }
 
 func statusOrDraft(status planningdom.PlanStatus) planningdom.PlanStatus {

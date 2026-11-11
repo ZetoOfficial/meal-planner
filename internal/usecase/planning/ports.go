@@ -29,6 +29,13 @@ type PlanRepository interface {
 
 	SwapSlotFill(ctx context.Context, planID planningdom.PlanID, fillID planningdom.SlotFillID, productID catalogdom.ProductID) error
 	MarkShoppingListStale(ctx context.Context, planID planningdom.PlanID, stale bool) error
+	// UpdateMealMacros and UpdatePlanQuality keep the stored plan in step with
+	// a swap: planned meal macros follow the batch, the headline follows the
+	// re-evaluation.
+	UpdateMealMacros(ctx context.Context, plan planningdom.Plan) error
+	UpdatePlanQuality(ctx context.Context, planID planningdom.PlanID, score *float64, warnings int) error
+	// ReplacePlanRecipe rewrites one batch in place after a recipe-level swap.
+	ReplacePlanRecipe(ctx context.Context, planID planningdom.PlanID, plan planningdom.Plan, recipeIndex int) error
 	ReplacePlanAllocations(ctx context.Context, planID planningdom.PlanID, plan planningdom.Plan) (planningdom.Plan, error)
 
 	SaveQualitySnapshots(ctx context.Context, planID planningdom.PlanID, snapshots []planningdom.QualitySnapshot) error
@@ -39,6 +46,11 @@ type PlanRepository interface {
 	// without these days red meat, processed meat and legumes would be judged
 	// on the plan's own days alone (SPEC §3.2).
 	ListEaterDaySummaries(ctx context.Context, eaterID eaterdom.ID, basis nutrition.SummaryBasis, from, to time.Time) ([]planningdom.QualitySnapshot, error)
+
+	// ListTemplateLastPlanned reports the start date of the latest plan before
+	// the given day that used each template. The novelty dial needs it to tell
+	// a familiar recipe from one the household has not eaten for two weeks.
+	ListTemplateLastPlanned(ctx context.Context, before time.Time) (map[recipedom.ID]time.Time, error)
 }
 
 // EaterRepository supplies the planning inputs of one eater: profile with

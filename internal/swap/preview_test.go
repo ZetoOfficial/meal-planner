@@ -141,8 +141,8 @@ func TestComputeReportsInvalidatedDependentDishes(t *testing.T) {
 		},
 	)
 	input.Plan.PrepDependencies = []planningdom.PrepDependency{
-		{DependentRecipeID: 12, SourceRecipeID: 11, Note: &note},
-		{DependentRecipeID: 13, SourceRecipeID: 12},
+		{DependentRecipeIndex: 1, SourceRecipeIndex: 0, Note: &note},
+		{DependentRecipeIndex: 2, SourceRecipeIndex: 1},
 	}
 
 	preview, err := Compute(input, Request{SlotFillID: 1, NewProductID: 3})
