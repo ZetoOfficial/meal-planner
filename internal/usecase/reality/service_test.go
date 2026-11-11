@@ -284,6 +284,7 @@ func TestQualityAnalyticsReportsAveragesAndCoverage(t *testing.T) {
 		{Totals: nutrition.DailyTotals{FiberG: 10}, Coverage: lowCoverage},
 	}
 	deps.analytics.rolling = []nutrition.RollingSummary{{WindowDays: 7, RedMeatG: 120}}
+	deps.expectNoFixedMeals()
 
 	result, err := deps.service.QualityAnalytics(t.Context(), analyticsPeriod(), nutrition.SummaryBasisPlanned)
 	if err != nil {
@@ -321,6 +322,7 @@ func TestQualityAnalyticsReportsStoredRuleVerdicts(t *testing.T) {
 			Result:      nutrition.RuleEvaluationResult{RuleCode: "red_meat", Status: nutrition.StatusWarn},
 		},
 	}
+	deps.expectNoFixedMeals()
 
 	result, err := deps.service.QualityAnalytics(t.Context(), analyticsPeriod(), nutrition.SummaryBasisPlanned)
 	if err != nil {
@@ -339,6 +341,82 @@ func TestQualityAnalyticsRejectsAnUnknownBasis(t *testing.T) {
 
 	if _, err := deps.service.QualityAnalytics(t.Context(), analyticsPeriod(), "guessed"); !isValidation(err) {
 		t.Fatalf("QualityAnalytics() error = %v, want a validation error", err)
+	}
+}
+
+func TestQualityAnalyticsReportsTheFixedMealBurdenPerDay(t *testing.T) {
+	deps := newRealityDeps(t)
+	deps.analytics.days = []nutrition.DaySummary{{}, {}}
+	breakfast, hidden := eaterdom.FixedMealID(5), eaterdom.FixedMealID(6)
+	deps.meals.EXPECT().ListEaterMeals(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]planningdom.Meal{
+		{FixedMealID: &breakfast, LogStatus: planningdom.MealLogStatusEatenAsPlanned},
+		{FixedMealID: &breakfast, LogStatus: planningdom.MealLogStatusSkipped},
+		{FixedMealID: &hidden, LogStatus: planningdom.MealLogStatusEatenAsPlanned},
+		{LogStatus: planningdom.MealLogStatusEatenAsPlanned},
+	}, nil)
+	sodium, processed := 900.0, 60.0
+	deps.eaters.EXPECT().GetFixedMeal(gomock.Any(), breakfast).Return(eaterdom.FixedMeal{
+		ID: breakfast,
+		Quality: eaterdom.FixedMealQuality{
+			SodiumMg: &sodium, ProcessedMeatG: &processed, IncludeInAnalytics: true,
+		},
+	}, nil)
+	deps.eaters.EXPECT().GetFixedMeal(gomock.Any(), hidden).Return(eaterdom.FixedMeal{
+		ID: hidden, Quality: eaterdom.FixedMealQuality{SodiumMg: &sodium},
+	}, nil)
+
+	result, err := deps.service.QualityAnalytics(t.Context(), analyticsPeriod(), nutrition.SummaryBasisActual)
+	if err != nil {
+		t.Fatalf("QualityAnalytics() error = %v", err)
+	}
+
+	burden := result.FixedMeals
+	if burden.SodiumMg == nil || *burden.SodiumMg != 450 {
+		t.Fatalf("sodium burden = %v, want one eaten breakfast averaged over two days", burden.SodiumMg)
+	}
+	if burden.ProcessedMeatG == nil || *burden.ProcessedMeatG != 30 {
+		t.Fatalf("processed meat burden = %v, want 30 g per day", burden.ProcessedMeatG)
+	}
+	if burden.SaturatedFatG != nil {
+		t.Fatalf("saturated fat burden = %v, want unknown: no fixed meal states it", *burden.SaturatedFatG)
+	}
+}
+
+func TestQualityAnalyticsCountsSkippedFixedMealsOnThePlannedBasis(t *testing.T) {
+	deps := newRealityDeps(t)
+	deps.analytics.days = []nutrition.DaySummary{{}}
+	breakfast := eaterdom.FixedMealID(5)
+	deps.meals.EXPECT().ListEaterMeals(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]planningdom.Meal{
+		{FixedMealID: &breakfast, LogStatus: planningdom.MealLogStatusSkipped},
+	}, nil)
+	sodium := 900.0
+	deps.eaters.EXPECT().GetFixedMeal(gomock.Any(), breakfast).Return(eaterdom.FixedMeal{
+		ID: breakfast, Quality: eaterdom.FixedMealQuality{SodiumMg: &sodium, IncludeInAnalytics: true},
+	}, nil)
+
+	result, err := deps.service.QualityAnalytics(t.Context(), analyticsPeriod(), nutrition.SummaryBasisPlanned)
+	if err != nil {
+		t.Fatalf("QualityAnalytics() error = %v", err)
+	}
+	if result.FixedMeals.SodiumMg == nil || *result.FixedMeals.SodiumMg != 900 {
+		t.Fatalf("planned sodium burden = %v, want the planned breakfast counted", result.FixedMeals.SodiumMg)
+	}
+}
+
+func TestProductFrequencyDefaultsTheLimitAndValidatesThePeriod(t *testing.T) {
+	deps := newRealityDeps(t)
+	deps.analytics.frequency = []ProductFrequency{{ProductID: 3, Name: "Rice", MealsCount: 4, TotalQtyG: 320}}
+
+	products, err := deps.service.ProductFrequency(t.Context(), analyticsPeriod(), 0)
+	if err != nil {
+		t.Fatalf("ProductFrequency() error = %v", err)
+	}
+	if len(products) != 1 || deps.analytics.lastLimit != 20 {
+		t.Fatalf("products = %#v, limit = %d, want the stored rows with the default limit", products, deps.analytics.lastLimit)
+	}
+
+	if _, err := deps.service.ProductFrequency(t.Context(), Period{EaterID: 1}, 5); !isValidation(err) {
+		t.Fatalf("ProductFrequency() error = %v, want a validation error for a missing period", err)
 	}
 }
 
@@ -366,6 +444,10 @@ type realityDeps struct {
 	products  *mocks.MockProductRepository
 	recipes   *mocks.MockRecipeRepository
 	eaters    *mocks.MockEaterRepository
+}
+
+func (d *realityDeps) expectNoFixedMeals() {
+	d.meals.EXPECT().ListEaterMeals(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, nil)
 }
 
 func newRealityDeps(t *testing.T) *realityDeps {
@@ -415,6 +497,7 @@ type fakeAnalytics struct {
 	rolling     []nutrition.RollingSummary
 	evaluations []RuleEvaluation
 	top         []TopRecipe
+	frequency   []ProductFrequency
 	lastLimit   int
 	basis       nutrition.SummaryBasis
 }
@@ -441,4 +524,11 @@ func (a *fakeAnalytics) ListRuleEvaluations(
 func (a *fakeAnalytics) ListTopRecipes(_ context.Context, limit int) ([]TopRecipe, error) {
 	a.lastLimit = limit
 	return a.top, nil
+}
+
+func (a *fakeAnalytics) ListProductFrequency(
+	_ context.Context, _ eaterdom.ID, _, _ time.Time, limit int,
+) ([]ProductFrequency, error) {
+	a.lastLimit = limit
+	return a.frequency, nil
 }

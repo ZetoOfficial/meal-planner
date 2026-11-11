@@ -154,7 +154,34 @@ func qualityAnalyticsResponse(
 		ratio := totals.WholeGrainGEquiv / totals.GrainGEquiv
 		response.WholeGrainRatio = &ratio
 	}
+	burden := analytics.FixedMeals
+	if burden.SodiumMg != nil || burden.SaturatedFatG != nil || burden.ProcessedMeatG != nil {
+		response.FixedMealQualityBurden = &model.FixedMealQualityBurden{
+			SodiumMg:       burden.SodiumMg,
+			SaturatedFatG:  burden.SaturatedFatG,
+			ProcessedMeatG: burden.ProcessedMeatG,
+		}
+	}
 	return response
+}
+
+func productFrequencyResponse(products []usecasereality.ProductFrequency) []model.ProductFrequency {
+	result := make([]model.ProductFrequency, 0, len(products))
+	for i := range products {
+		product := &products[i]
+		item := model.ProductFrequency{
+			ProductId:  int64(product.ProductID),
+			Name:       product.Name,
+			MealsCount: product.MealsCount,
+			TotalQtyG:  product.TotalQtyG,
+		}
+		if product.Brand != "" {
+			brand := product.Brand
+			item.Brand = &brand
+		}
+		result = append(result, item)
+	}
+	return result
 }
 
 func ruleEvaluationsResponse(analytics usecasereality.QualityAnalytics) []model.RuleEvaluation {

@@ -44,6 +44,9 @@ type RecipeRepository interface {
 type EaterRepository interface {
 	Get(ctx context.Context, id eaterdom.ID) (eaterdom.Eater, error)
 	ListFixedMeals(ctx context.Context, eaterID eaterdom.ID) ([]eaterdom.FixedMeal, error)
+	// GetFixedMeal also returns a meal the owner has since switched off: the
+	// meals of a past period still point at it.
+	GetFixedMeal(ctx context.Context, id eaterdom.FixedMealID) (eaterdom.FixedMeal, error)
 }
 
 type FeedbackRepository interface {
