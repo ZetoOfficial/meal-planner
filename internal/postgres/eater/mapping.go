@@ -87,6 +87,34 @@ func fixedMealParams(meal eaterdom.FixedMeal) sqlc.CreateFixedMealParams {
 	}
 }
 
+func fixedMealUpdateParams(meal eaterdom.FixedMeal) sqlc.UpdateFixedMealParams {
+	created := fixedMealParams(meal)
+	return sqlc.UpdateFixedMealParams{
+		ID:                 int64(meal.ID),
+		MealType:           created.MealType,
+		Label:              created.Label,
+		ProteinG:           created.ProteinG,
+		FatG:               created.FatG,
+		CarbG:              created.CarbG,
+		Kcal:               created.Kcal,
+		SaturatedFatG:      created.SaturatedFatG,
+		TransFatG:          created.TransFatG,
+		FiberG:             created.FiberG,
+		SodiumMg:           created.SodiumMg,
+		AddedSugarsG:       created.AddedSugarsG,
+		FreeSugarsG:        created.FreeSugarsG,
+		ProcessedMeatG:     created.ProcessedMeatG,
+		RedMeatG:           created.RedMeatG,
+		WholeGrainGEquiv:   created.WholeGrainGEquiv,
+		GrainGEquiv:        created.GrainGEquiv,
+		LegumeG:            created.LegumeG,
+		FruitVegG:          created.FruitVegG,
+		UpfKcal:            created.UpfKcal,
+		IncludeInAnalytics: created.IncludeInAnalytics,
+		IncludeInWarnings:  created.IncludeInWarnings,
+	}
+}
+
 func fixedMealFromRow(row sqlc.FixedMeal) (eaterdom.FixedMeal, error) {
 	protein, err := pgvalue.Float64(row.ProteinG)
 	if err != nil {

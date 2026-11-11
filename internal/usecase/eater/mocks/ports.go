@@ -178,6 +178,34 @@ func (mr *MockEaterRepositoryMockRecorder) CreateGoal(ctx, goal any) *gomock.Cal
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateGoal", reflect.TypeOf((*MockEaterRepository)(nil).CreateGoal), ctx, goal)
 }
 
+// DeactivateFixedMeal mocks base method.
+func (m *MockEaterRepository) DeactivateFixedMeal(ctx context.Context, id eater.FixedMealID) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeactivateFixedMeal", ctx, id)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeactivateFixedMeal indicates an expected call of DeactivateFixedMeal.
+func (mr *MockEaterRepositoryMockRecorder) DeactivateFixedMeal(ctx, id any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeactivateFixedMeal", reflect.TypeOf((*MockEaterRepository)(nil).DeactivateFixedMeal), ctx, id)
+}
+
+// Delete mocks base method.
+func (m *MockEaterRepository) Delete(ctx context.Context, id eater.ID) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Delete", ctx, id)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Delete indicates an expected call of Delete.
+func (mr *MockEaterRepositoryMockRecorder) Delete(ctx, id any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockEaterRepository)(nil).Delete), ctx, id)
+}
+
 // DeleteExclusion mocks base method.
 func (m *MockEaterRepository) DeleteExclusion(ctx context.Context, id eater.ExclusionID) error {
 	m.ctrl.T.Helper()
@@ -205,6 +233,21 @@ func (m *MockEaterRepository) Get(ctx context.Context, id eater.ID) (eater.Eater
 func (mr *MockEaterRepositoryMockRecorder) Get(ctx, id any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockEaterRepository)(nil).Get), ctx, id)
+}
+
+// GetFixedMeal mocks base method.
+func (m *MockEaterRepository) GetFixedMeal(ctx context.Context, id eater.FixedMealID) (eater.FixedMeal, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetFixedMeal", ctx, id)
+	ret0, _ := ret[0].(eater.FixedMeal)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetFixedMeal indicates an expected call of GetFixedMeal.
+func (mr *MockEaterRepositoryMockRecorder) GetFixedMeal(ctx, id any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetFixedMeal", reflect.TypeOf((*MockEaterRepository)(nil).GetFixedMeal), ctx, id)
 }
 
 // List mocks base method.
@@ -310,4 +353,19 @@ func (m *MockEaterRepository) Update(ctx context.Context, profile eater.Eater, g
 func (mr *MockEaterRepositoryMockRecorder) Update(ctx, profile, goal any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockEaterRepository)(nil).Update), ctx, profile, goal)
+}
+
+// UpdateFixedMeal mocks base method.
+func (m *MockEaterRepository) UpdateFixedMeal(ctx context.Context, meal eater.FixedMeal) (eater.FixedMeal, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateFixedMeal", ctx, meal)
+	ret0, _ := ret[0].(eater.FixedMeal)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// UpdateFixedMeal indicates an expected call of UpdateFixedMeal.
+func (mr *MockEaterRepositoryMockRecorder) UpdateFixedMeal(ctx, meal any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateFixedMeal", reflect.TypeOf((*MockEaterRepository)(nil).UpdateFixedMeal), ctx, meal)
 }

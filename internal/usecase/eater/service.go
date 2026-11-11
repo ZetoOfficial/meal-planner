@@ -196,6 +196,56 @@ func (s *Service) CreateFixedMeal(ctx context.Context, eaterID eaterdom.ID, comm
 	return s.eaters.CreateFixedMeal(ctx, meal)
 }
 
+// UpdateFixedMeal replaces the content of an active fixed meal. Stored plans
+// keep the macros they were built with; the change reaches the next plan.
+func (s *Service) UpdateFixedMeal(
+	ctx context.Context,
+	id eaterdom.FixedMealID,
+	command CreateFixedMealCommand,
+) (eaterdom.FixedMeal, error) {
+	if !id.Valid() {
+		return eaterdom.FixedMeal{}, apperr.Validation("fixed meal id must be positive")
+	}
+	var updated eaterdom.FixedMeal
+	err := s.transactions.WithTx(ctx, func(ctx context.Context) error {
+		current, err := s.eaters.GetFixedMeal(ctx, id)
+		if err != nil {
+			return err
+		}
+		if !current.Active {
+			return apperr.NotFound("fixed meal")
+		}
+		meal := command.meal(current.EaterID)
+		meal.ID = id
+		if err := validateFixedMeal(&meal); err != nil {
+			return err
+		}
+		updated, err = s.eaters.UpdateFixedMeal(ctx, meal)
+		return err
+	})
+	if err != nil {
+		return eaterdom.FixedMeal{}, err
+	}
+	return updated, nil
+}
+
+// DeleteFixedMeal switches the meal off for future plans.
+func (s *Service) DeleteFixedMeal(ctx context.Context, id eaterdom.FixedMealID) error {
+	if !id.Valid() {
+		return apperr.Validation("fixed meal id must be positive")
+	}
+	return s.eaters.DeactivateFixedMeal(ctx, id)
+}
+
+// DeleteEater removes a profile that has no planning history. A profile that
+// plans, meals or feedback still refer to is reported as a conflict.
+func (s *Service) DeleteEater(ctx context.Context, id eaterdom.ID) error {
+	if !id.Valid() {
+		return apperr.Validation("eater id must be positive")
+	}
+	return s.eaters.Delete(ctx, id)
+}
+
 type CreateExclusionCommand struct {
 	TargetKind  eaterdom.ExclusionTarget
 	TargetValue string

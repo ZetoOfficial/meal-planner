@@ -351,3 +351,71 @@ func TestGetEaterDerivesTheCurrentGoalFromTheClock(t *testing.T) {
 		t.Fatalf("current goal = %#v, want the goal already in effect", profile.CurrentGoal)
 	}
 }
+
+func TestUpdateFixedMealKeepsTheOwnerAndReplacesTheContent(t *testing.T) {
+	service, repository, transactions, _ := newMockService(t)
+	expectPassthroughTx(transactions)
+	repository.EXPECT().GetFixedMeal(gomock.Any(), eaterdom.FixedMealID(4)).
+		Return(eaterdom.FixedMeal{ID: 4, EaterID: 2, Active: true}, nil)
+	var stored eaterdom.FixedMeal
+	repository.EXPECT().UpdateFixedMeal(gomock.Any(), gomock.Any()).
+		DoAndReturn(func(_ context.Context, meal eaterdom.FixedMeal) (eaterdom.FixedMeal, error) {
+			stored = meal
+			return meal, nil
+		})
+
+	_, err := service.UpdateFixedMeal(t.Context(), 4, CreateFixedMealCommand{
+		MealType: eaterdom.MealTypeBreakfast, Label: " two toasts ",
+		Macros: eaterdom.Macros{ProteinG: 20, FatG: 10, CarbG: 60, Kcal: 420},
+	})
+	if err != nil {
+		t.Fatalf("UpdateFixedMeal() error = %v", err)
+	}
+	if stored.ID != 4 || stored.EaterID != 2 || stored.Label != "two toasts" || !stored.Quality.IncludeInAnalytics {
+		t.Fatalf("stored fixed meal = %#v, want the same row and owner with normalized content", stored)
+	}
+}
+
+func TestUpdateFixedMealTreatsASwitchedOffMealAsMissing(t *testing.T) {
+	service, repository, transactions, _ := newMockService(t)
+	expectPassthroughTx(transactions)
+	repository.EXPECT().GetFixedMeal(gomock.Any(), eaterdom.FixedMealID(4)).
+		Return(eaterdom.FixedMeal{ID: 4, EaterID: 2, Active: false}, nil)
+
+	_, err := service.UpdateFixedMeal(t.Context(), 4, CreateFixedMealCommand{
+		MealType: eaterdom.MealTypeBreakfast, Label: "toast", Macros: eaterdom.Macros{Kcal: 100},
+	})
+
+	assertErrorCode(t, err, apperr.CodeNotFound)
+}
+
+func TestUpdateFixedMealValidatesBeforeWriting(t *testing.T) {
+	service, repository, transactions, _ := newMockService(t)
+	expectPassthroughTx(transactions)
+	repository.EXPECT().GetFixedMeal(gomock.Any(), eaterdom.FixedMealID(4)).
+		Return(eaterdom.FixedMeal{ID: 4, EaterID: 2, Active: true}, nil)
+
+	_, err := service.UpdateFixedMeal(t.Context(), 4, CreateFixedMealCommand{
+		MealType: "brunch", Label: "toast", Macros: eaterdom.Macros{Kcal: 100},
+	})
+
+	assertErrorCode(t, err, apperr.CodeValidation)
+}
+
+func TestDeleteEaterAndFixedMealRejectInvalidIDs(t *testing.T) {
+	service, repository, _, _ := newMockService(t)
+
+	assertErrorCode(t, service.DeleteEater(t.Context(), 0), apperr.CodeValidation)
+	assertErrorCode(t, service.DeleteFixedMeal(t.Context(), -1), apperr.CodeValidation)
+	_, err := service.UpdateFixedMeal(t.Context(), 0, CreateFixedMealCommand{})
+	assertErrorCode(t, err, apperr.CodeValidation)
+
+	repository.EXPECT().Delete(gomock.Any(), eaterdom.ID(3)).Return(nil)
+	repository.EXPECT().DeactivateFixedMeal(gomock.Any(), eaterdom.FixedMealID(4)).Return(nil)
+	if err := service.DeleteEater(t.Context(), 3); err != nil {
+		t.Fatalf("DeleteEater() error = %v", err)
+	}
+	if err := service.DeleteFixedMeal(t.Context(), 4); err != nil {
+		t.Fatalf("DeleteFixedMeal() error = %v", err)
+	}
+}
