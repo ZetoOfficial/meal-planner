@@ -9,6 +9,7 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 
 	"github.com/ZetoOfficial/meal-planner/internal/apperr"
+	catalogdom "github.com/ZetoOfficial/meal-planner/internal/domain/catalog"
 	eaterdom "github.com/ZetoOfficial/meal-planner/internal/domain/eater"
 	"github.com/ZetoOfficial/meal-planner/internal/domain/nutrition"
 	recipedom "github.com/ZetoOfficial/meal-planner/internal/domain/recipe"
@@ -223,4 +224,37 @@ func rollingSummaryFromRow(row sqlc.RollingNutritionSummary) (nutrition.RollingS
 		AddedSugarsGAvg: values["addedSugars"], FruitVegGAvg: values["fruitVeg"],
 		Coverage: coverage, RuleCoverage: map[string]nutrition.Coverage{},
 	}, nil
+}
+
+// ListProductFrequency counts the meals that used each product. Each day is
+// read from one plan, so a replaced rotation or a second draft is not counted.
+func (r *Repository) ListProductFrequency(
+	ctx context.Context,
+	eaterID eaterdom.ID,
+	from, to time.Time,
+	limit int,
+) ([]reality.ProductFrequency, error) {
+	if limit <= 0 || int64(limit) > math.MaxInt32 {
+		return nil, apperr.Validation("limit must fit a positive int32", "limit")
+	}
+	rows, err := r.store.Queries(ctx).ListProductFrequency(ctx, sqlc.ListProductFrequencyParams{
+		EaterID:  int64(eaterID),
+		FromDate: pgvalue.Date(from),
+		ToDate:   pgvalue.Date(to),
+		RowLimit: int32(limit),
+	})
+	if err != nil {
+		return nil, dberror.Map(err, "product")
+	}
+	products := make([]reality.ProductFrequency, 0, len(rows))
+	for i := range rows {
+		products = append(products, reality.ProductFrequency{
+			ProductID:  catalogdom.ProductID(rows[i].ProductID),
+			Brand:      rows[i].Brand,
+			Name:       rows[i].Name,
+			MealsCount: int(rows[i].MealsCount),
+			TotalQtyG:  rows[i].TotalQtyG,
+		})
+	}
+	return products, nil
 }

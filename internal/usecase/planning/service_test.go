@@ -100,6 +100,13 @@ func TestGeneratePlanRejectsInvalidCommandBeforeTouchingTheDatabase(t *testing.T
 		"negative days":      {StartDate: planStartDate(), Days: -1, Targets: validTargets()},
 		"novelty above four": {StartDate: planStartDate(), Novelty: 4, Targets: validTargets()},
 		"no targets":         {StartDate: planStartDate()},
+		"cooked after it is eaten": {
+			StartDate: planStartDate(), CookDate: dayAfter(planStartDate(), 1), Targets: validTargets(),
+		},
+		"horizon past the batch life": {StartDate: planStartDate(), Days: 5, Targets: validTargets()},
+		"cooked too early": {
+			StartDate: planStartDate(), Days: 3, CookDate: dayAfter(planStartDate(), -2), Targets: validTargets(),
+		},
 		"repeated eater": {StartDate: planStartDate(), Targets: []EaterTarget{
 			{EaterID: 1, GeneratedMealTypes: []mealdom.Type{mealdom.TypeLunch}},
 			{EaterID: 1, GeneratedMealTypes: []mealdom.Type{mealdom.TypeDinner}},
@@ -206,6 +213,7 @@ func TestGeneratePlanPassesOnlyActiveFixedMealsToTheSolver(t *testing.T) {
 		{ID: 1, EaterID: 1, MealType: mealdom.TypeBreakfast, Active: true},
 		{ID: 2, EaterID: 1, MealType: mealdom.TypeSnack, Active: false},
 	}, nil)
+	deps.plans.EXPECT().ListTemplateLastPlanned(gomock.Any(), gomock.Any()).Return(nil, nil)
 	deps.plans.EXPECT().
 		ListEaterDaySummaries(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 		Return(nil, nil).
@@ -226,7 +234,79 @@ func TestGeneratePlanPassesOnlyActiveFixedMealsToTheSolver(t *testing.T) {
 	}
 }
 
+func dayAfter(date time.Time, days int) *time.Time {
+	result := date.AddDate(0, 0, days)
+	return &result
+}
+
+func TestGeneratePlanAcceptsTheLongestCookingWindow(t *testing.T) {
+	deps := newDeps(t)
+	deps.expectInputs()
+	deps.expectSolvedPlan()
+	deps.expectPersistence()
+	command := validCommand()
+	command.Days = 3
+	command.CookDate = dayAfter(planStartDate(), -1)
+
+	if _, err := deps.service.GeneratePlan(t.Context(), command); err != nil {
+		t.Fatalf("GeneratePlan() error = %v, want cooking the evening before a 3-day plan accepted", err)
+	}
+}
+
+func TestGeneratePlanTellsTheSolverWhenEachTemplateWasLastPlanned(t *testing.T) {
+	deps := newDeps(t)
+	deps.lastPlanned = map[recipedom.ID]time.Time{4: planStartDate().AddDate(0, 0, -20)}
+	deps.expectInputs()
+	var seen solver.Input
+	deps.planner.EXPECT().BuildPlan(gomock.Any(), gomock.Any()).
+		DoAndReturn(func(_ context.Context, input solver.Input) (solver.Result, error) {
+			seen = input
+			return solvedResult(), nil
+		})
+	deps.expectPersistence()
+
+	if _, err := deps.service.GeneratePlan(t.Context(), validCommand()); err != nil {
+		t.Fatalf("GeneratePlan() error = %v", err)
+	}
+	if got := seen.RecipeLastUsed[4]; !got.Equal(planStartDate().AddDate(0, 0, -20)) {
+		t.Fatalf("RecipeLastUsed = %v, want the stored planning history handed to the solver", seen.RecipeLastUsed)
+	}
+}
+
+func TestGeneratePlanReportsAnUnavailableLLMWhenTheLibraryHasNoPlan(t *testing.T) {
+	deps := newDepsWithGenerator(t)
+	deps.expectInputs()
+	deps.planner.EXPECT().
+		BuildPlan(gomock.Any(), gomock.Any()).
+		Return(solver.Result{Failure: &solver.Failure{Code: solver.FailureMacroInfeasible, EaterID: 1}}, nil)
+	deps.products.EXPECT().ListRoleTags(gomock.Any()).Return(validRoleTags(), nil)
+	deps.generator.err = apperr.Unavailable("recipe generation is unavailable", errors.New("529"))
+
+	_, err := deps.service.GeneratePlan(t.Context(), validCommand())
+
+	var appErr *apperr.Error
+	if !errors.As(err, &appErr) || appErr.Code != apperr.CodeUnavailable {
+		t.Fatalf("GeneratePlan() error = %v, want the provider outage reported (SPEC §6)", err)
+	}
+}
+
+func TestGeneratePlanKeepsTheLibraryPlanWhenTheLLMIsUnavailable(t *testing.T) {
+	deps := newDepsWithGenerator(t)
+	deps.expectInputs()
+	deps.expectSolvedPlan()
+	deps.products.EXPECT().ListRoleTags(gomock.Any()).Return(validRoleTags(), nil)
+	deps.generator.err = apperr.Unavailable("recipe generation is unavailable", errors.New("529"))
+	deps.expectPersistence()
+	command := validCommand()
+	command.Novelty = 3
+
+	if _, err := deps.service.GeneratePlan(t.Context(), command); err != nil {
+		t.Fatalf("GeneratePlan() error = %v, want the reuse-only plan kept when novelty 3 cannot reach the LLM", err)
+	}
+}
+
 type deps struct {
+	lastPlanned  map[recipedom.ID]time.Time
 	service      *Service
 	plans        *mocks.MockPlanRepository
 	eaters       *mocks.MockEaterRepository
@@ -279,6 +359,7 @@ func (d *deps) expectInputs() {
 }
 
 func (d *deps) expectInputsWithoutHistory() {
+	d.plans.EXPECT().ListTemplateLastPlanned(gomock.Any(), gomock.Any()).Return(d.lastPlanned, nil).AnyTimes()
 	d.products.EXPECT().List(gomock.Any(), "").Return([]catalogdom.Product{{
 		ID: 1, Roles: []catalogdom.RoleTag{{Code: "protein:lean"}},
 	}}, nil)
@@ -405,6 +486,9 @@ func TestGeneratePlanRetriesTheSolverWithGeneratedDrafts(t *testing.T) {
 		t.Fatalf("GeneratePlan() error = %v", err)
 	}
 
+	if deps.storedDraft.Weight != 1 || deps.storedDraft.Status != recipedom.StatusDraft {
+		t.Fatalf("stored draft = %#v, want a draft at the neutral rotation weight", deps.storedDraft)
+	}
 	if len(retried.Recipes) != 1 || retried.Recipes[0].ID != 99 {
 		t.Fatalf("retry candidates = %#v, want the stored draft handed to the solver", retried.Recipes)
 	}
@@ -535,7 +619,7 @@ func TestPreviewSwapReportsAnUnknownFillAsAValidationError(t *testing.T) {
 	deps.plans.EXPECT().Get(gomock.Any(), planningdom.PlanID(7)).Return(swappablePlan(), nil)
 	deps.expectSwapCatalogue()
 
-	_, err := deps.service.PreviewSwap(t.Context(), 7, SwapCommand{SlotFillID: 404, NewProductID: 1})
+	_, err := deps.service.PreviewSwap(t.Context(), 7, SwapCommand{Level: planningdom.SwapFill, SlotFillID: 404, NewProductID: 1})
 	if err == nil {
 		t.Fatal("PreviewSwap() = nil, want a rejection for a fill outside the plan")
 	}
@@ -553,7 +637,7 @@ func TestPreviewSwapDoesNotBlameTheOwnerForACorruptPlan(t *testing.T) {
 	deps.plans.EXPECT().Get(gomock.Any(), planningdom.PlanID(7)).Return(plan, nil)
 	deps.expectSwapCatalogue()
 
-	_, err := deps.service.PreviewSwap(t.Context(), 7, SwapCommand{SlotFillID: 11, NewProductID: 1})
+	_, err := deps.service.PreviewSwap(t.Context(), 7, SwapCommand{Level: planningdom.SwapFill, SlotFillID: 11, NewProductID: 1})
 	if err == nil {
 		t.Fatal("PreviewSwap() = nil, want the missing product reported")
 	}
@@ -589,6 +673,7 @@ func (d *deps) expectSwapCatalogue() {
 	d.recipes.EXPECT().List(gomock.Any(), nil).Return([]recipedom.Template{{ID: 1}}, nil)
 	d.eaters.EXPECT().Get(gomock.Any(), eaterdom.ID(1)).Return(eaterdom.Eater{ID: 1}, nil)
 	d.eaters.EXPECT().ListFixedMeals(gomock.Any(), eaterdom.ID(1)).Return(nil, nil)
+	d.eaters.EXPECT().ListGoals(gomock.Any(), eaterdom.ID(1)).Return(validGoals(), nil).AnyTimes()
 	d.plans.EXPECT().
 		ListEaterDaySummaries(gomock.Any(), eaterdom.ID(1), gomock.Any(), gomock.Any(), gomock.Any()).
 		Return(nil, nil).
@@ -604,6 +689,7 @@ func TestPreviewSwapReadsTheRollingWindowHistory(t *testing.T) {
 	deps.recipes.EXPECT().List(gomock.Any(), nil).Return([]recipedom.Template{{ID: 1}}, nil)
 	deps.eaters.EXPECT().Get(gomock.Any(), eaterdom.ID(1)).Return(eaterdom.Eater{ID: 1}, nil)
 	deps.eaters.EXPECT().ListFixedMeals(gomock.Any(), eaterdom.ID(1)).Return(nil, nil)
+	deps.eaters.EXPECT().ListGoals(gomock.Any(), eaterdom.ID(1)).Return(validGoals(), nil)
 
 	from := planStartDate().AddDate(0, 0, -6)
 	to := planStartDate().AddDate(0, 0, -1)
@@ -614,7 +700,7 @@ func TestPreviewSwapReadsTheRollingWindowHistory(t *testing.T) {
 		ListEaterDaySummaries(gomock.Any(), eaterdom.ID(1), nutrition.SummaryBasisActual, from, to).
 		Return(nil, nil)
 
-	if _, err := deps.service.PreviewSwap(t.Context(), 7, SwapCommand{SlotFillID: 11, NewProductID: 1}); err != nil {
+	if _, err := deps.service.PreviewSwap(t.Context(), 7, SwapCommand{Level: planningdom.SwapFill, SlotFillID: 11, NewProductID: 1}); err != nil {
 		t.Fatalf("PreviewSwap() error = %v", err)
 	}
 }

@@ -11,6 +11,8 @@ import (
 const defaultRollingWindowDays = 7
 
 type variantSlot struct {
+	productID         catalogdom.ProductID
+	pricePer100G      *float64
 	baseQtyG          float64
 	preparedQtyFactor *float64
 	macrosPer100G     nutrition.MacrosPer100G
@@ -20,6 +22,8 @@ type variantSlot struct {
 
 func newVariantSlot(slot SlotCandidates, product catalogdom.Product) variantSlot {
 	return variantSlot{
+		productID:         product.ID,
+		pricePer100G:      product.PricePer100G,
 		baseQtyG:          slot.Slot.QtyG,
 		preparedQtyFactor: slot.Slot.PreparedQtyFactor,
 		macrosPer100G: nutrition.MacrosPer100G{

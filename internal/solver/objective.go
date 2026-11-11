@@ -61,13 +61,17 @@ type daySearch struct {
 	// can still serve, so a branch that can no longer fill an empty meal is cut.
 	suffixMeals []uint32
 
-	evaluator dayEvaluator
-	ruleset   quality.Ruleset
-	mealTypes []mealdom.Type
-	priorUses map[int64]int
-	accepted  int
-	best      *rankedDay
-	bestScore dayScore
+	evaluator   dayEvaluator
+	ruleset     quality.Ruleset
+	mealTypes   []mealdom.Type
+	preferences dayPreferences
+	// requireUnseen makes the search ignore candidates without a novel
+	// component, so the candidate budget is spent only on plans that honour
+	// the novelty dial.
+	requireUnseen bool
+	accepted      int
+	best          *rankedDay
+	bestScore     dayScore
 }
 
 // rankedDay carries the winning candidate together with the evaluation that
@@ -93,7 +97,7 @@ func searchDay(
 	day EaterDayInput,
 	fixedMacros nutrition.Macros,
 	recipes []RecipeCandidate,
-	priorUses map[int64]int,
+	preferences dayPreferences,
 ) (rankedDay, searchState, []MacroConstraint, error) {
 	variables, err := searchVariables(day.GeneratedMealTypes, recipes)
 	if err != nil {
@@ -109,26 +113,45 @@ func searchDay(
 		return rankedDay{}, searchExhausted, nil, err
 	}
 	unreachable := unreachableMacros(day.Goal.Range, fixedMacros, ceiling)
-	search := daySearch{
-		config:             config,
-		target:             day.Goal.Range,
-		variables:          variables,
-		suffixMaximums:     suffixMaximums,
-		suffixMeals:        suffixMeals(variables),
-		chosen:             make([]float64, len(variables)),
-		mealComponentCount: make([]int, len(day.GeneratedMealTypes)),
-		evaluator:          evaluator,
-		ruleset:            evaluator.ruleset,
-		mealTypes:          day.GeneratedMealTypes,
-		priorUses:          priorUses,
+	newSearch := func(requireUnseen bool) *daySearch {
+		return &daySearch{
+			config:             config,
+			target:             day.Goal.Range,
+			variables:          variables,
+			suffixMaximums:     suffixMaximums,
+			suffixMeals:        suffixMeals(variables),
+			chosen:             make([]float64, len(variables)),
+			mealComponentCount: make([]int, len(day.GeneratedMealTypes)),
+			evaluator:          evaluator,
+			ruleset:            evaluator.ruleset,
+			mealTypes:          day.GeneratedMealTypes,
+			preferences:        preferences,
+			requireUnseen:      requireUnseen,
+		}
 	}
 
-	switch err := search.walk(ctx, 0, fixedMacros); {
-	case errors.Is(err, errSearchBudget), errors.Is(err, errCandidateBudget):
-	case err != nil:
+	// The novelty dial: look for the best day that carries a novel component.
+	// A forced search takes it outright; otherwise it wins only when the whole
+	// library offers no day with better quality rules.
+	var novel *daySearch
+	if preferences.requiresUnseen() {
+		novel = newSearch(true)
+		if err := novel.run(ctx, fixedMacros); err != nil {
+			return rankedDay{}, searchExhausted, nil, err
+		}
+		if novel.best != nil && preferences.forceUnseen {
+			return *novel.best, searchFound, nil, nil
+		}
+	}
+
+	search := newSearch(false)
+	if err := search.run(ctx, fixedMacros); err != nil {
 		return rankedDay{}, searchExhausted, nil, err
 	}
-
+	if novel != nil && novel.best != nil &&
+		(search.best == nil || !search.bestScore.betterQualityThan(novel.bestScore)) {
+		return *novel.best, searchFound, nil, nil
+	}
 	if search.best == nil {
 		if search.limited {
 			return rankedDay{}, searchLimited, unreachable, nil
@@ -136,6 +159,15 @@ func searchDay(
 		return rankedDay{}, searchExhausted, unreachable, nil
 	}
 	return *search.best, searchFound, nil, nil
+}
+
+// run walks the whole tree; running out of either budget is a normal outcome.
+func (search *daySearch) run(ctx context.Context, fixedMacros nutrition.Macros) error {
+	err := search.walk(ctx, 0, fixedMacros)
+	if errors.Is(err, errSearchBudget) || errors.Is(err, errCandidateBudget) {
+		return nil
+	}
+	return err
 }
 
 func (search *daySearch) walk(ctx context.Context, index int, total nutrition.Macros) error {
@@ -188,6 +220,9 @@ func (search *daySearch) consider() error {
 	if err != nil {
 		return err
 	}
+	if search.requireUnseen && !search.preferences.hasUnseen(solution) {
+		return nil
+	}
 	evaluated, err := search.evaluator.evaluate(solution, search.mealTypes)
 	if err != nil {
 		return err
@@ -196,7 +231,7 @@ func (search *daySearch) consider() error {
 		return nil
 	}
 
-	score := scoreDay(search.ruleset, evaluated.evaluation, solution, search.priorUses)
+	score := scoreDay(search.ruleset, evaluated.evaluation, solution, search.preferences)
 	if search.best == nil || score.betterThan(search.bestScore) {
 		search.best = &rankedDay{
 			solution:   solution,

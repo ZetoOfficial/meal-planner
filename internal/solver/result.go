@@ -7,6 +7,7 @@ import (
 	eaterdom "github.com/ZetoOfficial/meal-planner/internal/domain/eater"
 	"github.com/ZetoOfficial/meal-planner/internal/domain/nutrition"
 	planningdom "github.com/ZetoOfficial/meal-planner/internal/domain/planning"
+	recipedom "github.com/ZetoOfficial/meal-planner/internal/domain/recipe"
 	"github.com/ZetoOfficial/meal-planner/internal/quality"
 )
 
@@ -52,18 +53,26 @@ type allocationDraft struct {
 
 type planBuilder struct {
 	plan                planningdom.Plan
+	storage             map[recipedom.ID]recipedom.StorageProfile
 	recipeServingTotals []float64
 	recipeBaseServings  []int
 	allocations         []allocationDraft
 }
 
 func newPlanBuilder(input Input) *planBuilder {
-	return &planBuilder{plan: planningdom.Plan{
-		StartDate: input.StartDate,
-		Days:      input.Days,
-		CookDate:  input.CookDate,
-		Novelty:   input.Novelty,
-	}}
+	storage := make(map[recipedom.ID]recipedom.StorageProfile, len(input.Recipes))
+	for i := range input.Recipes {
+		storage[input.Recipes[i].ID] = input.Recipes[i].Storage
+	}
+	return &planBuilder{
+		storage: storage,
+		plan: planningdom.Plan{
+			StartDate: input.StartDate,
+			Days:      input.Days,
+			CookDate:  input.CookDate,
+			Novelty:   input.Novelty,
+		},
+	}
 }
 
 func fixedMealsForDay(eaterInput EaterInput, date time.Time) ([]planningdom.Meal, nutrition.Macros, error) {
@@ -127,11 +136,24 @@ func (b *planBuilder) addDay(eaterInput EaterInput, day EaterDayInput, fixedMeal
 	}
 }
 
-func (b *planBuilder) planRecipe(variant componentVariant) int {
+// hasBatch reports whether the plan already cooks this exact variant, so the
+// objective can prefer portions of an existing batch over a new one.
+func (b *planBuilder) hasBatch(variant componentVariant) bool {
+	return b.batchIndex(variant) >= 0
+}
+
+func (b *planBuilder) batchIndex(variant componentVariant) int {
 	for i := range b.plan.Recipes {
 		if b.plan.Recipes[i].TemplateID == variant.recipe.ID && sameFills(b.plan.Recipes[i].Fills, variant.baseFills) {
 			return i
 		}
+	}
+	return -1
+}
+
+func (b *planBuilder) planRecipe(variant componentVariant) int {
+	if index := b.batchIndex(variant); index >= 0 {
+		return index
 	}
 	b.plan.Recipes = append(b.plan.Recipes, planningdom.PlanRecipe{
 		TemplateID:      variant.recipe.ID,
@@ -166,6 +188,10 @@ func (b *planBuilder) build() (planningdom.Plan, error) {
 			component.PlannedServingG = &servingG
 		}
 	}
+	b.plan.PrepDependencies = planningdom.DerivePrepDependencies(b.plan, func(id recipedom.ID) (recipedom.StorageProfile, bool) {
+		profile, ok := b.storage[id]
+		return profile, ok
+	})
 	return b.plan, nil
 }
 
@@ -214,7 +240,7 @@ func (q EaterDayQuality) rules(rolling bool) []nutrition.RuleEvaluationResult {
 func (q EaterDayQuality) Warnings() int {
 	count := 0
 	for _, outcome := range q.Evaluation.Outcomes {
-		if outcome.Status == nutrition.StatusSoftFail || outcome.Status == nutrition.StatusWarn {
+		if outcome.Status.NeedsAttention() {
 			count++
 		}
 	}

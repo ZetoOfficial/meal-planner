@@ -81,13 +81,29 @@ func planResponse(result usecaseplanning.PlanResult) model.Plan {
 		EaterDays:         planEaterDaysResponse(plan.EaterDays),
 		Recipes:           planRecipesResponse(plan),
 		Meals:             planMealsResponse(plan),
-		PrepDependencies:  []model.PrepDependency{},
+		PrepDependencies:  prepDependenciesResponse(plan),
 		ShoppingListStale: plan.ShoppingListStale,
 	}
 	if summary := qualitySummaryResponse(plan, result.Snapshots); summary != nil {
 		response.QualitySummary = summary
 	}
 	return response
+}
+
+// prepDependenciesResponse publishes the prep graph by stored plan recipe id.
+func prepDependenciesResponse(plan planningdom.Plan) []model.PrepDependency {
+	result := make([]model.PrepDependency, 0, len(plan.PrepDependencies))
+	for _, dependency := range plan.PrepDependencies {
+		if dependency.DependentRecipeIndex >= len(plan.Recipes) || dependency.SourceRecipeIndex >= len(plan.Recipes) {
+			continue
+		}
+		result = append(result, model.PrepDependency{
+			DependentRecipeId: int64(plan.Recipes[dependency.DependentRecipeIndex].ID),
+			SourceRecipeId:    int64(plan.Recipes[dependency.SourceRecipeIndex].ID),
+			Note:              dependency.Note,
+		})
+	}
+	return result
 }
 
 func planEaterDaysResponse(days []planningdom.EaterDay) []model.PlanEaterDay {

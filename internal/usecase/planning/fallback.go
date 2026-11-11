@@ -16,6 +16,9 @@ import (
 // for a brand new template even though the library already has a feasible plan.
 const noveltyForcesGeneration = 3
 
+// defaultRecipeWeight mirrors the schema default of recipe_template.weight.
+const defaultRecipeWeight = 1
+
 // shouldGenerate keeps the LLM off the happy path: it runs only when the saved
 // library produced no feasible plan, or when novelty 3 explicitly asks for one.
 func shouldGenerate(result solver.Result, novelty int) bool {
@@ -90,6 +93,11 @@ func (s *Service) storeDraft(ctx context.Context, candidate recipedom.Template) 
 	}
 	candidate.Status = recipedom.StatusDraft
 	candidate.Source = recipedom.SourceLLM
+	if candidate.Weight <= 0 {
+		// A new draft enters the rotation at the neutral weight; weight 0
+		// would mean "practically never drawn" before anyone has rated it.
+		candidate.Weight = defaultRecipeWeight
+	}
 	if err := candidate.Validate(resolved); err != nil {
 		return recipedom.Template{}, apperr.Validation("generated recipe candidate is invalid", err.Error())
 	}

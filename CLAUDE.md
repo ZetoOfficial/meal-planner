@@ -9,6 +9,7 @@ Read these before making structural changes:
 - `docs/DESIGN.md`
 - `docs/SPEC.md`
 - `docs/ARCHITECTURE.md`
+- `docs/DECISIONS.md`
 - `docs/schema.sql`
 - `api/openapi/api/api.yaml` (плюс `api/openapi/model/api.yaml` для схем)
 

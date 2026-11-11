@@ -9,6 +9,11 @@ const (
 	StatusUnknown  RuleEvalStatus = "unknown"
 )
 
+// NeedsAttention reports the verdicts counted as plan warnings.
+func (s RuleEvalStatus) NeedsAttention() bool {
+	return s == StatusSoftFail || s == StatusWarn
+}
+
 func (s RuleEvalStatus) Valid() bool {
 	switch s {
 	case StatusPass, StatusSoftFail, StatusWarn, StatusUnknown:

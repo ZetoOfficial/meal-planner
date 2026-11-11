@@ -240,6 +240,33 @@ func (q *Queries) CreateMacroGoal(ctx context.Context, arg CreateMacroGoalParams
 	return i, err
 }
 
+const deactivateFixedMeal = `-- name: DeactivateFixedMeal :one
+UPDATE fixed_meal
+SET active = FALSE
+WHERE id = $1 AND active = TRUE
+RETURNING id
+`
+
+func (q *Queries) DeactivateFixedMeal(ctx context.Context, id int64) (int64, error) {
+	row := q.db.QueryRow(ctx, deactivateFixedMeal, id)
+	var id_2 int64
+	err := row.Scan(&id_2)
+	return id_2, err
+}
+
+const deleteEater = `-- name: DeleteEater :one
+DELETE FROM eater
+WHERE id = $1
+RETURNING id
+`
+
+func (q *Queries) DeleteEater(ctx context.Context, id int64) (int64, error) {
+	row := q.db.QueryRow(ctx, deleteEater, id)
+	var id_2 int64
+	err := row.Scan(&id_2)
+	return id_2, err
+}
+
 const deleteEaterAllergens = `-- name: DeleteEaterAllergens :exec
 DELETE FROM eater_allergen WHERE eater_id = $1
 `
@@ -311,6 +338,42 @@ func (q *Queries) GetEater(ctx context.Context, id int64) (Eater, error) {
 		&i.Sex,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const getFixedMeal = `-- name: GetFixedMeal :one
+SELECT id, eater_id, meal_type, label, protein_g, fat_g, carb_g, kcal, saturated_fat_g, trans_fat_g, fiber_g, sodium_mg, added_sugars_g, free_sugars_g, processed_meat_g, red_meat_g, grain_g_equiv, whole_grain_g_equiv, legume_g, fruit_veg_g, upf_kcal, include_in_analytics, include_in_warnings, active FROM fixed_meal WHERE id = $1
+`
+
+func (q *Queries) GetFixedMeal(ctx context.Context, id int64) (FixedMeal, error) {
+	row := q.db.QueryRow(ctx, getFixedMeal, id)
+	var i FixedMeal
+	err := row.Scan(
+		&i.ID,
+		&i.EaterID,
+		&i.MealType,
+		&i.Label,
+		&i.ProteinG,
+		&i.FatG,
+		&i.CarbG,
+		&i.Kcal,
+		&i.SaturatedFatG,
+		&i.TransFatG,
+		&i.FiberG,
+		&i.SodiumMg,
+		&i.AddedSugarsG,
+		&i.FreeSugarsG,
+		&i.ProcessedMeatG,
+		&i.RedMeatG,
+		&i.GrainGEquiv,
+		&i.WholeGrainGEquiv,
+		&i.LegumeG,
+		&i.FruitVegG,
+		&i.UpfKcal,
+		&i.IncludeInAnalytics,
+		&i.IncludeInWarnings,
+		&i.Active,
 	)
 	return i, err
 }
@@ -540,6 +603,97 @@ func (q *Queries) UpdateEater(ctx context.Context, arg UpdateEaterParams) (Eater
 		&i.Sex,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const updateFixedMeal = `-- name: UpdateFixedMeal :one
+UPDATE fixed_meal
+SET meal_type = $2, label = $3, protein_g = $4, fat_g = $5, carb_g = $6, kcal = $7,
+    saturated_fat_g = $8, trans_fat_g = $9, fiber_g = $10, sodium_mg = $11,
+    added_sugars_g = $12, free_sugars_g = $13, processed_meat_g = $14, red_meat_g = $15,
+    whole_grain_g_equiv = $16, grain_g_equiv = $17, legume_g = $18, fruit_veg_g = $19,
+    upf_kcal = $20, include_in_analytics = $21, include_in_warnings = $22
+WHERE id = $1 AND active = TRUE
+RETURNING id, eater_id, meal_type, label, protein_g, fat_g, carb_g, kcal, saturated_fat_g, trans_fat_g, fiber_g, sodium_mg, added_sugars_g, free_sugars_g, processed_meat_g, red_meat_g, grain_g_equiv, whole_grain_g_equiv, legume_g, fruit_veg_g, upf_kcal, include_in_analytics, include_in_warnings, active
+`
+
+type UpdateFixedMealParams struct {
+	ID                 int64          `json:"id"`
+	MealType           MealType       `json:"meal_type"`
+	Label              string         `json:"label"`
+	ProteinG           pgtype.Numeric `json:"protein_g"`
+	FatG               pgtype.Numeric `json:"fat_g"`
+	CarbG              pgtype.Numeric `json:"carb_g"`
+	Kcal               int32          `json:"kcal"`
+	SaturatedFatG      pgtype.Numeric `json:"saturated_fat_g"`
+	TransFatG          pgtype.Numeric `json:"trans_fat_g"`
+	FiberG             pgtype.Numeric `json:"fiber_g"`
+	SodiumMg           pgtype.Numeric `json:"sodium_mg"`
+	AddedSugarsG       pgtype.Numeric `json:"added_sugars_g"`
+	FreeSugarsG        pgtype.Numeric `json:"free_sugars_g"`
+	ProcessedMeatG     pgtype.Numeric `json:"processed_meat_g"`
+	RedMeatG           pgtype.Numeric `json:"red_meat_g"`
+	WholeGrainGEquiv   pgtype.Numeric `json:"whole_grain_g_equiv"`
+	GrainGEquiv        pgtype.Numeric `json:"grain_g_equiv"`
+	LegumeG            pgtype.Numeric `json:"legume_g"`
+	FruitVegG          pgtype.Numeric `json:"fruit_veg_g"`
+	UpfKcal            pgtype.Numeric `json:"upf_kcal"`
+	IncludeInAnalytics bool           `json:"include_in_analytics"`
+	IncludeInWarnings  bool           `json:"include_in_warnings"`
+}
+
+func (q *Queries) UpdateFixedMeal(ctx context.Context, arg UpdateFixedMealParams) (FixedMeal, error) {
+	row := q.db.QueryRow(ctx, updateFixedMeal,
+		arg.ID,
+		arg.MealType,
+		arg.Label,
+		arg.ProteinG,
+		arg.FatG,
+		arg.CarbG,
+		arg.Kcal,
+		arg.SaturatedFatG,
+		arg.TransFatG,
+		arg.FiberG,
+		arg.SodiumMg,
+		arg.AddedSugarsG,
+		arg.FreeSugarsG,
+		arg.ProcessedMeatG,
+		arg.RedMeatG,
+		arg.WholeGrainGEquiv,
+		arg.GrainGEquiv,
+		arg.LegumeG,
+		arg.FruitVegG,
+		arg.UpfKcal,
+		arg.IncludeInAnalytics,
+		arg.IncludeInWarnings,
+	)
+	var i FixedMeal
+	err := row.Scan(
+		&i.ID,
+		&i.EaterID,
+		&i.MealType,
+		&i.Label,
+		&i.ProteinG,
+		&i.FatG,
+		&i.CarbG,
+		&i.Kcal,
+		&i.SaturatedFatG,
+		&i.TransFatG,
+		&i.FiberG,
+		&i.SodiumMg,
+		&i.AddedSugarsG,
+		&i.FreeSugarsG,
+		&i.ProcessedMeatG,
+		&i.RedMeatG,
+		&i.GrainGEquiv,
+		&i.WholeGrainGEquiv,
+		&i.LegumeG,
+		&i.FruitVegG,
+		&i.UpfKcal,
+		&i.IncludeInAnalytics,
+		&i.IncludeInWarnings,
+		&i.Active,
 	)
 	return i, err
 }

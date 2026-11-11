@@ -2,6 +2,7 @@ package planning
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sort"
 	"time"
@@ -19,6 +20,10 @@ const (
 	defaultPlanDays = 3
 	maxNovelty      = 3
 	dayDuration     = 24 * time.Hour
+	// maxBatchLifeDays is how long one cooking session feeds the household
+	// (HC-7): the cooking day plus at most three more days in the fridge. A
+	// longer horizon needs a second session, which is a second plan.
+	maxBatchLifeDays = 4
 )
 
 // EaterTarget is one eater's schedule for the whole plan horizon.
@@ -150,8 +155,11 @@ func (s *Service) GeneratePlan(ctx context.Context, command GeneratePlanCommand)
 }
 
 // withGeneratedCandidates gives the solver a second chance with freshly
-// generated drafts. A generation failure never replaces the original
+// generated drafts. An unusable generation never replaces the original
 // infeasibility: the owner still learns why the saved library was not enough.
+// An unavailable provider is different: when the library alone has no plan, the
+// owner must hear that generation is down rather than that the plan is
+// impossible (SPEC §6). A feasible library plan survives either failure.
 func (s *Service) withGeneratedCandidates(
 	ctx context.Context,
 	command GeneratePlanCommand,
@@ -162,12 +170,16 @@ func (s *Service) withGeneratedCandidates(
 		return solved, nil
 	}
 
-	drafts, generated := s.tryGenerateCandidates(ctx, command, input)
-	if !generated {
+	drafts, err := s.generateCandidates(ctx, command, input)
+	if err != nil {
+		if solved.Failure != nil && isUnavailable(err) {
+			return solver.Result{}, err
+		}
 		return solved, nil
 	}
 
 	input.Recipes = append(append([]recipedom.Template(nil), input.Recipes...), drafts...)
+	input.FreshRecipes = draftIDs(drafts)
 	retried, err := s.planner.BuildPlan(ctx, input)
 	if err != nil {
 		return solver.Result{}, err
@@ -178,19 +190,17 @@ func (s *Service) withGeneratedCandidates(
 	return retried, nil
 }
 
-// tryGenerateCandidates reports whether usable drafts were produced. A failed
-// generation is not an error for the caller: an infeasible plan keeps its
-// diagnostics and a feasible one keeps the plan the library already produced.
-func (s *Service) tryGenerateCandidates(
-	ctx context.Context,
-	command GeneratePlanCommand,
-	input solver.Input,
-) ([]recipedom.Template, bool) {
-	drafts, err := s.generateCandidates(ctx, command, input)
-	if err != nil {
-		return nil, false
+func isUnavailable(err error) bool {
+	var appErr *apperr.Error
+	return errors.As(err, &appErr) && appErr.Code == apperr.CodeUnavailable
+}
+
+func draftIDs(drafts []recipedom.Template) []recipedom.ID {
+	ids := make([]recipedom.ID, 0, len(drafts))
+	for i := range drafts {
+		ids = append(ids, drafts[i].ID)
 	}
-	return drafts, true
+	return ids
 }
 
 func (s *Service) GetPlan(ctx context.Context, id planningdom.PlanID) (PlanResult, error) {
@@ -234,6 +244,9 @@ func normalizeCommand(command GeneratePlanCommand) (GeneratePlanCommand, error) 
 		cookDate := command.CookDate.UTC().Truncate(dayDuration)
 		command.CookDate = &cookDate
 	}
+	if err := validateCookingWindow(command); err != nil {
+		return GeneratePlanCommand{}, err
+	}
 	if len(command.Targets) == 0 {
 		return GeneratePlanCommand{}, apperr.Validation("at least one eater target is required", "targets")
 	}
@@ -252,6 +265,23 @@ func normalizeCommand(command GeneratePlanCommand) (GeneratePlanCommand, error) 
 		}
 	}
 	return command, nil
+}
+
+// validateCookingWindow enforces HC-7: food is cooked no later than the first
+// day it is eaten, and the last day it is eaten is still inside the batch life.
+func validateCookingWindow(command GeneratePlanCommand) error {
+	cookDate := *command.CookDate
+	if cookDate.After(command.StartDate) {
+		return apperr.Validation("cook_date must not be after start_date", "cook_date")
+	}
+	lastDay := command.StartDate.AddDate(0, 0, command.Days-1)
+	if lastDay.Sub(cookDate) >= maxBatchLifeDays*dayDuration {
+		return apperr.Validation(
+			fmt.Sprintf("a cooked batch keeps for %d days: shorten the plan or cook closer to its start", maxBatchLifeDays),
+			"days",
+		)
+	}
+	return nil
 }
 
 func validateMealTypes(types []mealdom.Type) error {
@@ -290,6 +320,11 @@ func (s *Service) solverInput(ctx context.Context, command GeneratePlanCommand) 
 		eaters = append(eaters, eaterInput)
 	}
 
+	lastUsed, err := s.plans.ListTemplateLastPlanned(ctx, command.StartDate)
+	if err != nil {
+		return solver.Input{}, err
+	}
+
 	return solver.Input{
 		StartDate:          command.StartDate,
 		Days:               command.Days,
@@ -299,6 +334,7 @@ func (s *Service) solverInput(ctx context.Context, command GeneratePlanCommand) 
 		Eaters:             eaters,
 		Products:           products,
 		Recipes:            recipes,
+		RecipeLastUsed:     lastUsed,
 		RollingWindowDays:  s.options.RollingWindowDays,
 	}, nil
 }

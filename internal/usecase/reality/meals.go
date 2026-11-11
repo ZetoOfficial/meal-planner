@@ -16,6 +16,7 @@ type Service struct {
 	feedback     FeedbackRepository
 	analytics    AnalyticsRepository
 	reference    reference.Readers
+	eaters       EaterRepository
 	transactions TxRunner
 	clock        Clock
 }
@@ -39,6 +40,7 @@ func NewService(
 			Recipes:  recipes,
 			Eaters:   eaters,
 		},
+		eaters:       eaters,
 		transactions: transactions,
 		clock:        clock,
 	}

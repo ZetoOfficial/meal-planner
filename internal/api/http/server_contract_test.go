@@ -518,13 +518,37 @@ func TestPreviewSwapHTTPContract(t *testing.T) {
 	}
 }
 
-func TestPreviewSwapRejectsUnsupportedLevels(t *testing.T) {
+func TestPreviewSwapRejectsALevelWithoutItsTargets(t *testing.T) {
 	handler := httpapi.New(httpapi.Deps{APIToken: "secret", Planning: mocks.NewMockPlanningUseCases(gomock.NewController(t))})
 
-	response := doRequest(t, handler, http.MethodPost, "/plans/7/swap/preview", `{"level":"rotation"}`)
+	for _, body := range []string{`{"level":"fill","slot_fill_id":5}`, `{"level":"recipe","plan_recipe_id":5}`} {
+		response := doRequest(t, handler, http.MethodPost, "/plans/7/swap/preview", body)
 
-	if response.Code != http.StatusUnprocessableEntity {
-		t.Fatalf("status = %d, body = %s; want 422 for an unsupported swap level", response.Code, response.Body.String())
+		if response.Code != http.StatusUnprocessableEntity {
+			t.Fatalf("status = %d, body = %s; want 422 for %s", response.Code, response.Body.String(), body)
+		}
+	}
+}
+
+func TestPreviewSwapPassesRecipeAndRotationLevelsToTheUseCase(t *testing.T) {
+	cases := map[string]usecaseplanning.SwapCommand{
+		`{"level":"recipe","plan_recipe_id":5,"new_template_id":9}`: {
+			Level: planningdom.SwapRecipe, PlanRecipeID: 5, NewTemplateID: 9,
+		},
+		`{"level":"rotation"}`: {Level: planningdom.SwapRotation},
+	}
+	for body, want := range cases {
+		planning := mocks.NewMockPlanningUseCases(gomock.NewController(t))
+		planning.EXPECT().
+			PreviewSwap(gomock.Any(), planningdom.PlanID(7), want).
+			Return(swap.Preview{Level: swap.LevelFullRotation, Summary: "new rotation"}, nil)
+		handler := httpapi.New(httpapi.Deps{APIToken: "secret", Planning: planning})
+
+		response := doRequest(t, handler, http.MethodPost, "/plans/7/swap/preview", body)
+
+		if response.Code != http.StatusOK {
+			t.Fatalf("status = %d, body = %s; want 200 for %s", response.Code, response.Body.String(), body)
+		}
 	}
 }
 

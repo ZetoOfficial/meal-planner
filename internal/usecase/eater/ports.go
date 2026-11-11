@@ -22,12 +22,16 @@ type EaterRepository interface {
 	List(ctx context.Context) ([]eaterdom.Eater, error)
 	Get(ctx context.Context, id eaterdom.ID) (eaterdom.Eater, error)
 	Update(ctx context.Context, profile eaterdom.Eater, goal eaterdom.MacroGoal) (eaterdom.Eater, error)
+	Delete(ctx context.Context, id eaterdom.ID) error
 
 	ListGoals(ctx context.Context, eaterID eaterdom.ID) ([]eaterdom.MacroGoal, error)
 	CreateGoal(ctx context.Context, goal eaterdom.MacroGoal) (eaterdom.MacroGoal, error)
 
 	ListFixedMeals(ctx context.Context, eaterID eaterdom.ID) ([]eaterdom.FixedMeal, error)
 	CreateFixedMeal(ctx context.Context, meal eaterdom.FixedMeal) (eaterdom.FixedMeal, error)
+	GetFixedMeal(ctx context.Context, id eaterdom.FixedMealID) (eaterdom.FixedMeal, error)
+	UpdateFixedMeal(ctx context.Context, meal eaterdom.FixedMeal) (eaterdom.FixedMeal, error)
+	DeactivateFixedMeal(ctx context.Context, id eaterdom.FixedMealID) error
 
 	ListExclusions(ctx context.Context, eaterID eaterdom.ID) ([]eaterdom.Exclusion, error)
 	CreateExclusion(ctx context.Context, exclusion eaterdom.Exclusion) (eaterdom.Exclusion, error)

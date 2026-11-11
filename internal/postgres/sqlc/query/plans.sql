@@ -206,3 +206,34 @@ SET
     planned_kcal = sqlc.arg(planned_kcal)
 WHERE id = sqlc.arg(id)
 RETURNING *;
+
+-- name: ListTemplateLastPlanned :many
+-- Последняя дата, на которую шаблон попадал в план, начавшийся раньше before.
+SELECT pr.template_id, max(p.start_date)::date AS last_planned
+FROM plan_recipe pr
+JOIN plan p ON p.id = pr.plan_id
+WHERE p.start_date < sqlc.arg(before)
+GROUP BY pr.template_id;
+
+-- name: UpdatePlanRecipeTemplate :one
+UPDATE plan_recipe
+SET template_id = sqlc.arg(template_id),
+    scale_factor = sqlc.arg(scale_factor),
+    expected_output_g = sqlc.arg(expected_output_g)
+WHERE id = sqlc.arg(id)
+RETURNING *;
+
+-- name: DeletePlanRecipeSlotFills :exec
+DELETE FROM slot_fill
+WHERE plan_recipe_id = sqlc.arg(plan_recipe_id);
+
+-- name: DeletePlanPrepDependencies :exec
+DELETE FROM prep_dependency
+WHERE plan_id = sqlc.arg(plan_id);
+
+-- name: UpdatePlanQuality :one
+UPDATE plan
+SET quality_score = sqlc.arg(quality_score),
+    quality_warnings_count = sqlc.arg(quality_warnings_count)
+WHERE id = sqlc.arg(id)
+RETURNING *;

@@ -328,6 +328,21 @@ func (mr *MockEaterRepositoryMockRecorder) Get(ctx, id any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockEaterRepository)(nil).Get), ctx, id)
 }
 
+// GetFixedMeal mocks base method.
+func (m *MockEaterRepository) GetFixedMeal(ctx context.Context, id eater.FixedMealID) (eater.FixedMeal, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetFixedMeal", ctx, id)
+	ret0, _ := ret[0].(eater.FixedMeal)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetFixedMeal indicates an expected call of GetFixedMeal.
+func (mr *MockEaterRepositoryMockRecorder) GetFixedMeal(ctx, id any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetFixedMeal", reflect.TypeOf((*MockEaterRepository)(nil).GetFixedMeal), ctx, id)
+}
+
 // ListFixedMeals mocks base method.
 func (m *MockEaterRepository) ListFixedMeals(ctx context.Context, eaterID eater.ID) ([]eater.FixedMeal, error) {
 	m.ctrl.T.Helper()

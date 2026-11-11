@@ -81,3 +81,22 @@ func (s *server) GetTopRecipes(ctx context.Context, request api.GetTopRecipesReq
 	}
 	return api.GetTopRecipes200JSONResponse(topRecipesResponse(recipes)), nil
 }
+
+func (s *server) GetProductFrequency(
+	ctx context.Context,
+	request api.GetProductFrequencyRequestObject,
+) (api.GetProductFrequencyResponseObject, error) {
+	limit := 0
+	if request.Params.Limit != nil {
+		limit = *request.Params.Limit
+	}
+	products, err := s.reality.ProductFrequency(ctx, usecasereality.Period{
+		EaterID: eaterdom.ID(request.Params.EaterId),
+		From:    request.Params.From.Time,
+		To:      request.Params.To.Time,
+	}, limit)
+	if err != nil {
+		return nil, err
+	}
+	return api.GetProductFrequency200JSONResponse(productFrequencyResponse(products)), nil
+}

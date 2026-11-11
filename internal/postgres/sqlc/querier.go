@@ -6,6 +6,8 @@ package sqlc
 
 import (
 	"context"
+
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 type Querier interface {
@@ -30,17 +32,22 @@ type Querier interface {
 	CreateRecipeSlot(ctx context.Context, arg CreateRecipeSlotParams) (RecipeSlot, error)
 	CreateRecipeTemplate(ctx context.Context, arg CreateRecipeTemplateParams) (RecipeTemplate, error)
 	CreateSlotFill(ctx context.Context, arg CreateSlotFillParams) (SlotFill, error)
+	DeactivateFixedMeal(ctx context.Context, id int64) (int64, error)
+	DeleteEater(ctx context.Context, id int64) (int64, error)
 	DeleteEaterAllergens(ctx context.Context, eaterID int64) error
 	DeleteEaterExclusion(ctx context.Context, id int64) (EaterExclusion, error)
 	// A rebalance rewrites the whole allocation set of a meal, so the old rows go
 	// first: the portions and even the batches a meal draws from can change.
 	DeleteMealComponentAllocations(ctx context.Context, mealID int64) error
+	DeletePlanPrepDependencies(ctx context.Context, planID int64) error
+	DeletePlanRecipeSlotFills(ctx context.Context, planRecipeID int64) error
 	DeleteProduct(ctx context.Context, id int64) (int64, error)
 	DeleteProductAllergens(ctx context.Context, productID int64) error
 	DeleteProductRoles(ctx context.Context, productID int64) error
 	DeleteShoppingItemsOutsideProducts(ctx context.Context, arg DeleteShoppingItemsOutsideProductsParams) error
 	GetCurrentMacroGoal(ctx context.Context, eaterID int64) (EaterMacroGoal, error)
 	GetEater(ctx context.Context, id int64) (Eater, error)
+	GetFixedMeal(ctx context.Context, id int64) (FixedMeal, error)
 	GetMeal(ctx context.Context, id int64) (Meal, error)
 	GetPlan(ctx context.Context, id int64) (Plan, error)
 	GetProduct(ctx context.Context, id int64) (Product, error)
@@ -60,6 +67,10 @@ type Querier interface {
 	ListEaters(ctx context.Context) ([]Eater, error)
 	ListLLMCalls(ctx context.Context, rowLimit int32) ([]LlmCall, error)
 	ListMacroGoals(ctx context.Context, eaterID int64) ([]EaterMacroGoal, error)
+	// Приёмы едока за период — по одному плану на день. День ведёт план, в котором
+	// по нему уже что-то залогировано; иначе самый свежий неархивный. Так черновики
+	// на те же даты и заменённые ротации не удваивают аналитику, а история
+	// архивного плана, который успели прожить, не теряется.
 	ListMealsForEaterPeriod(ctx context.Context, arg ListMealsForEaterPeriodParams) ([]Meal, error)
 	ListPlanDaySummaries(ctx context.Context, arg ListPlanDaySummariesParams) ([]DayNutritionSummary, error)
 	ListPlanEaterDays(ctx context.Context, planID int64) ([]PlanEaterDay, error)
@@ -73,6 +84,10 @@ type Querier interface {
 	ListPlansForEaterPeriod(ctx context.Context, arg ListPlansForEaterPeriodParams) ([]Plan, error)
 	ListPrepDependencies(ctx context.Context, planID int64) ([]PrepDependency, error)
 	ListProductAllergens(ctx context.Context, productID int64) ([]string, error)
+	// Частота продуктов в запланированных и съеденных приёмах едока: вход продукта
+	// делится между приёмами по доле партии, пропущенные приёмы не считаются.
+	// День ведёт один план — тот же выбор, что в ListMealsForEaterPeriod.
+	ListProductFrequency(ctx context.Context, arg ListProductFrequencyParams) ([]ListProductFrequencyRow, error)
 	ListProductRoleTags(ctx context.Context, productID int64) ([]RoleTag, error)
 	ListProducts(ctx context.Context) ([]Product, error)
 	ListProductsByRole(ctx context.Context, roleCode string) ([]Product, error)
@@ -82,6 +97,8 @@ type Querier interface {
 	ListRoleTags(ctx context.Context) ([]RoleTag, error)
 	ListRuleEvaluationResults(ctx context.Context, arg ListRuleEvaluationResultsParams) ([]RuleEvaluationResult, error)
 	ListShoppingItems(ctx context.Context, listID int64) ([]ListShoppingItemsRow, error)
+	// Последняя дата, на которую шаблон попадал в план, начавшийся раньше before.
+	ListTemplateLastPlanned(ctx context.Context, before pgtype.Date) ([]ListTemplateLastPlannedRow, error)
 	ListTopRecipes(ctx context.Context, rowLimit int32) ([]ListTopRecipesRow, error)
 	LogMeal(ctx context.Context, arg LogMealParams) (Meal, error)
 	LookupLLMCache(ctx context.Context, promptHash string) (LlmCache, error)
@@ -92,7 +109,10 @@ type Querier interface {
 	RoleTagExists(ctx context.Context, code string) (bool, error)
 	SetShoppingItemChecked(ctx context.Context, arg SetShoppingItemCheckedParams) (ShoppingListItem, error)
 	UpdateEater(ctx context.Context, arg UpdateEaterParams) (Eater, error)
+	UpdateFixedMeal(ctx context.Context, arg UpdateFixedMealParams) (FixedMeal, error)
 	UpdateMealPlannedMacros(ctx context.Context, arg UpdateMealPlannedMacrosParams) (Meal, error)
+	UpdatePlanQuality(ctx context.Context, arg UpdatePlanQualityParams) (Plan, error)
+	UpdatePlanRecipeTemplate(ctx context.Context, arg UpdatePlanRecipeTemplateParams) (PlanRecipe, error)
 	UpdateProduct(ctx context.Context, arg UpdateProductParams) (Product, error)
 	UpdateSlotFillProduct(ctx context.Context, arg UpdateSlotFillProductParams) (SlotFill, error)
 	UpdateSlotFillQuantity(ctx context.Context, arg UpdateSlotFillQuantityParams) (SlotFill, error)

@@ -27,7 +27,10 @@ type HardRejection struct {
 	Detail    string
 }
 
-func rejectProduct(eater eaterdom.Eater, product catalogdom.Product) *HardRejection {
+// RejectProduct applies the per-eater hard safety rules (HC-1, HC-2, HC-9,
+// HC-10) to one product. Swaps reuse it so a manual change can never put into a
+// plan what generation would have refused.
+func RejectProduct(eater eaterdom.Eater, product catalogdom.Product) *HardRejection {
 	if allergen := matchingAllergen(eater.Allergens, product.Allergens); allergen != "" {
 		return &HardRejection{
 			Code:      RejectionAllergen,
@@ -36,7 +39,7 @@ func rejectProduct(eater eaterdom.Eater, product catalogdom.Product) *HardReject
 			Detail:    allergen,
 		}
 	}
-	if exclusion := matchingHardExclusion(eater.Exclusions, product); exclusion != "" {
+	if exclusion := matchingExclusion(eater.Exclusions, product, eaterdom.ExclusionSeverityHard); exclusion != "" {
 		return &HardRejection{
 			Code:      RejectionHardExclusion,
 			EaterID:   eater.ID,
@@ -74,9 +77,13 @@ func matchingAllergen(eaterAllergens []eaterdom.Allergen, productAllergens []cat
 	return ""
 }
 
-func matchingHardExclusion(exclusions []eaterdom.Exclusion, product catalogdom.Product) string {
+func matchingExclusion(
+	exclusions []eaterdom.Exclusion,
+	product catalogdom.Product,
+	severity eaterdom.ExclusionSeverity,
+) string {
 	for _, exclusion := range exclusions {
-		if exclusion.Severity != eaterdom.ExclusionSeverityHard {
+		if exclusion.Severity != severity {
 			continue
 		}
 		switch exclusion.TargetKind {

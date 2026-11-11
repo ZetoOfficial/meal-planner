@@ -3,6 +3,7 @@ package planning
 import (
 	"context"
 	"errors"
+	"math"
 	"sort"
 	"strconv"
 	"time"
@@ -14,6 +15,7 @@ import (
 	eaterdom "github.com/ZetoOfficial/meal-planner/internal/domain/eater"
 	"github.com/ZetoOfficial/meal-planner/internal/domain/nutrition"
 	planningdom "github.com/ZetoOfficial/meal-planner/internal/domain/planning"
+	recipedom "github.com/ZetoOfficial/meal-planner/internal/domain/recipe"
 	"github.com/ZetoOfficial/meal-planner/internal/postgres"
 	"github.com/ZetoOfficial/meal-planner/internal/postgres/dberror"
 	"github.com/ZetoOfficial/meal-planner/internal/postgres/pgvalue"
@@ -56,7 +58,7 @@ func (r *Repository) Save(ctx context.Context, plan planningdom.Plan) (planningd
 	if err := r.saveMeals(ctx, query, planID, plan.Meals, recipeIDs); err != nil {
 		return planningdom.Plan{}, err
 	}
-	if err := r.savePrepDependencies(ctx, query, planID, plan, recipeIDs); err != nil {
+	if err := r.savePrepDependencies(ctx, query, planID, plan.PrepDependencies, recipeIDs); err != nil {
 		return planningdom.Plan{}, err
 	}
 	return r.Get(ctx, planID)
@@ -113,28 +115,27 @@ func (r *Repository) saveMeals(
 	return nil
 }
 
-// savePrepDependencies stores the graph using the ids the plan recipes just
-// received; the aggregate addresses them by slice index before it is saved.
+// savePrepDependencies stores the graph. The aggregate addresses batches by
+// slice index; recipeIDs holds the database id each index just received.
 func (r *Repository) savePrepDependencies(
 	ctx context.Context,
 	query *sqlc.Queries,
 	planID planningdom.PlanID,
-	plan planningdom.Plan,
+	dependencies []planningdom.PrepDependency,
 	recipeIDs []planningdom.PlanRecipeID,
 ) error {
-	positions := make(map[planningdom.PlanRecipeID]planningdom.PlanRecipeID, len(recipeIDs))
-	for i, id := range recipeIDs {
-		positions[plan.Recipes[i].ID] = id
-	}
-	for _, dependency := range plan.PrepDependencies {
-		stored := dependency
-		if mapped, ok := positions[dependency.DependentRecipeID]; ok {
-			stored.DependentRecipeID = mapped
+	for _, dependency := range dependencies {
+		if dependency.DependentRecipeIndex < 0 || dependency.DependentRecipeIndex >= len(recipeIDs) ||
+			dependency.SourceRecipeIndex < 0 || dependency.SourceRecipeIndex >= len(recipeIDs) {
+			return apperr.Validation("prep dependency points to a plan recipe outside the plan")
 		}
-		if mapped, ok := positions[dependency.SourceRecipeID]; ok {
-			stored.SourceRecipeID = mapped
-		}
-		if _, err := query.CreatePrepDependency(ctx, prepDependencyParams(planID, stored)); err != nil {
+		params := prepDependencyParams(
+			planID,
+			recipeIDs[dependency.DependentRecipeIndex],
+			recipeIDs[dependency.SourceRecipeIndex],
+			dependency.Note,
+		)
+		if _, err := query.CreatePrepDependency(ctx, params); err != nil {
 			return dberror.Map(err, "prep dependency")
 		}
 	}
@@ -168,7 +169,11 @@ func (r *Repository) Get(ctx context.Context, id planningdom.PlanID) (planningdo
 	}
 	plan.PrepDependencies = make([]planningdom.PrepDependency, 0, len(dependencies))
 	for i := range dependencies {
-		plan.PrepDependencies = append(plan.PrepDependencies, prepDependencyFromRow(dependencies[i]))
+		dependency, err := prepDependencyFromRow(dependencies[i], recipeIndex)
+		if err != nil {
+			return planningdom.Plan{}, err
+		}
+		plan.PrepDependencies = append(plan.PrepDependencies, dependency)
 	}
 	return plan, nil
 }
@@ -459,6 +464,26 @@ func (r *Repository) List(ctx context.Context) ([]planningdom.Plan, error) {
 	return plans, nil
 }
 
+// ListTemplateLastPlanned returns, per template, the start date of the latest
+// plan that began before the given day.
+func (r *Repository) ListTemplateLastPlanned(
+	ctx context.Context,
+	before time.Time,
+) (map[recipedom.ID]time.Time, error) {
+	rows, err := r.store.Queries(ctx).ListTemplateLastPlanned(ctx, pgvalue.Date(before))
+	if err != nil {
+		return nil, dberror.Map(err, "plan recipe")
+	}
+	result := make(map[recipedom.ID]time.Time, len(rows))
+	for i := range rows {
+		if !rows[i].LastPlanned.Valid {
+			continue
+		}
+		result[recipedom.ID(rows[i].TemplateID)] = rows[i].LastPlanned.Time
+	}
+	return result, nil
+}
+
 func (r *Repository) Archive(ctx context.Context, id planningdom.PlanID) error {
 	if _, err := r.store.Queries(ctx).ArchivePlan(ctx, int64(id)); err != nil {
 		return dberror.Map(err, "plan")
@@ -488,6 +513,138 @@ func (r *Repository) SwapSlotFill(
 		return dberror.Map(err, "plan")
 	}
 	return nil
+}
+
+// UpdateMealMacros stores the planned macros of every generated meal. A swap
+// changes what a batch contains, so the meals served from it must follow.
+func (r *Repository) UpdateMealMacros(ctx context.Context, plan planningdom.Plan) error {
+	query := r.store.Queries(ctx)
+	for i := range plan.Meals {
+		if plan.Meals[i].FixedMealID != nil {
+			continue
+		}
+		if _, err := query.UpdateMealPlannedMacros(ctx, mealMacroParams(plan.Meals[i])); err != nil {
+			return dberror.Map(err, "meal")
+		}
+	}
+	return nil
+}
+
+// UpdatePlanQuality refreshes the plan headline after its content changed.
+func (r *Repository) UpdatePlanQuality(
+	ctx context.Context,
+	planID planningdom.PlanID,
+	score *float64,
+	warnings int,
+) error {
+	if warnings < 0 || int64(warnings) > math.MaxInt32 {
+		return apperr.Validation("quality warnings count must fit a nonnegative int32")
+	}
+	_, err := r.store.Queries(ctx).UpdatePlanQuality(ctx, sqlc.UpdatePlanQualityParams{
+		ID:                   int64(planID),
+		QualityScore:         pgvalue.OptionalNumeric(score),
+		QualityWarningsCount: int32(warnings),
+	})
+	if err != nil {
+		return dberror.Map(err, "plan")
+	}
+	return nil
+}
+
+// ReplacePlanRecipe rewrites one batch in place after a recipe-level swap: its
+// template, scale and fills, the serving hints of the meals that eat from it,
+// every generated meal's planned macros and the prep graph. Meal rows keep
+// their ids, so anything already logged against them survives.
+func (r *Repository) ReplacePlanRecipe(
+	ctx context.Context,
+	planID planningdom.PlanID,
+	plan planningdom.Plan,
+	recipeIndex int,
+) error {
+	if recipeIndex < 0 || recipeIndex >= len(plan.Recipes) {
+		return apperr.Validation("swapped plan recipe is outside the plan")
+	}
+	query := r.store.Queries(ctx)
+	if err := replaceBatch(ctx, query, plan.Recipes[recipeIndex]); err != nil {
+		return err
+	}
+	if err := r.UpdateMealMacros(ctx, plan); err != nil {
+		return err
+	}
+	if err := replaceBatchAllocations(ctx, query, plan, recipeIndex); err != nil {
+		return err
+	}
+
+	if err := query.DeletePlanPrepDependencies(ctx, int64(planID)); err != nil {
+		return dberror.Map(err, "prep dependency")
+	}
+	recipeIDs := make([]planningdom.PlanRecipeID, 0, len(plan.Recipes))
+	for i := range plan.Recipes {
+		recipeIDs = append(recipeIDs, plan.Recipes[i].ID)
+	}
+	if err := r.savePrepDependencies(ctx, query, planID, plan.PrepDependencies, recipeIDs); err != nil {
+		return err
+	}
+	return r.MarkShoppingListStale(ctx, planID, true)
+}
+
+// replaceBatch points the stored batch at its new template and swaps its fills.
+func replaceBatch(ctx context.Context, query *sqlc.Queries, recipe planningdom.PlanRecipe) error {
+	if _, err := query.UpdatePlanRecipeTemplate(ctx, sqlc.UpdatePlanRecipeTemplateParams{
+		ID:              int64(recipe.ID),
+		TemplateID:      int64(recipe.TemplateID),
+		ScaleFactor:     pgvalue.Numeric(recipe.ScaleFactor),
+		ExpectedOutputG: pgvalue.OptionalNumeric(recipe.ExpectedOutputG),
+	}); err != nil {
+		return dberror.Map(err, "plan recipe")
+	}
+	if err := query.DeletePlanRecipeSlotFills(ctx, int64(recipe.ID)); err != nil {
+		return dberror.Map(err, "slot fill")
+	}
+	for _, fill := range recipe.Fills {
+		if _, err := query.CreateSlotFill(ctx, slotFillParams(recipe.ID, fill)); err != nil {
+			return dberror.Map(err, "slot fill")
+		}
+	}
+	return nil
+}
+
+// replaceBatchAllocations rewrites the allocations of the meals that eat from
+// the swapped batch: their serving hints follow the new expected output.
+func replaceBatchAllocations(
+	ctx context.Context,
+	query *sqlc.Queries,
+	plan planningdom.Plan,
+	recipeIndex int,
+) error {
+	for i := range plan.Meals {
+		meal := &plan.Meals[i]
+		if !mealUsesRecipe(*meal, recipeIndex) {
+			continue
+		}
+		if err := query.DeleteMealComponentAllocations(ctx, int64(meal.ID)); err != nil {
+			return dberror.Map(err, "meal component allocation")
+		}
+		for _, component := range meal.Components {
+			if component.PlanRecipeIndex >= len(plan.Recipes) {
+				return apperr.Conflict("allocation points to a plan recipe outside the plan")
+			}
+			params := allocationParams(meal.ID, plan.Recipes[component.PlanRecipeIndex].ID, component)
+			if _, err := query.CreateMealComponentAllocation(ctx, params); err != nil {
+				return dberror.Map(err, "meal component allocation")
+			}
+		}
+	}
+	return nil
+}
+
+func mealUsesRecipe(meal planningdom.Meal, recipeIndex int) bool {
+	for _, component := range meal.Components {
+		if component.PlanRecipeIndex == recipeIndex {
+			return true
+		}
+	}
+	return false
 }
 
 // MarkShoppingListStale records whether the plan still matches its list.
@@ -597,8 +754,8 @@ func (r *Repository) ListPlanMeals(
 	return mealsFromRows(rows)
 }
 
-// ListEaterMeals returns every meal of one eater inside a period, whichever
-// plan it belongs to, which is what analytics reads.
+// ListEaterMeals returns the meals of one eater inside a period, one plan per
+// day: the plan the day was logged in, otherwise the latest one not archived.
 func (r *Repository) ListEaterMeals(
 	ctx context.Context,
 	eaterID eaterdom.ID,

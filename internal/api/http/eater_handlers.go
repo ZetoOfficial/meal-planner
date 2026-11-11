@@ -99,3 +99,25 @@ func (s *server) DeleteExclusion(ctx context.Context, request api.DeleteExclusio
 	}
 	return api.DeleteExclusion204Response{}, nil
 }
+
+func (s *server) DeleteEater(ctx context.Context, request api.DeleteEaterRequestObject) (api.DeleteEaterResponseObject, error) {
+	if err := s.eater.DeleteEater(ctx, eaterdom.ID(request.EaterId)); err != nil {
+		return nil, err
+	}
+	return api.DeleteEater204Response{}, nil
+}
+
+func (s *server) UpdateFixedMeal(ctx context.Context, request api.UpdateFixedMealRequestObject) (api.UpdateFixedMealResponseObject, error) {
+	meal, err := s.eater.UpdateFixedMeal(ctx, eaterdom.FixedMealID(request.FixedMealId), fixedMealCommand(*request.Body))
+	if err != nil {
+		return nil, err
+	}
+	return api.UpdateFixedMeal200JSONResponse(fixedMealResponse(meal)), nil
+}
+
+func (s *server) DeleteFixedMeal(ctx context.Context, request api.DeleteFixedMealRequestObject) (api.DeleteFixedMealResponseObject, error) {
+	if err := s.eater.DeleteFixedMeal(ctx, eaterdom.FixedMealID(request.FixedMealId)); err != nil {
+		return nil, err
+	}
+	return api.DeleteFixedMeal204Response{}, nil
+}

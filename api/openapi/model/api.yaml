@@ -992,6 +992,21 @@ components:
           description: 'сколько раз планы обращались к шаблону, даже если он не был приготовлен'
       required: [recipe_id, name, cooked_count, plan_usage]
 
+    ProductFrequency:
+      type: object
+      properties:
+        product_id: { type: integer, format: int64 }
+        brand: { type: string }
+        name: { type: string }
+        meals_count:
+          type: integer
+          description: 'сколько приёмов пищи использовали продукт'
+        total_qty_g:
+          type: number
+          format: double
+          description: 'суммарный вход продукта, пришедшийся на эти приёмы'
+      required: [product_id, name, meals_count, total_qty_g]
+
     SolverError:
       type: object
       properties:

@@ -7,6 +7,8 @@ import (
 
 type FixedMealID int64
 
+func (id FixedMealID) Valid() bool { return id > 0 }
+
 type MealType = meal.Type
 
 const (

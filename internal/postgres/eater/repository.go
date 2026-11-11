@@ -128,6 +128,42 @@ func (r *Repository) CreateFixedMeal(ctx context.Context, meal eaterdom.FixedMea
 	return fixedMealFromRow(row)
 }
 
+// GetFixedMeal reads a fixed meal whether or not it is still active: stored
+// plans keep pointing at meals the owner has since switched off.
+func (r *Repository) GetFixedMeal(ctx context.Context, id eaterdom.FixedMealID) (eaterdom.FixedMeal, error) {
+	row, err := r.store.Queries(ctx).GetFixedMeal(ctx, int64(id))
+	if err != nil {
+		return eaterdom.FixedMeal{}, dberror.Map(err, "fixed meal")
+	}
+	return fixedMealFromRow(row)
+}
+
+func (r *Repository) UpdateFixedMeal(ctx context.Context, meal eaterdom.FixedMeal) (eaterdom.FixedMeal, error) {
+	row, err := r.store.Queries(ctx).UpdateFixedMeal(ctx, fixedMealUpdateParams(meal))
+	if err != nil {
+		return eaterdom.FixedMeal{}, dberror.Map(err, "fixed meal")
+	}
+	return fixedMealFromRow(row)
+}
+
+// DeactivateFixedMeal switches a fixed meal off instead of deleting the row,
+// because stored meals reference it to explain their macros.
+func (r *Repository) DeactivateFixedMeal(ctx context.Context, id eaterdom.FixedMealID) error {
+	if _, err := r.store.Queries(ctx).DeactivateFixedMeal(ctx, int64(id)); err != nil {
+		return dberror.Map(err, "fixed meal")
+	}
+	return nil
+}
+
+// Delete removes a profile that no plan, meal or feedback refers to. Goals,
+// allergens, exclusions and fixed meals go with it; history never does.
+func (r *Repository) Delete(ctx context.Context, id eaterdom.ID) error {
+	if _, err := r.store.Queries(ctx).DeleteEater(ctx, int64(id)); err != nil {
+		return dberror.MapDelete(err, "eater")
+	}
+	return nil
+}
+
 func (r *Repository) ListExclusions(ctx context.Context, eaterID eaterdom.ID) ([]eaterdom.Exclusion, error) {
 	query := r.store.Queries(ctx)
 	if err := r.ensureEater(ctx, query, eaterID); err != nil {

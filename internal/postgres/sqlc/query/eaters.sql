@@ -87,3 +87,27 @@ SELECT EXISTS(SELECT 1 FROM role_tag WHERE code = $1);
 
 -- name: ProductExists :one
 SELECT EXISTS(SELECT 1 FROM product WHERE id = $1);
+
+-- name: DeleteEater :one
+DELETE FROM eater
+WHERE id = $1
+RETURNING id;
+
+-- name: GetFixedMeal :one
+SELECT * FROM fixed_meal WHERE id = $1;
+
+-- name: UpdateFixedMeal :one
+UPDATE fixed_meal
+SET meal_type = $2, label = $3, protein_g = $4, fat_g = $5, carb_g = $6, kcal = $7,
+    saturated_fat_g = $8, trans_fat_g = $9, fiber_g = $10, sodium_mg = $11,
+    added_sugars_g = $12, free_sugars_g = $13, processed_meat_g = $14, red_meat_g = $15,
+    whole_grain_g_equiv = $16, grain_g_equiv = $17, legume_g = $18, fruit_veg_g = $19,
+    upf_kcal = $20, include_in_analytics = $21, include_in_warnings = $22
+WHERE id = $1 AND active = TRUE
+RETURNING *;
+
+-- name: DeactivateFixedMeal :one
+UPDATE fixed_meal
+SET active = FALSE
+WHERE id = $1 AND active = TRUE
+RETURNING id;

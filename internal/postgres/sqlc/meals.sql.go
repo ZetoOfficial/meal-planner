@@ -261,11 +261,21 @@ func (q *Queries) ListEaterRollingSummariesForPeriod(ctx context.Context, arg Li
 }
 
 const listMealsForEaterPeriod = `-- name: ListMealsForEaterPeriod :many
-SELECT id, plan_id, eater_id, meal_date, meal_type, fixed_meal_id, planned_protein_g, planned_fat_g, planned_carb_g, planned_kcal, actual_protein_g, actual_fat_g, actual_carb_g, actual_kcal, cooked_by, cooked_at, logged_by, logged_at, log_status
-FROM meal
-WHERE eater_id = $1
-  AND meal_date BETWEEN $2 AND $3
-ORDER BY meal_date, meal_type, id
+WITH governing AS (
+    SELECT DISTINCT ON (gm.meal_date) gm.meal_date, gm.plan_id
+    FROM meal gm
+    JOIN plan gp ON gp.id = gm.plan_id
+    WHERE gm.eater_id = $1
+      AND gm.meal_date BETWEEN $2 AND $3
+    GROUP BY gm.meal_date, gm.plan_id, gp.status
+    HAVING bool_or(gm.log_status <> 'planned') OR gp.status <> 'archived'
+    ORDER BY gm.meal_date, bool_or(gm.log_status <> 'planned') DESC, gm.plan_id DESC
+)
+SELECT m.id, m.plan_id, m.eater_id, m.meal_date, m.meal_type, m.fixed_meal_id, m.planned_protein_g, m.planned_fat_g, m.planned_carb_g, m.planned_kcal, m.actual_protein_g, m.actual_fat_g, m.actual_carb_g, m.actual_kcal, m.cooked_by, m.cooked_at, m.logged_by, m.logged_at, m.log_status
+FROM meal m
+JOIN governing g ON g.meal_date = m.meal_date AND g.plan_id = m.plan_id
+WHERE m.eater_id = $1
+ORDER BY m.meal_date, m.meal_type, m.id
 `
 
 type ListMealsForEaterPeriodParams struct {
@@ -274,6 +284,10 @@ type ListMealsForEaterPeriodParams struct {
 	ToDate   pgtype.Date `json:"to_date"`
 }
 
+// Приёмы едока за период — по одному плану на день. День ведёт план, в котором
+// по нему уже что-то залогировано; иначе самый свежий неархивный. Так черновики
+// на те же даты и заменённые ротации не удваивают аналитику, а история
+// архивного плана, который успели прожить, не теряется.
 func (q *Queries) ListMealsForEaterPeriod(ctx context.Context, arg ListMealsForEaterPeriodParams) ([]Meal, error) {
 	rows, err := q.db.Query(ctx, listMealsForEaterPeriod, arg.EaterID, arg.FromDate, arg.ToDate)
 	if err != nil {
@@ -403,6 +417,84 @@ func (q *Queries) ListPlansForEaterPeriod(ctx context.Context, arg ListPlansForE
 			&i.QualityWarningsCount,
 			&i.ShoppingListStale,
 			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listProductFrequency = `-- name: ListProductFrequency :many
+WITH governing AS (
+    SELECT DISTINCT ON (gm.meal_date) gm.meal_date, gm.plan_id
+    FROM meal gm
+    JOIN plan gp ON gp.id = gm.plan_id
+    WHERE gm.eater_id = $1
+      AND gm.meal_date BETWEEN $3 AND $4
+    GROUP BY gm.meal_date, gm.plan_id, gp.status
+    HAVING bool_or(gm.log_status <> 'planned') OR gp.status <> 'archived'
+    ORDER BY gm.meal_date, bool_or(gm.log_status <> 'planned') DESC, gm.plan_id DESC
+)
+SELECT
+    pr.id AS product_id,
+    pr.brand,
+    pr.name,
+    count(DISTINCT m.id) AS meals_count,
+    sum(sf.planned_input_qty_g * mca.portion_factor)::float8 AS total_qty_g
+FROM meal m
+JOIN meal_component_allocation mca ON mca.meal_id = m.id
+JOIN slot_fill sf ON sf.plan_recipe_id = mca.plan_recipe_id
+JOIN product pr ON pr.id = sf.product_id
+JOIN governing g ON g.meal_date = m.meal_date AND g.plan_id = m.plan_id
+WHERE m.eater_id = $1
+  AND m.log_status <> 'skipped'
+GROUP BY pr.id, pr.brand, pr.name
+ORDER BY meals_count DESC, total_qty_g DESC, pr.id
+LIMIT $2
+`
+
+type ListProductFrequencyParams struct {
+	EaterID  int64       `json:"eater_id"`
+	RowLimit int32       `json:"row_limit"`
+	FromDate pgtype.Date `json:"from_date"`
+	ToDate   pgtype.Date `json:"to_date"`
+}
+
+type ListProductFrequencyRow struct {
+	ProductID  int64   `json:"product_id"`
+	Brand      string  `json:"brand"`
+	Name       string  `json:"name"`
+	MealsCount int64   `json:"meals_count"`
+	TotalQtyG  float64 `json:"total_qty_g"`
+}
+
+// Частота продуктов в запланированных и съеденных приёмах едока: вход продукта
+// делится между приёмами по доле партии, пропущенные приёмы не считаются.
+// День ведёт один план — тот же выбор, что в ListMealsForEaterPeriod.
+func (q *Queries) ListProductFrequency(ctx context.Context, arg ListProductFrequencyParams) ([]ListProductFrequencyRow, error) {
+	rows, err := q.db.Query(ctx, listProductFrequency,
+		arg.EaterID,
+		arg.RowLimit,
+		arg.FromDate,
+		arg.ToDate,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListProductFrequencyRow{}
+	for rows.Next() {
+		var i ListProductFrequencyRow
+		if err := rows.Scan(
+			&i.ProductID,
+			&i.Brand,
+			&i.Name,
+			&i.MealsCount,
+			&i.TotalQtyG,
 		); err != nil {
 			return nil, err
 		}
