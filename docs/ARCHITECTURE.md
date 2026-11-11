@@ -76,7 +76,8 @@ internal/
                             planning, recipe, shopping
   solver/                   поиск плана и диагностика невозможности
   quality/                  правила качества, rolling-окно, coverage
-  swap/                     детерминированный diff свопа и фиксации количества
+  swap/                     детерминированный diff свопа (fill, recipe, rotation)
+                            и фиксации количества
 
   # use cases: оркестрация через порты (ports.go на стороне потребителя)
   usecase/
@@ -103,7 +104,7 @@ internal/
 api/openapi/                контракт (source of truth)
 api/sdk/go/                 сгенерированный SDK (отдельный Go-модуль)
 migrations/                 tern-миграции и dev seed
-docs/                       DESIGN, SPEC, ARCHITECTURE, schema.sql
+docs/                       DESIGN, SPEC, ARCHITECTURE, DECISIONS, schema.sql
 ```
 
 E2E-тест владельческого сценария лежит рядом с HTTP-адаптером
@@ -296,6 +297,13 @@ llm/provider-specific packages
 5. cost / reuse / storage / novelty
 6. per-rule coverage
 ```
+
+Уровень 5 раскрыт так: soft-исключения едока → число новых партий → reuse и вес
+ротации (на novelty 1 — взвешенный случайный ключ с seed из запроса) → стоимость →
+число партий, требующих разогрева. Требование новизны (novelty 2+) применяется
+отдельно от ранжирования: пока в плане нет нового компонента, день с ним берётся,
+если не уступает по quality-правилам; если бесплатного дня нет, план собирается
+заново с принудительной новизной. Подробности и обоснования — `docs/DECISIONS.md`.
 
 MVP использует bounded deterministic search по сетке serving multipliers. Для каждого набора партий порции eater/day решаются независимо, после чего агрегируются в `PlanRecipe.scale_factor` и `MealComponentAllocation`. Алгоритм отличает полное исчерпание конечного поиска от остановки по search budget.
 
@@ -503,6 +511,7 @@ candidates, повторяет solver и сохраняет допустимый
 /eaters/{eaterId}/goals
 /eaters/{eaterId}/fixed-meals
 /eaters/{eaterId}/exclusions
+/fixed-meals/{fixedMealId}
 /exclusions/{exclusionId}
   → usecase/eater
 
@@ -533,6 +542,7 @@ candidates, повторяет solver и сохраняет допустимый
 /feedback
 /analytics/macros
 /analytics/nutrition-quality
+/analytics/product-frequency
 /analytics/top-recipes
   → usecase/reality
 ```
