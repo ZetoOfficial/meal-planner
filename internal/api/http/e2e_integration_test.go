@@ -361,3 +361,159 @@ func itemChecked(list model.ShoppingList, productID int64) bool {
 func itoa(value int64) string {
 	return strconv.FormatInt(value, 10)
 }
+
+// TestSwapLevelsAndProfileLifecycleSmoke covers the parts of the contract the
+// owner workflow does not reach: every novelty level, a dish-for-dish swap, a
+// full rotation, the prep graph in the response, product frequency and the
+// profile endpoints that remove things.
+func TestSwapLevelsAndProfileLifecycleSmoke(t *testing.T) {
+	handler, database := newSmokeAPI(t)
+	ctx := context.Background()
+	eaterID := seededEaterID(t, ctx, database, "Pasha")
+	start := time.Now().UTC().Truncate(24 * time.Hour)
+
+	var plan model.Plan
+	for novelty := 0; novelty <= 3; novelty++ {
+		// Each level plans its own week so the earlier plans become history.
+		from := start.AddDate(0, 0, 7*novelty).Format(time.DateOnly)
+		body := `{"start_date":"` + from + `","days":2,"novelty_level":` + itoa(int64(novelty)) + `,"targets":[` +
+			`{"eater_id":` + itoa(eaterID) + `,"generated_meal_types":["lunch","dinner"]}]}`
+		response := call(t, handler, http.MethodPost, "/plans", body)
+		if response.Code != http.StatusCreated {
+			t.Fatalf("generate plan at novelty %d: status = %d, body = %s; want 201",
+				novelty, response.Code, response.Body.String())
+		}
+		plan = decode[model.Plan](t, response)
+		if plan.PrepDependencies == nil {
+			t.Fatalf("plan at novelty %d has no prep_dependencies array", novelty)
+		}
+	}
+	planPath := "/plans/" + itoa(plan.Id)
+
+	recipes := decodeList[model.RecipeTemplate](t, call(t, handler, http.MethodGet, "/recipes?status=permanent", ""))
+	swapped := swapOneRecipe(t, handler, planPath, plan, recipes)
+	if !swapped.ShoppingListStale {
+		t.Fatal("plan after a recipe swap is not marked shopping_list_stale")
+	}
+	if len(swapped.Meals) != len(plan.Meals) {
+		t.Fatalf("meals after a recipe swap = %d, want the same %d meal rows", len(swapped.Meals), len(plan.Meals))
+	}
+
+	to := start.AddDate(0, 0, 40).Format(time.DateOnly)
+	period := "?eaterId=" + itoa(eaterID) + "&from=" + start.Format(time.DateOnly) + "&to=" + to
+	frequency := decodeList[model.ProductFrequency](t,
+		call(t, handler, http.MethodGet, "/analytics/product-frequency"+period+"&limit=5", ""))
+	if len(frequency) == 0 || frequency[0].MealsCount == 0 || frequency[0].TotalQtyG <= 0 {
+		t.Fatalf("product frequency = %#v, want the planned products ranked", frequency)
+	}
+
+	rotationPreview := call(t, handler, http.MethodPost, planPath+"/swap/preview", `{"level":"rotation"}`)
+	if rotationPreview.Code != http.StatusOK {
+		t.Fatalf("rotation preview status = %d, body = %s; want 200", rotationPreview.Code, rotationPreview.Body.String())
+	}
+	if preview := decode[model.SwapPreview](t, rotationPreview); preview.Level != "full_rotation" || preview.Summary == "" {
+		t.Fatalf("rotation preview = %#v, want a full_rotation blast radius", preview)
+	}
+	unconfirmed := call(t, handler, http.MethodPost, planPath+"/swap", `{"level":"rotation","confirm":false}`)
+	if unconfirmed.Code != http.StatusConflict {
+		t.Fatalf("unconfirmed rotation status = %d, want 409", unconfirmed.Code)
+	}
+	rotated := call(t, handler, http.MethodPost, planPath+"/swap", `{"level":"rotation","confirm":true}`)
+	if rotated.Code != http.StatusOK {
+		t.Fatalf("apply rotation status = %d, body = %s; want 200", rotated.Code, rotated.Body.String())
+	}
+	rotation := decode[model.Plan](t, rotated)
+	if rotation.Id == plan.Id || len(rotation.Meals) == 0 {
+		t.Fatalf("rotation = plan %d with %d meals, want a new stored plan", rotation.Id, len(rotation.Meals))
+	}
+	if old := decode[model.Plan](t, call(t, handler, http.MethodGet, planPath, "")); old.Status != "archived" {
+		t.Fatalf("old plan status = %q, want archived after the rotation replaced it", old.Status)
+	}
+
+	// A logged meal pins the plan: eaten food cannot be rotated away.
+	rotationPath := "/plans/" + itoa(rotation.Id)
+	meals := decodeList[model.Meal](t, call(t, handler, http.MethodGet, rotationPath+"/meals", ""))
+	logged := call(t, handler, http.MethodPost, "/meals/"+itoa(meals[0].Id)+"/log",
+		`{"log_status":"eaten_as_planned","logged_by":`+itoa(eaterID)+`}`)
+	if logged.Code != http.StatusOK {
+		t.Fatalf("log meal status = %d, body = %s; want 200", logged.Code, logged.Body.String())
+	}
+	if pinned := call(t, handler, http.MethodPost, rotationPath+"/swap/preview", `{"level":"rotation"}`); pinned.Code != http.StatusConflict {
+		t.Fatalf("rotation of a logged plan: status = %d, body = %s; want 409", pinned.Code, pinned.Body.String())
+	}
+
+	if busy := call(t, handler, http.MethodDelete, "/eaters/"+itoa(eaterID), ""); busy.Code != http.StatusConflict {
+		t.Fatalf("delete an eater with plans: status = %d, body = %s; want 409", busy.Code, busy.Body.String())
+	}
+
+	guest := decode[model.Eater](t, call(t, handler, http.MethodPost, "/eaters",
+		`{"name":"Guest","sex":"unspecified","goal":{"protein_min_g":100,"protein_max_g":140,`+
+			`"fat_min_g":50,"fat_max_g":80,"carb_min_g":150,"carb_max_g":250,"kcal_min":1600,"kcal_max":2300}}`))
+	fixed := decode[model.FixedMeal](t, call(t, handler, http.MethodPost, "/eaters/"+itoa(guest.Id)+"/fixed-meals",
+		`{"meal_type":"breakfast","label":"toast","macros":{"protein_g":10,"fat_g":5,"carb_g":30,"kcal":210}}`))
+	updated := call(t, handler, http.MethodPut, "/fixed-meals/"+itoa(fixed.Id),
+		`{"meal_type":"breakfast","label":"two toasts","macros":{"protein_g":20,"fat_g":10,"carb_g":60,"kcal":420},`+
+			`"quality":{"sodium_mg":600}}`)
+	if updated.Code != http.StatusOK {
+		t.Fatalf("update fixed meal status = %d, body = %s; want 200", updated.Code, updated.Body.String())
+	}
+	if meal := decode[model.FixedMeal](t, updated); meal.Label != "two toasts" || meal.Macros.Kcal != 420 {
+		t.Fatalf("updated fixed meal = %#v, want the new label and macros", meal)
+	}
+	if removed := call(t, handler, http.MethodDelete, "/fixed-meals/"+itoa(fixed.Id), ""); removed.Code != http.StatusNoContent {
+		t.Fatalf("delete fixed meal status = %d, body = %s; want 204", removed.Code, removed.Body.String())
+	}
+	if left := decodeList[model.FixedMeal](t, call(t, handler, http.MethodGet, "/eaters/"+itoa(guest.Id)+"/fixed-meals", "")); len(left) != 0 {
+		t.Fatalf("fixed meals after delete = %#v, want none", left)
+	}
+	if gone := call(t, handler, http.MethodDelete, "/eaters/"+itoa(guest.Id), ""); gone.Code != http.StatusNoContent {
+		t.Fatalf("delete an eater without history: status = %d, body = %s; want 204", gone.Code, gone.Body.String())
+	}
+	if missing := call(t, handler, http.MethodGet, "/eaters/"+itoa(guest.Id), ""); missing.Code != http.StatusNotFound {
+		t.Fatalf("get a deleted eater: status = %d, want 404", missing.Code)
+	}
+}
+
+// swapOneRecipe tries the library until a template fits one of the plan's
+// batches, previews the swap and applies it.
+func swapOneRecipe(
+	t *testing.T,
+	handler http.Handler,
+	planPath string,
+	plan model.Plan,
+	recipes []model.RecipeTemplate,
+) model.Plan {
+	t.Helper()
+	for _, batch := range plan.Recipes {
+		for _, candidate := range recipes {
+			if candidate.Id == batch.TemplateId {
+				continue
+			}
+			target := `"level":"recipe","plan_recipe_id":` + itoa(batch.Id) + `,"new_template_id":` + itoa(candidate.Id)
+			preview := call(t, handler, http.MethodPost, planPath+"/swap/preview", `{`+target+`}`)
+			if preview.Code == http.StatusUnprocessableEntity {
+				continue
+			}
+			if preview.Code != http.StatusOK {
+				t.Fatalf("recipe swap preview status = %d, body = %s", preview.Code, preview.Body.String())
+			}
+			if radius := decode[model.SwapPreview](t, preview); radius.Level != "recipe_change" || radius.Summary == "" {
+				t.Fatalf("recipe swap preview = %#v, want a recipe_change blast radius", radius)
+			}
+
+			response := call(t, handler, http.MethodPost, planPath+"/swap", `{`+target+`,"confirm":true}`)
+			if response.Code != http.StatusOK {
+				t.Fatalf("apply recipe swap status = %d, body = %s; want 200", response.Code, response.Body.String())
+			}
+			applied := decode[model.Plan](t, response)
+			for _, recipe := range applied.Recipes {
+				if recipe.Id == batch.Id && recipe.TemplateId == candidate.Id && len(recipe.Fills) > 0 {
+					return applied
+				}
+			}
+			t.Fatalf("plan recipe %d was not rewritten to template %d", batch.Id, candidate.Id)
+		}
+	}
+	t.Fatal("no template in the library can replace any batch of the plan")
+	return model.Plan{}
+}
