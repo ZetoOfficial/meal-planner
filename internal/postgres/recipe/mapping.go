@@ -32,10 +32,12 @@ func templateParams(template recipedom.Template) sqlc.CreateRecipeTemplateParams
 		CookingMethod:    template.CookingMethod,
 		Storage:          sqlc.StorageProfile(template.Storage),
 		StorageNotes:     template.StorageNotes,
-		Equipment:        template.Equipment,
-		Instructions:     template.Instructions,
-		Weight:           pgvalue.Numeric(template.Weight),
-		CookedCount:      int32(template.CookedCount),
+		// The column is NOT NULL: a recipe that needs no equipment stores an
+		// empty array, never NULL.
+		Equipment:    append([]string{}, template.Equipment...),
+		Instructions: template.Instructions,
+		Weight:       pgvalue.Numeric(template.Weight),
+		CookedCount:  int32(template.CookedCount),
 	}
 }
 

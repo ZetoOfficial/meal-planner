@@ -56,7 +56,7 @@ func filterProducts(eater eaterdom.Eater, products []catalogdom.Product) ([]cata
 	rejections := make([]HardRejection, 0)
 	for i := range products {
 		product := &products[i]
-		if rejection := rejectProduct(eater, *product); rejection != nil {
+		if rejection := RejectProduct(eater, *product); rejection != nil {
 			rejections = append(rejections, *rejection)
 			continue
 		}

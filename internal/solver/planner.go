@@ -39,6 +39,12 @@ type Input struct {
 	Eaters             []EaterInput
 	Products           []catalogdom.Product
 	Recipes            []recipedom.Template
+	// RecipeLastUsed holds the last date each template was planned. A template
+	// missing from the map has never been planned.
+	RecipeLastUsed map[recipedom.ID]time.Time
+	// FreshRecipes names drafts generated for this very request; at novelty 3
+	// the plan is built around one of them.
+	FreshRecipes []recipedom.ID
 	// Ruleset overrides the default quality rules; nil keeps the MVP defaults.
 	Ruleset           *quality.Ruleset
 	RollingWindowDays int
@@ -83,24 +89,62 @@ func (p *Planner) BuildPlan(ctx context.Context, input Input) (Result, error) {
 	}
 
 	candidates := FilterCandidates(input)
+	// The novelty dial first looks for a day that hosts a novel component at no
+	// quality cost. Only when the whole plan has no such day is it rebuilt with
+	// the component forced into the first day that can carry it, so levels 2–3
+	// still always deliver one when any day allows it.
+	result, novel, err := p.buildPlan(ctx, input, candidates, false)
+	if err != nil || result.Failure != nil || novel || len(unseenRecipes(input)) == 0 {
+		return result, err
+	}
+	forced, novel, err := p.buildPlan(ctx, input, candidates, true)
+	if err != nil {
+		return Result{}, err
+	}
+	if forced.Failure != nil || !novel {
+		return result, nil
+	}
+	return forced, nil
+}
+
+// buildPlan runs one pass over every eater-day and reports whether the plan
+// ended up with a novel component.
+func (p *Planner) buildPlan(
+	ctx context.Context,
+	input Input,
+	candidates Candidates,
+	forceUnseen bool,
+) (Result, bool, error) {
 	builder := newPlanBuilder(input)
 	evaluations := make([]EaterDayQuality, 0, len(input.Eaters)*input.Days)
 	priorUses := make(map[int64]int)
+	unseen := unseenRecipes(input)
+	novel := false
+	keys := shuffleKeys(input)
 	for eaterIndex := range input.Eaters {
 		eaterInput := &input.Eaters[eaterIndex]
 		eaterCandidates := &candidates.Eaters[eaterIndex]
+		softExcluded := softExcludedProducts(eaterInput.Eater, eaterCandidates.Products)
 		history := append([]nutrition.DaySummary(nil), eaterInput.History...)
 		for dayIndex := range eaterInput.Days {
 			day := &eaterInput.Days[dayIndex]
 			fixedMeals, fixedMacros, err := fixedMealsForDay(*eaterInput, day.Date)
 			if err != nil {
-				return Result{}, err
+				return Result{}, false, err
 			}
 
 			evaluator := newDayEvaluator(input, *eaterInput, history)
-			ranked, state, unreachable, err := searchDay(ctx, p.config, evaluator, *day, fixedMacros, eaterCandidates.Recipes, priorUses)
+			preferences := dayPreferences{
+				priorUses:    priorUses,
+				softExcluded: softExcluded,
+				shuffleKeys:  keys,
+				unseen:       unseen,
+				forceUnseen:  forceUnseen,
+				planned:      builder.hasBatch,
+			}
+			ranked, state, unreachable, err := searchDay(ctx, p.config, evaluator, *day, fixedMacros, eaterCandidates.Recipes, preferences)
 			if err != nil {
-				return Result{}, err
+				return Result{}, false, err
 			}
 			if state != searchFound {
 				return Result{Failure: &Failure{
@@ -110,7 +154,7 @@ func (p *Planner) BuildPlan(ctx context.Context, input Input) (Result, error) {
 					Exhaustive:       state == searchExhausted,
 					Rejections:       rejectionsForEater(candidates.Rejections, eaterInput.Eater.ID),
 					MacroConstraints: unreachable,
-				}}, nil
+				}}, false, nil
 			}
 			builder.addDay(*eaterInput, *day, fixedMeals, ranked.solution)
 			evaluations = append(evaluations, EaterDayQuality{
@@ -122,14 +166,19 @@ func (p *Planner) BuildPlan(ctx context.Context, input Input) (Result, error) {
 			})
 			history = append(history, ranked.day)
 			recordUses(priorUses, ranked.solution)
+			if preferences.hasUnseen(ranked.solution) {
+				// One novel component satisfies the dial for the whole plan.
+				unseen = nil
+				novel = true
+			}
 		}
 	}
 
 	plan, err := builder.build()
 	if err != nil {
-		return Result{}, err
+		return Result{}, false, err
 	}
-	return Result{Plan: plan, Quality: evaluations}, nil
+	return Result{Plan: plan, Quality: evaluations}, novel, nil
 }
 
 func recordUses(priorUses map[int64]int, solution daySolution) {
